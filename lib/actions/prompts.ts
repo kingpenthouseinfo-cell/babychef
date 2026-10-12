@@ -5,6 +5,7 @@ import { db } from '../db';
 import { bool, pickText, str, strRaw } from '../util';
 import { versionPrompt } from '../prompt-versions';
 import { buildVars, render, templateCodeFor } from '../template-engine';
+import { contextBlock } from '../publishing';
 import { PUBLISHING_PLAN, PUB_CONTEXT_FIELDS, DEFAULT_CHECKLIST } from '../constants';
 import { logActivity } from '../activity';
 import { parseJson } from '../util';
@@ -79,22 +80,6 @@ export async function savePubContext(fd: FormData) {
   for (const k of ['Funny moments', 'Recipe highlights', 'Cooking techniques', 'Notes']) data[k] = strRaw(fd, `x:${k}`);
   await db.projectDoc.upsert({ where: { projectId_key: { projectId, key: 'pubctx' } }, update: { data: JSON.stringify(data) }, create: { projectId, key: 'pubctx', data: JSON.stringify(data) } });
   touch();
-}
-
-export async function contextBlock(projectId: string): Promise<string> {
-  const [p, doc, vars] = await Promise.all([
-    db.project.findUniqueOrThrow({ where: { id: projectId }, include: { babyChef: true } }),
-    db.projectDoc.findUnique({ where: { projectId_key: { projectId, key: 'pubctx' } } }),
-    buildVars(projectId),
-  ]);
-  const d = parseJson<any>(doc?.data, { include: PUB_CONTEXT_FIELDS });
-  const inc: string[] = d.include ?? PUB_CONTEXT_FIELDS;
-  const val: Record<string, string> = {
-    'Project title': p.title, Recipe: vars.recipe_name, Cuisine: vars.cuisine, 'Baby Chef': vars.baby_name, Personality: vars.baby_personality, 'Dialogue style': vars.dialogue_style,
-    Hook: vars.hook, 'Finished food description': vars.finished_food_description, 'Funny moments': d['Funny moments'] ?? '', 'SHORT KEEP moments': vars.short_keep_moments,
-    'Recipe highlights': d['Recipe highlights'] ?? '', 'Cooking techniques': d['Cooking techniques'] ?? '', 'Video duration': `Long ${vars.long_form_duration}`, 'Short duration': vars.short_form_duration, 'CTA preference': vars.cta, Notes: d.Notes ?? '',
-  };
-  return inc.filter(k => (val[k] ?? '').trim()).map(k => `${k}: ${val[k]}`).join('\n');
 }
 
 export async function preparePublishingPrompt(fd: FormData) {
