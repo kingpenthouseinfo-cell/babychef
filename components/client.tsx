@@ -142,3 +142,21 @@ export function PromptBox({ name, label, initial, rows = 12, downloadHref, copyL
     </div>
   );
 }
+
+export function AttachImageForm({ action, klingId, options }: { action: (fd: FormData) => void | Promise<void>; klingId: string; options: { id: string; label: string; approved: boolean }[] }) {
+  const [sel, setSel] = useState('');
+  return (
+    <form action={action} onSubmit={e => {
+      const o = options.find(x => x.id === sel);
+      if (o && !o.approved && !window.confirm(`WARNING:\n${o.label} is not approved.\n\nContinue anyway?`)) e.preventDefault();
+    }} className="mt-3 flex flex-wrap items-end gap-2">
+      <input type="hidden" name="klingId" value={klingId} />
+      <label className="block"><span className="label">Add image</span>
+        <select name="imageId" className="input min-w-[260px]" required value={sel} onChange={e => setSel(e.target.value)}>
+          <option value="" disabled>— choose planned image —</option>
+          {options.map(o => <option key={o.id} value={o.id}>{o.label} {o.approved ? '✓ approved' : '⚠ NOT approved'}</option>)}
+        </select></label>
+      <SubmitBtn pendingText="…">Attach</SubmitBtn>
+    </form>
+  );
+}
