@@ -632,6 +632,41 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   await go('/projects/raw-paste-test/recipe');
   ok('Recipe typed into New video is split into ingredients automatically', (await page.locator('[data-testid=ing-group]').count()) === 3 && !(await page.locator('main').textContent()).includes('No ingredients yet'));
 }
+// ---- Images to Generate: automatic plan from scene breakdown, prompts, per-card upload
+{
+  await go('/projects/new'); await page.fill('input[name=title]', 'Generate plan test');
+  await page.click('button:has-text("Create video")'); await page.waitForURL(/\/projects\/generate-plan-test/); await page.waitForLoadState('networkidle');
+  await go('/projects/generate-plan-test/fill');
+  await page.fill('textarea', `SCENE\n\nTitle: Rub the butter in\nPurpose: Show the dough starting\nBaby Action: Pinches cold butter into the flour\nFOOD BEFORE: Dry golden flour with grated butter on top\nFOOD AFTER: Dry crumbly mixture with pea-sized butter pieces\nPlanned Image Anchors:\n1. Dry flour mixture in the bowl\n2. Close-up macro of butter pinched into crumbs\nKling Grouping Note: Both pictures in one clip\n\nSCENE\n\nTitle: Brown the beef\nBaby Action: Stirs the beef\nFOOD AFTER: Beef completely browned\n`);
+  await page.click('button:has-text("Check it")'); await page.waitForSelector('button:has-text("Fill in form")');
+  await page.click('button:has-text("Fill in form")'); await page.waitForURL(/filled=1/); await page.waitForLoadState('networkidle');
+  await go('/projects/generate-plan-test/generate');
+  ok('Images to Generate: tab exists and page opens', (await page.locator('text=IMAGES TO GENERATE').count()) > 0);
+  await page.click('button:has-text("PLAN IMAGES FOR MY SCENES")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1500);
+  await go('/projects/generate-plan-test/generate?x=all');
+  const cards = page.locator('[data-testid=gen-card]');
+  ok('Image plan: anchors became 2 cards + 1 for the scene without anchors', (await cards.count()) === 3, String(await cards.count()));
+  const prompts = await page.locator('[data-testid=gen-prompt]').allTextContents();
+  ok('Every card has a full Baby Chef style prompt', prompts.length === 3 && prompts.every(t => t.startsWith('Ultra-photorealistic cinematic') && t.includes('No text, no captions')), prompts[0]?.slice(0, 80));
+  ok('Prompt carries scene-specific negative states (dry dough)', prompts[0].includes('No liquid has been added yet') || prompts[1].includes('No liquid has been added yet'));
+  ok('Macro anchor is a macro shot without the vertical-crop rule', prompts[1].startsWith('Ultra-photorealistic cinematic macro') && !prompts[1].includes('central 55'), prompts[1].slice(0, 90));
+  ok('Cards show friendly labels, status and buttons', (await page.locator('text=IMAGE 01.1').count()) > 0 && (await page.locator('text=PROMPT READY').count()) >= 3 && (await page.locator('button:has-text("COPY PROMPT")').count()) >= 3 && (await page.locator('button:has-text("UPLOAD GENERATED IMAGE")').count()) >= 3);
+  ok('Progress header counts 3 images, 0 approved', (await page.locator('[aria-label="Image progress"]').textContent()).includes('Total images3'));
+  // upload straight onto the second card
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync('/tmp/claude-0/card-upload.png', png);
+  await page.locator('[data-testid=gen-card]').nth(1).locator('input[type=file]').setInputFiles('/tmp/claude-0/card-upload.png');
+  await page.waitForSelector('text=UPLOAD COMPLETE', { timeout: 15000 }).catch(() => null); await page.waitForTimeout(1500);
+  await go('/projects/generate-plan-test/generate?x=all');
+  ok('Upload on a card attaches to that picture (status IMAGE UPLOADED)', (await page.locator('[data-testid=gen-card]').nth(1).textContent()).includes('IMAGE UPLOADED'));
+  await page.locator('[data-testid=gen-card]').nth(1).locator('button:has-text("MARK APPROVED")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/generate?x=all');
+  ok('Mark approved updates the card and the progress', (await page.locator('[data-testid=gen-card]').nth(1).textContent()).includes('APPROVED') && (await page.locator('[aria-label="Image progress"]').textContent()).includes('Images approved1'));
+  await go('/projects/generate-plan-test/generate?f=APPROVED&x=all');
+  ok('Filter APPROVED shows only the approved card', (await page.locator('[data-testid=gen-card]').count()) === 1);
+  await go('/projects/generate-plan-test/kling');
+  ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
+}
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,

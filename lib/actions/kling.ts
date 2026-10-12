@@ -32,7 +32,7 @@ export async function makeClipForScene(fd: FormData) {
   if (existing) { redirect(`/projects/${p.slug}/kling/${existing.id}`); }
   const scenesNo = sceneLabels(await db.scene.findMany({ where: { projectId: p.id }, select: { id: true, pos: true, order: true, inserted: true } })).get(sceneId) ?? '?';
   const max = await db.klingClip.aggregate({ where: { projectId: p.id }, _max: { order: true } });
-  const k = await db.klingClip.create({ data: { projectId: p.id, title: `Scene ${scenesNo} video — ${sc.title}`, order: (max._max.order ?? 0) + 1 } });
+  const k = await db.klingClip.create({ data: { projectId: p.id, title: `Scene ${scenesNo} video — ${sc.title}`, order: (max._max.order ?? 0) + 1, purpose: (sc as any).klingNote || null } as any });
   await db.klingScene.create({ data: { klingId: k.id, sceneId } });
   const pics = await db.plannedImage.findMany({ where: { sceneId, approvedAttemptId: { not: null } }, orderBy: [{ pos: 'asc' }, { seq: 'asc' }] });
   let o = 0;

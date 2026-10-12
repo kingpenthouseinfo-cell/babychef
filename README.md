@@ -22,6 +22,14 @@ Open a **Recipe Video** and the first thing you see is **What do I do next?** wi
 * **Fill from text** (New Recipe Video, Overview, Recipe, Ingredients, Scenes & Pictures): paste labelled text, check it, then fill in. Nothing is saved until you confirm; existing answers are kept unless you choose Replace/Merge.
 * Technical names (Planned Image, Prompt Queue, Production Brain…) remain in code and the database only.
 
+## Automatic picture planning, names and prompts
+
+- **Add Picture** starts with "What picture do you need?". The title, picture number (IMG-nnn), file name and version are made for you; a live "Will be added as" box shows them as you type. Scenes added between others show as Scene 4A, 4B (stable SC codes in file names never change).
+- **Images to Generate** (project tab): press *Plan images for my scenes* and every scene without pictures gets its pictures from the scene breakdown (planned image anchors, food states, shots). Each card has a ready ChatGPT Image prompt in the Baby Chef style, *Copy prompt*, *Open ChatGPT + copy prompt*, *Upload generated image* (goes straight onto that picture), *Mark approved* / *Needs revision*, filters and progress. Existing pictures are never touched or overwritten.
+- **Scene-specific negative states**: each prompt says what must NOT be visible yet (for example "No liquid has been added yet", "No raw pink beef remains"), worked out from the food-state timeline and the ingredients that appear later in the video.
+- **Recipes**: pasted recipes are split into title, yield, ingredient groups (with one ingredient record per line, original line kept) and method sections. If a recipe was saved before this existed, open its Recipe page and press *Re-parse recipe*.
+- **Format help**: every importer has "How should I format this?" with copy-ready ChatGPT instructions, a blank template and an example. ChatGPT is optional; everything is read locally.
+
 ## The Simple Studio design
 
 The interface follows the "Simple Studio" handoff: white pages, soft pink/green/blue/purple/coral panels, dark and pastel raised buttons, Newsreader + Hanken Grotesk + IBM Plex Mono. **Home** shows your two active videos with % done and "Show next steps", plus boxes to start a video and add a Baby Chef or kitchen. Inside a video: Overview · Start to Finish · Missing Info · Recipe · Scenes & Pictures (drag to reorder, large or compact) · Video Clips (one per scene) · Post Video · More. A picture moves through four states: Make → Found → Fix it → Looks good. Mobile layouts are not part of this design pass.

@@ -3,7 +3,7 @@ import { PLACEHOLDER, isPlaceholder } from './questions';
 import { parseRecipeText, hasRecipeStructure, titleCase, type RecipeParse } from './recipe-parse';
 
 /** FILL FROM TEXT — deterministic parser for human-readable "LABEL: value" text (no AI). Pure, so it can be previewed safely. */
-export type ParsedScene = { title: string; purpose?: string; mainAction?: string; adultNotes?: string; cameraAngle?: string; asmr?: string; shortKeep?: boolean | string; narrative?: string; dialogue?: string; babyReaction?: string; foodBefore?: string; foodDuring?: string; foodAfter?: string; notes?: string; images: ParsedImage[] };
+export type ParsedScene = { title: string; anchors?: string; klingNote?: string; mainShot?: string; insertShots?: string; duration?: string; purpose?: string; mainAction?: string; adultNotes?: string; cameraAngle?: string; asmr?: string; shortKeep?: boolean | string; narrative?: string; dialogue?: string; babyReaction?: string; foodBefore?: string; foodDuring?: string; foodAfter?: string; notes?: string; images: ParsedImage[] };
 export type ParsedImage = { title: string; purpose?: string; fullPrompt?: string; contPrompt?: string; shotType?: string; foodState?: string; cameraAngle?: string; mustBeVisible?: string; mustNotAppear?: string; sceneRef?: number; sceneTitle?: string };
 export type ParsedImport = {
   babyChef?: string;
@@ -25,7 +25,7 @@ const TOP: Record<string, string> = {
   'recipe': 'recipe', 'full recipe': 'recipe', 'ingredients': 'ingredients', 'ingredient list': 'ingredients', 'method': 'method', 'steps': 'method', 'instructions': 'method', 'directions': 'method',
   'posting notes': 'publishing', 'publishing notes': 'publishing', 'publishing': 'publishing', 'post notes': 'publishing',
 };
-const SCENE_SUB: Record<string, keyof ParsedScene> = { 'title': 'title', 'purpose': 'purpose', 'baby action': 'mainAction', 'adult action': 'adultNotes', 'camera': 'cameraAngle', 'asmr': 'asmr', 'short keep': 'shortKeep', 'action': 'narrative', 'what happens': 'narrative', 'scene action': 'narrative', 'narrative': 'narrative', 'description': 'narrative', 'dialogue': 'dialogue', 'dialog': 'dialogue', 'says': 'dialogue', 'reaction': 'babyReaction', 'baby reaction': 'babyReaction', 'food before': 'foodBefore', 'before': 'foodBefore', 'food during': 'foodDuring', 'during': 'foodDuring', 'food after': 'foodAfter', 'after': 'foodAfter', 'notes': 'notes', 'note': 'notes' };
+const SCENE_SUB: Record<string, keyof ParsedScene> = { 'planned image anchors': 'anchors', 'image anchors': 'anchors', 'kling grouping note': 'klingNote', 'video clip grouping note': 'klingNote', 'main shot': 'mainShot', 'insert shots': 'insertShots', 'estimated duration': 'duration', 'title': 'title', 'purpose': 'purpose', 'baby action': 'mainAction', 'adult action': 'adultNotes', 'camera': 'cameraAngle', 'asmr': 'asmr', 'short keep': 'shortKeep', 'action': 'narrative', 'what happens': 'narrative', 'scene action': 'narrative', 'narrative': 'narrative', 'description': 'narrative', 'dialogue': 'dialogue', 'dialog': 'dialogue', 'says': 'dialogue', 'reaction': 'babyReaction', 'baby reaction': 'babyReaction', 'food before': 'foodBefore', 'before': 'foodBefore', 'food during': 'foodDuring', 'during': 'foodDuring', 'food after': 'foodAfter', 'after': 'foodAfter', 'notes': 'notes', 'note': 'notes' };
 const IMG_SUB: Record<string, keyof ParsedImage | 'sceneRef'> = { 'title': 'title', 'shot type': 'shotType', 'food state': 'foodState', 'camera': 'cameraAngle', 'must show': 'mustBeVisible', 'must not show': 'mustNotAppear', 'full image prompt': 'fullPrompt', 'next image prompt': 'contPrompt', 'action moment': 'purpose', 'purpose': 'purpose', 'action': 'purpose', 'what': 'purpose', 'description': 'purpose', 'prompt': 'fullPrompt', 'image prompt': 'fullPrompt', 'scene': 'sceneRef' };
 
 const SCENE_HEAD = /^\s*(?:#+\s*)?scene\s*(\d+)?\s*[:.\-–—]\s*(.*)$/i;
@@ -79,7 +79,7 @@ export function parseImport(raw: string): ParsedImport {
   out.scenes.forEach((sc, n) => { if (!sc.title) sc.title = `Scene ${n + 1}`; if (typeof sc.shortKeep === 'string') sc.shortKeep = /^\s*(y|yes|true)/i.test(sc.shortKeep); });
   for (const im of [...out.strayImages, ...out.scenes.flatMap(sc => sc.images)]) if (!im.title) im.title = (im.purpose || 'Picture').split('\n')[0].slice(0, 60);
   for (const im of [...out.strayImages]) if (im.sceneTitle) { const t = out.scenes.find(sc => sc.title.toLowerCase() === im.sceneTitle!.toLowerCase()); if (t) { t.images.push(im); out.strayImages.splice(out.strayImages.indexOf(im), 1); } }
-  for (const s of out.scenes) for (const k of ['narrative', 'dialogue', 'babyReaction', 'foodBefore', 'foodDuring', 'foodAfter', 'notes'] as const) if (s[k]) s[k] = s[k]!.trim();
+  for (const s of out.scenes) for (const k of ['narrative', 'dialogue', 'babyReaction', 'foodBefore', 'foodDuring', 'foodAfter', 'notes', 'anchors', 'klingNote'] as const) if (s[k]) s[k] = s[k]!.trim();
   // images with an explicit scene number move into that scene
   for (const im of out.strayImages) if (im.sceneRef && out.scenes[im.sceneRef - 1]) out.scenes[im.sceneRef - 1].images.push(im);
   out.strayImages = out.strayImages.filter(im => !(im.sceneRef && out.scenes[im.sceneRef - 1]));
