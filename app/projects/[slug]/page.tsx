@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { getProjectBySlug, projectStats } from '@/lib/queries';
+import { actionCenter, getProjectBySlug, projectStats } from '@/lib/queries';
+import { Chip } from '@/components/ui';
 import { DirtyForm, SubmitBtn, ConfirmForm } from '@/components/client';
 import { Area, Check, ProgressBar, Section, Sel, Stat, Text } from '@/components/ui';
 import { updateProject, archiveProject } from '@/lib/actions/project';
@@ -10,14 +11,21 @@ import { PROJECT_STATUSES } from '@/lib/constants';
 export default async function Overview({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
-  const [s, chefs, script] = await Promise.all([
+  const [s, chefs, script, next] = await Promise.all([
     projectStats(p.id), db.babyChef.findMany({ where: { deletedAt: null }, orderBy: { displayName: 'asc' } }),
-    db.scriptVersion.findFirst({ where: { projectId: p.id, isCurrent: true } }),
+    db.scriptVersion.findFirst({ where: { projectId: p.id, isCurrent: true } }), actionCenter(6, p.id),
   ]);
   const b = `/projects/${p.slug}`;
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Production Brain</b> — assemble your rules + Baby Chef + recipe into one copy-ready prompt for ChatGPT / Claude.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">PREPARE PRODUCTION PLAN</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Production overrides</Link></div>
+      <Section title="Next actions">
+        {next.length === 0 ? <p className="text-[13px] text-ink-secondary">Nothing needs you right now in this project.</p> : (
+          <ul className="grid gap-2 md:grid-cols-2">{next.map(i => (
+            <li key={i.kind + i.key}><Link href={i.href} className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3 transition hover:border-ink/30"><span className="font-mono text-[12px] font-medium">{i.code}</span><Chip>{i.chip}</Chip><span className="min-w-0 flex-1 truncate text-[13px]">{i.title}</span><span className="whitespace-nowrap text-[13px] font-semibold text-blue-deep">{i.cta} →</span></Link></li>
+          ))}</ul>
+        )}
+      </Section>
       <Section title="Production summary">
         <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
           <div><span className="label">Recipe</span>{p.recipeName || '—'}</div><div><span className="label">Cuisine</span>{p.cuisine || '—'}</div>

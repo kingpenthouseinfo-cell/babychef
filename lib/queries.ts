@@ -132,8 +132,8 @@ export async function refPool(project: { id: string; babyChefId: string | null }
 export type ActionItem = { key: string; kind: 'READY' | 'REVIEW' | 'REDO' | 'WAITING' | 'KLING' | 'PUB'; code: string; chip: string; title: string; desc: string; cta: string; href: string; score: number; project: string };
 
 /** "What needs me now", sorted by what unblocks the most. */
-export async function actionCenter(limit = 8): Promise<ActionItem[]> {
-  const live = { project: { deletedAt: null, status: { not: 'ARCHIVED' } } };
+export async function actionCenter(limit = 8, projectId?: string): Promise<ActionItem[]> {
+  const live = { project: { deletedAt: null, status: { not: 'ARCHIVED' } }, ...(projectId ? { projectId } : {}) };
   const [imgs, clips, pubs] = await Promise.all([
     db.plannedImage.findMany({ where: { status: { in: ['READY', 'REVIEW', 'REDO', 'WAITING'] }, ...live }, include: { project: true, scene: true, dependents: { select: { id: true } }, dependsOn: true } }),
     db.klingClip.findMany({ where: { status: { in: ['READY', 'REVIEW', 'REDO'] }, ...live }, include: { project: true } }),

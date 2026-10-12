@@ -416,6 +416,41 @@ for (const [w, h, n] of [[1440, 900, 'desktop'], [820, 1100, 'tablet'], [390, 84
   }
   await page.screenshot({ path: path.join(FIX, `shot-${n}.png`), fullPage: false });
 }
+// ---- batch actions, scene reorder, script LOCKED/reopen, storage root
+await go(`/projects/${slug}/images`);
+await page.click('summary:has-text("Batch actions")');
+await page.locator('input[name=ids]').first().check();
+await page.locator('details:has(summary:has-text("Batch actions")) select[name=status]').selectOption('SKIPPED');
+await page.click('button:has-text("Apply status")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+ok('Batch: change status of selected images', (await page.locator('.chip.st-skipped').count()) > 0);
+await go(`/projects/${slug}/scenes`);
+const sceneTitles = async () => page.locator('a[href*="?scene="]').evaluateAll(a => a.map(x => (x.textContent || '').match(/SC\d+/)?.[0] + ':' + (x.querySelector('div.font-bold')?.textContent || '')));
+const before3 = await sceneTitles();
+await page.locator('a[href*="?scene="]').nth(1).click(); await page.waitForTimeout(600);
+await page.click('button[aria-label="Move scene up"]'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+const after3 = await sceneTitles();
+ok('Scene reorder: numbers renumber cleanly (title swapped, SC codes stay in order)', before3[0].split(':')[1] === after3[1].split(':')[1] && after3.map(x => x.split(':')[0]).join() === before3.map(x => x.split(':')[0]).join(), `${before3.join('|')} -> ${after3.join('|')}`);
+await go(`/projects/${slug}/script`);
+await page.selectOption('select[name=status]', 'LOCKED'); await page.click('form button[type=submit]:has-text("SAVE")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+ok('Script LOCKED can be reopened (not irreversible)', (await page.locator('button:has-text("Reopen (unlock)")').count()) > 0);
+await page.click('button:has-text("Reopen (unlock)")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+ok('Reopen sets status back to DRAFT', (await page.locator('select[name=status]').inputValue()) === 'DRAFT');
+await go('/settings');
+await page.fill('input[name=root]', STORE + '-alt'); await page.click('button:has-text("SAVE STORAGE ROOT")'); await page.waitForTimeout(1200);
+ok('Settings: storage root is validated and saved', (await page.locator('text=Storage root set to').count()) > 0);
+await page.fill('input[name=root]', '~/Documents/Baby Chef Studio'); await page.click('button:has-text("SAVE STORAGE ROOT")'); await page.waitForTimeout(800);
+
+// ---- every screen at phone + tablet width: no page-level horizontal overflow
+const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
+  `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
+  `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
+  `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
+const overflowing = [];
+for (const [w, h] of [[390, 844], [820, 1100]]) {
+  await page.setViewportSize({ width: w, height: h });
+  for (const u of allPages) { await go(u); if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2)) overflowing.push(`${w}px ${u}`); }
+}
+ok(`No horizontal overflow on ${allPages.length} screens × 2 widths`, overflowing.length === 0, overflowing.slice(0, 5).join(' | '));
 ok('No browser console errors', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' || '));
 await browser.close();
 const failed = results.filter(r => r[0] === 'FAIL');
