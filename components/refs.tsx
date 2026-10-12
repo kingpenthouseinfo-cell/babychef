@@ -12,22 +12,22 @@ export function ReferenceCard({ r, cats, showOrigin = true }: { r: any; cats: st
     <div className={`card flex flex-col gap-2 ${!r.active ? 'opacity-60' : ''}`}>
       <BigImage id={a.id} alt={a.altText || r.title} />
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="font-mono text-xs text-neutral-500">{r.code}</span>
+        <span className="font-mono text-xs text-ink-secondary">{r.code}</span>
         {r.isGold && <GoldBadge />}
         {!r.active && <Chip>INACTIVE</Chip>}
         {r.ingredient?.importance === 'PACKAGE_CRITICAL' && <Chip tone="PACKAGE CRITICAL">PACKAGE CRITICAL</Chip>}
       </div>
       <div className="font-semibold leading-tight">{r.title}</div>
-      <div className="text-xs text-neutral-500">{r.category}{showOrigin && <> · {origin}</>} · v{r.version}</div>
-      <div className="break-all text-[11px] text-neutral-400" title={a.originalName}>{a.displayName}</div>
-      <div className="text-[11px] text-neutral-400">{a.orientation}{a.width ? ` · ${a.width}×${a.height} (${ratioLabel(a.width, a.height)})` : ''}</div>
-      {r.notes && <p className="text-sm text-neutral-600">{r.notes}</p>}
+      <div className="text-xs text-ink-secondary">{r.category}{showOrigin && <> · {origin}</>} · v{r.version}</div>
+      <div className="break-all text-[11px] text-ink-secondary" title={a.originalName}>{a.displayName}</div>
+      <div className="text-[11px] text-ink-secondary">{a.orientation}{a.width ? ` · ${a.width}×${a.height} (${ratioLabel(a.width, a.height)})` : ''}</div>
+      {r.notes && <p className="text-sm text-ink-secondary">{r.notes}</p>}
       <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
         <form action={toggleGold}><input type="hidden" name="id" value={r.id} /><SubmitBtn className="btn-sm" pendingText="…">{r.isGold ? '★ Un-gold' : '☆ Gold'}</SubmitBtn></form>
         <a className="btn btn-sm" href={`/api/files/${a.id}?download=1`}>Download</a>
       </div>
       <details className="text-sm">
-        <summary className="cursor-pointer text-xs font-semibold text-neutral-600">Edit / replace / delete</summary>
+        <summary className="cursor-pointer text-xs font-semibold text-ink-secondary">Edit / replace / delete</summary>
         <form action={updateReference} className="mt-2 space-y-2">
           <input type="hidden" name="id" value={r.id} />
           <Text name="title" label="Title" v={r.title} />

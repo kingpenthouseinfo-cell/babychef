@@ -77,8 +77,8 @@ export default async function ShortPage({ params }: { params: { slug: string } }
         <SubmitBtn>SAVE SHORT VERSION</SubmitBtn>
       </DirtyForm>
       <Section title="CapCut editing prompt (copy into CapCut AI or an editing assistant)">
-        <p className="mb-2 text-xs text-neutral-500">Built from the “CapCut Editing Prompt” template and the timeline above. Save the form first so notes are included.</p>
-        <pre className="mono max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-3">{capcut}</pre>
+        <p className="mb-2 text-xs text-ink-secondary">Built from the “CapCut Editing Prompt” template and the timeline above. Save the form first so notes are included.</p>
+        <pre className="mono max-h-80 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-3">{capcut}</pre>
         <div className="mt-2"><CopyButton text={capcut} label="COPY CAPCUT EDITING PROMPT" /></div>
       </Section>
     </div>

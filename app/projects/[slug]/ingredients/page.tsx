@@ -31,12 +31,12 @@ export default async function Ingredients({ params }: { params: { slug: string }
   const ings = await db.ingredient.findMany({ where: { projectId: p.id }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { references: { where: { deletedAt: null }, include: { asset: true, ingredient: true }, orderBy: { createdAt: 'asc' } } } });
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm"><b>Visual importance:</b> <b>PACKAGE CRITICAL</b> — exact brand/label matters when visible. <b>TEXTURE / APPEARANCE CRITICAL</b> — the real product defines how it should look. <b>OPTIONAL</b> — reference is useful but not required.</div>
+      <div className="rounded-lg bg-sunken p-3 text-sm"><b>Visual importance:</b> <b>PACKAGE CRITICAL</b> — exact brand/label matters when visible. <b>TEXTURE / APPEARANCE CRITICAL</b> — the real product defines how it should look. <b>OPTIONAL</b> — reference is useful but not required.</div>
       {ings.length === 0 && <Empty title="No ingredients yet." hint="Add structured ingredients — quantities and product photos drive your reference checklists." />}
       {ings.map((i, n) => (
         <section key={i.id} className="card">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-neutral-500">ING-{String(n + 1).padStart(2, '0')}</span>
+            <span className="font-mono text-xs text-ink-secondary">ING-{String(n + 1).padStart(2, '0')}</span>
             <h2>{[i.quantity, i.unit].filter(Boolean).join(' ')} {i.name}</h2>
             {i.importance === 'PACKAGE_CRITICAL' ? <Chip tone="PACKAGE CRITICAL">PACKAGE CRITICAL</Chip> : <Chip>{INGREDIENT_IMPORTANCE[i.importance]}</Chip>}
             {i.packageVisible && <Chip>PACKAGE VISIBLE</Chip>}

@@ -23,17 +23,17 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
     const groups = ['Planning', 'Images', 'Kling'] as const;
     return (
       <div className="space-y-5">
-        <div className="rounded-xl bg-ink px-4 py-3 text-sm text-white"><b>PRODUCTION BRAIN</b> — assembles your permanent production rules + Baby Chef + project context into a copy-ready prompt. You paste it into ChatGPT or Claude yourself. No AI service is called.</div>
+        <div className="rounded-lg bg-ink px-4 py-3 text-sm text-white"><b>PRODUCTION BRAIN</b> — assembles your permanent production rules + Baby Chef + project context into a copy-ready prompt. You paste it into ChatGPT or Claude yourself. No AI service is called.</div>
         {groups.map(g => (
           <Section key={g} title={g}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {(Object.keys(BUILDERS) as BuilderType[]).filter(k => BUILDERS[k].group === g).map(k => (
-                <Link key={k} href={`${base}?type=${k}`} className="rounded-lg border border-line p-3 hover:border-ink"><div className="font-semibold">PREPARE {BUILDERS[k].label.toUpperCase()}</div><div className="mt-1 text-xs text-neutral-500">{BUILDERS[k].help}</div></Link>
+                <Link key={k} href={`${base}?type=${k}`} className="rounded-lg border border-line p-3 hover:border-ink"><div className="font-semibold">PREPARE {BUILDERS[k].label.toUpperCase()}</div><div className="mt-1 text-xs text-ink-secondary">{BUILDERS[k].help}</div></Link>
               ))}
             </div>
           </Section>
         ))}
-        <p className="text-xs text-neutral-500">Image and Kling builders can also be opened from an image page or a Kling clip page.</p>
+        <p className="text-xs text-ink-secondary">Image and Kling builders can also be opened from an image page or a Kling clip page.</p>
       </div>
     );
   }
@@ -66,8 +66,21 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm"><Link href={base} className="underline">← All prompt builders</Link><Chip>{def.purpose}</Chip></div>
-      <div className="rounded-xl bg-ink px-4 py-2.5 text-sm text-white">No AI is called. This screen only <b>assembles text</b>. Copy it into {target === 'CLAUDE' ? 'Claude' : target === 'GENERIC AI' ? 'your AI tool' : 'ChatGPT'} yourself, then paste the answer back below.</div>
+      <div>
+        <h1>Prompt Builder</h1>
+        <p className="mt-1 text-[14px] text-ink-secondary">Assembles a copy-ready text prompt for ChatGPT / Claude · no AI called · 12 builders</p>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+          {(['Planning', 'Images', 'Kling'] as const).map(g => (
+            <div key={g} className="flex flex-wrap items-center gap-1.5"><span className="eyebrow mr-1">{g}</span>
+              {(Object.keys(BUILDERS) as BuilderType[]).filter(k => BUILDERS[k].group === g).map(k => (
+                <Link key={k} href={`${base}?type=${k}${BUILDERS[k].needs === 'image' || BUILDERS[k].needs === 'attempt' ? (imageId ? `&image=${imageId}` : '') : ''}${(BUILDERS[k].needs === 'kling' || BUILDERS[k].needs === 'klingAttempt') && klingId ? `&kling=${klingId}` : ''}`}
+                  className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${k === type ? 'bg-blue-light text-blue-deep' : 'text-ink-secondary hover:bg-sunken'}`}>{BUILDERS[k].label}</Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg bg-ink px-4 py-2.5 text-sm text-white">No AI is called. This screen only <b>assembles text</b>. Copy it into {target === 'CLAUDE' ? 'Claude' : target === 'GENERIC AI' ? 'your AI tool' : 'ChatGPT'} yourself, then paste the answer back below.</div>
       {res.warnings.map((w, i) => <Warn key={i}>{w}</Warn>)}
       <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_280px]">
         {/* LEFT: context included */}
@@ -80,7 +93,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
                   <li key={b.key}>
                     <label className="flex items-start gap-2">
                       <input type="checkbox" name="inc" value={b.key} defaultChecked={b.on || (b.required && !b.empty)} disabled={b.required} className="mt-1 h-4 w-4" />
-                      <span><span className={b.on ? 'font-semibold' : 'text-neutral-500'}>{b.on ? '✓' : b.empty ? '○' : '✗'} {b.label}</span>{b.required && <span className="ml-1 text-[10px] font-bold text-red-700">REQUIRED</span>}<span className="block text-xs text-neutral-500">{b.detail}</span></span>
+                      <span><span className={b.on ? 'font-semibold' : 'text-ink-secondary'}>{b.on ? '✓' : b.empty ? '○' : '✗'} {b.label}</span>{b.required && <span className="ml-1 text-[10px] font-bold text-[#A8513F]">REQUIRED</span>}<span className="block text-xs text-ink-secondary">{b.detail}</span></span>
                     </label>
                     {b.required && <input type="hidden" name="inc" value={b.key} />}
                   </li>
@@ -114,7 +127,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
 
         {/* CENTER: final prompt */}
         <div className="order-1 space-y-4 xl:order-2">
-          <Section title={`FINAL COPY-READY PROMPT — ${def.purpose}`}>
+          <Section title={`${def.purpose}${linkLabel ? ` · ${imageCode(linkLabel.seq)} ${linkLabel.title} · ${sceneCode(linkLabel.scene.order)}` : ''}${klLabel ? ` · ${klingCode(klLabel.order)} ${klLabel.title}` : ''}`}>
             <BuilderEditor projectId={p.id} initial={res.text} meta={metaJson} label={label} chatgpt={settings.url_ChatGPT} claude={settings.url_Claude} />
           </Section>
         </div>
@@ -126,22 +139,23 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
               <div><dt className="label">Task template</dt><dd>{res.templateName ?? '—'} <Link href="/templates" className="underline">edit</Link></dd></div>
               <div><dt className="label">Production Bible version</dt><dd>v{String(res.meta.bibleVersion)} <Link href="/settings/bible" className="underline">edit rules</Link></dd></div>
               <div><dt className="label">Recipe version</dt><dd>v{String(res.meta.recipeVersion)}</dd></div>
-              <div><dt className="label">Baby Chef</dt><dd>{String(res.meta.chefName ?? '—')}</dd></div>
+              <div><dt className="label">Baby Chef</dt><dd>{String(res.meta.chefName ?? '—')}{res.meta.chefUpdatedAt ? <span className="text-ink-muted"> · updated {fmtDate(String(res.meta.chefUpdatedAt))}</span> : null}</dd></div>
               <div><dt className="label">Target</dt><dd>{target}</dd></div>
+              <div><dt className="label">Built</dt><dd>{fmtDate(String(res.meta.createdAt))}</dd></div>
             </dl>
           </Section>
-          {(type === 'plan' || type === 'scenes') && <Link href={`/projects/${p.slug}/import`} className="btn w-full">IMPORT SCENES FROM TEXT</Link>}
+          {(type === 'plan' || type === 'scenes') && <div className="card"><div className="eyebrow mb-1">Import scenes from text</div><p className="mb-3 text-[12px] text-ink-secondary">Available on Production Plan and Scene breakdown builders: paste the AI&apos;s scene list to create SC cards.</p><Link href={`/projects/${p.slug}/import`} className="btn btn-sm">IMPORT SCENES FROM TEXT</Link></div>}
         </aside>
       </div>
 
       <Section title={`Saved versions & pasted-back results (${saved.length})`}>
-        {saved.length === 0 ? <p className="text-sm text-neutral-500">Save a version to keep the exact prompt you copied, then paste the AI&apos;s answer here.</p> : saved.map(s => {
+        {saved.length === 0 ? <p className="text-sm text-ink-secondary">Save a version to keep the exact prompt you copied, then paste the AI&apos;s answer here.</p> : saved.map(s => {
           const m = parseJson<Record<string, any>>(s.meta, {});
           return (
             <div key={s.id} className="mb-4 rounded-lg border border-line p-3">
-              <div className="flex flex-wrap items-center gap-2 text-sm"><b>{s.name}</b><span className="text-xs text-neutral-500">{fmtDate(s.createdAt)} · Bible v{m.bibleVersion} · Recipe v{m.recipeVersion} · {m.target}{m.userEdited ? ' · edited by you' : ''}</span></div>
-              <div className="mt-1 text-[11px] text-neutral-500">Context: {(m.blocks || []).map((b: string) => BLOCK_LABELS[b] || b).join(', ')}</div>
-              <details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">Show saved prompt</summary><pre className="mono mt-1 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-neutral-50 p-2">{s.text}</pre><CopyButton text={s.text} label="COPY" className="btn-sm mt-1" /></details>
+              <div className="flex flex-wrap items-center gap-2 text-sm"><b>{s.name}</b>{s.id === saved[0]?.id && <Chip tone="CURRENT">CURRENT</Chip>}<span className="text-xs text-ink-secondary">{fmtDate(s.createdAt)} · Bible v{m.bibleVersion} · Recipe v{m.recipeVersion} · {m.target}{m.userEdited ? ' · edited by you' : ''}</span></div>
+              <div className="mt-1 text-[11px] text-ink-secondary">Context: {(m.blocks || []).map((b: string) => BLOCK_LABELS[b] || b).join(', ')}</div>
+              <details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">Show saved prompt</summary><pre className="mono mt-1 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-sunken p-2">{s.text}</pre><CopyButton text={s.text} label="COPY" className="btn-sm mt-1" /></details>
               <form action={saveResult} className="mt-2 space-y-2"><input type="hidden" name="id" value={s.id} />
                 <label className="block"><span className="label">PASTE RESULT from ChatGPT / Claude</span><textarea name="result" defaultValue={s.result ?? ''} rows={6} className="input mono" /></label>
                 <div className="flex flex-wrap gap-2"><SubmitBtn className="btn-sm" pendingText="…">SAVE RESULT</SubmitBtn>

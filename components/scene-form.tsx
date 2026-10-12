@@ -8,8 +8,8 @@ export function SceneForm({ projectId, s }: { projectId: string; s?: any }) {
     <DirtyForm action={saveScene} className="space-y-3">
       <input type="hidden" name="projectId" value={projectId} />{s && <input type="hidden" name="id" value={s.id} />}
       <div className="grid gap-3 sm:grid-cols-3"><Text name="title" label="Scene title *" v={s?.title} required className="sm:col-span-2" /><Sel name="status" label="Status" v={s?.status ?? 'PLANNED'} options={SCENE_STATUSES} /></div>
-      <div className="grid gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 sm:grid-cols-3">
-        <div className="sm:col-span-3 text-xs font-bold uppercase tracking-wide text-amber-900">Food-state continuity</div>
+      <div className="grid gap-3 rounded-lg border-2 border-[#E7D3A0] bg-[#F8EFD9] p-3 sm:grid-cols-3">
+        <div className="sm:col-span-3 text-xs font-bold uppercase tracking-wide text-[#8A6216]">Food-state continuity</div>
         <Area name="foodBefore" label="Food state BEFORE" v={s?.foodBefore} rows={3} /><Area name="foodDuring" label="Food state DURING" v={s?.foodDuring} rows={3} /><Area name="foodAfter" label="Food state AFTER" v={s?.foodAfter} rows={3} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

@@ -13,7 +13,7 @@ export default async function ImportPage({ params, searchParams }: { params: { s
     <div className="space-y-4">
       <Link href={`/projects/${p.slug}/builder`} className="text-sm underline">← Prompt builders</Link>
       <Section title="Import scenes from pasted AI text">
-        <p className="mb-3 text-sm text-neutral-600">Paste the structured scene list from ChatGPT/Claude (headings like <code>### SCENE 01 — Title</code> with lines such as <code>FOOD STATE BEFORE:</code>). You get a preview first; nothing is saved or changed until you press import. If parsing does not fit your text, create scenes manually on the Scenes tab.</p>
+        <p className="mb-3 text-sm text-ink-secondary">Paste the structured scene list from ChatGPT/Claude (headings like <code>### SCENE 01 — Title</code> with lines such as <code>FOOD STATE BEFORE:</code>). You get a preview first; nothing is saved or changed until you press import. If parsing does not fit your text, create scenes manually on the Scenes tab.</p>
         <ImportScenes projectId={p.id} initialText={from?.result ?? ''} />
       </Section>
     </div>

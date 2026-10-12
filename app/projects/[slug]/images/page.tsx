@@ -42,7 +42,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
         <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" name="keep" value="1" defaultChecked={!!searchParams.keep} />Short Keep</label>
         <button className="btn">Filter</button>
       </form>
-      {Object.keys(summary).length > 0 && <div className="text-xs text-neutral-500">Shot variety: {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}</div>}
+      {Object.keys(summary).length > 0 && <div className="text-xs text-ink-secondary">Shot variety: {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}</div>}
 
       {all.length === 0 ? <Empty title="No planned images yet." hint="Add images to your Scenes. A scene can have many images, numbered IMG-001, IMG-002… across the project." /> : list.length === 0 ? <Empty title="No images match this filter." /> : (
         <form action={batchImages} className="space-y-3">
@@ -59,7 +59,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
 
       <section id="add" className="card">
         <h2 className="mb-3">+ Add planned image</h2>
-        {scenes.length === 0 ? <p className="text-sm text-neutral-500">Create a scene first (Scenes tab).</p> : (
+        {scenes.length === 0 ? <p className="text-sm text-ink-secondary">Create a scene first (Scenes tab).</p> : (
           <form action={createImage} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="projectId" value={p.id} />
             <Sel name="sceneId" label="Scene *" v={searchParams.scene || scenes[0].id} options={scenes.map(s => [s.id, `${sceneCode(s.order)} ${s.title}`] as [string, string])} />

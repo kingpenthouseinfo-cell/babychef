@@ -42,18 +42,18 @@ export default async function Queue({ searchParams }: { searchParams: { project?
             <div key={i.id} className="card">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div><div className="flex flex-wrap items-center gap-2"><Link href={`/projects/${slug}/images/${i.id}`} className="font-mono text-base font-bold hover:underline">{imageCode(i.seq)}</Link><Chip>{i.status}</Chip>{i.priority === 'HIGH' && <Chip tone="HIGH">HIGH</Chip>}<Chip>{`PROMPT ${i.promptStatus}`}</Chip></div>
-                  <div className="mt-1 font-semibold">{i.title}</div><div className="text-xs text-neutral-500">{i.project?.title} · {sceneCode(i.scene.order)} {i.scene.title} · {i.shotType}</div></div>
-                <div className="text-right text-xs text-neutral-500">{cl.filter(c => c.required).length} required refs</div>
+                  <div className="mt-1 font-semibold">{i.title}</div><div className="text-xs text-ink-secondary">{i.project?.title} · {sceneCode(i.scene.order)} {i.scene.title} · {i.shotType}</div></div>
+                <div className="text-right text-xs text-ink-secondary">{cl.filter(c => c.required).length} required refs</div>
               </div>
-              {isBlocked && <div className="mt-2 text-sm font-semibold text-amber-800">Waiting for {imageCode(i.dependsOn.seq)}.</div>}
+              {isBlocked && <div className="mt-2 text-sm font-semibold text-[#8A6216]">Waiting for {imageCode(i.dependsOn.seq)}.</div>}
               <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]"><div><RefThumbs list={cl} max={8} /><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">VIEW REFERENCES (checklist)</summary><div className="mt-2"><ChecklistText list={cl} /></div></details></div></div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <CopyButton text={i.fullPrompt} label="COPY FULL PROMPT" /><CopyButton text={i.contPrompt} label="COPY CONTINUATION PROMPT" />
+                <CopyButton text={i.fullPrompt} label="COPY FULL PROMPT" /><CopyButton text={i.contPrompt} label="COPY CONTINUATION PROMPT" variant="secondary" />
                 {i.status === 'READY' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="GENERATING" /><SubmitBtn className="" pendingText="…">MARK GENERATING</SubmitBtn></form>}
                 {['READY', 'GENERATING'].includes(i.status) && <form action={setImageStatus} className="flex gap-1"><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="WAITING" /><select name="reason" className="input w-44" aria-label="Waiting reason">{WAITING_REASONS.map(r => <option key={r}>{r}</option>)}</select><SubmitBtn className="" pendingText="…">MARK WAITING</SubmitBtn></form>}
                 {i.status === 'WAITING' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Return to READY</SubmitBtn></form>}
                 {i.status === 'REDO' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Mark READY again</SubmitBtn></form>}
-                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-accent">{i.status === 'REVIEW' ? 'REVIEW' : 'IMPORT RESULT'}</Link>
+                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-primary">{i.status === 'REVIEW' ? 'REVIEW' : 'ADD RESULT'}</Link>
               </div>
             </div>
           );

@@ -10,7 +10,7 @@ import Link from 'next/link';
 
 function Highlight({ text }: { text: string }) {
   const parts = text.split(/(\[[A-Z \-]+\])/g);
-  return <pre className="mono max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-3">{parts.map((p, i) => SCRIPT_MARKERS.includes(p) ? <mark key={i} className="rounded bg-amber-200 px-0.5">{p}</mark> : p)}</pre>;
+  return <pre className="mono max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-3">{parts.map((p, i) => SCRIPT_MARKERS.includes(p) ? <mark key={i} className="rounded bg-amber-200 px-0.5">{p}</mark> : p)}</pre>;
 }
 
 export default async function Script({ params, searchParams }: { params: { slug: string }; searchParams: { v?: string } }) {
@@ -20,7 +20,7 @@ export default async function Script({ params, searchParams }: { params: { slug:
   const sel = versions.find(v => v.id === searchParams.v) ?? versions.find(v => v.isCurrent) ?? versions[0];
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm">Scripts are written elsewhere (ChatGPT / Claude) and pasted here. Use <Link className="underline" href={`/projects/${p.slug}/builder?type=script`}>PREPARE SCRIPT PROMPT</Link> (or <Link className="underline" href={`/projects/${p.slug}/builder?type=script-revision`}>PREPARE SCRIPT REVISION PROMPT</Link>) to build the request — it includes your Production Bible, the Baby Chef profile and the recipe.</div>
+      <div className="rounded-lg bg-sunken p-3 text-sm">Scripts are written elsewhere (ChatGPT / Claude) and pasted here. Use <Link className="underline" href={`/projects/${p.slug}/builder?type=script`}>PREPARE SCRIPT PROMPT</Link> (or <Link className="underline" href={`/projects/${p.slug}/builder?type=script-revision`}>PREPARE SCRIPT REVISION PROMPT</Link>) to build the request — it includes your Production Bible, the Baby Chef profile and the recipe.</div>
       {!sel ? <Empty title="No script yet." hint="Create Script v1, then paste your script into it."><form action={createScript}><input type="hidden" name="projectId" value={p.id} /><SubmitBtn pendingText="Creating…">+ CREATE SCRIPT v1</SubmitBtn></form></Empty> : (
         <>
           <div className="flex flex-wrap gap-1.5">
@@ -33,7 +33,7 @@ export default async function Script({ params, searchParams }: { params: { slug:
               <MarkerToolbar target="script-content" markers={SCRIPT_MARKERS} />
               <Area id="script-content" name="content" label={`Script (${wordCount(sel.content)} words)`} v={sel.content} rows={22} mono />
               <Area name="notes" label="Version notes" v={sel.notes} rows={2} />
-              <div className="text-xs text-neutral-500">Created {fmtDate(sel.createdAt)} · Last modified {fmtDate(sel.updatedAt)}</div>
+              <div className="text-xs text-ink-secondary">Created {fmtDate(sel.createdAt)} · Last modified {fmtDate(sel.updatedAt)}</div>
               <div className="flex flex-wrap gap-2"><SubmitBtn>SAVE</SubmitBtn><CopyButton text={sel.content} label="COPY ENTIRE SCRIPT" />
                 <a className="btn" href={`/api/export/text?type=script&id=${sel.id}`}>DOWNLOAD</a></div>
             </DirtyForm>

@@ -17,14 +17,14 @@ export default async function Overview({ params }: { params: { slug: string } })
   const b = `/projects/${p.slug}`;
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Production Brain</b> — assemble your rules + Baby Chef + recipe into one copy-ready prompt for ChatGPT / Claude.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">PREPARE PRODUCTION PLAN</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Production overrides</Link></div>
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Production Brain</b> — assemble your rules + Baby Chef + recipe into one copy-ready prompt for ChatGPT / Claude.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">PREPARE PRODUCTION PLAN</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Production overrides</Link></div>
       <Section title="Production summary">
         <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
           <div><span className="label">Recipe</span>{p.recipeName || '—'}</div><div><span className="label">Cuisine</span>{p.cuisine || '—'}</div>
           <div><span className="label">Aspect</span>{p.aspectRatio}{p.verticalCrop ? ' + vertical crop' : ''}</div><div><span className="label">Targets</span>Long {p.longDuration || '—'} · Short {p.shortDuration || '—'}</div>
         </div>
         <ProgressBar pct={s.progress} />
-        <div className="mt-1 text-xs text-neutral-500">{s.approved} of {s.images} images approved ({s.progress}%)</div>
+        <div className="mt-1 text-xs text-ink-secondary">{s.approved} of {s.images} images approved ({s.progress}%)</div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <Stat label="Script" value={script ? `v${script.version}` : '—'} href={`${b}/script`} />
           <Stat label={`Scenes (${s.scenesComplete} done)`} value={s.scenes} href={`${b}/scenes`} />
@@ -32,8 +32,8 @@ export default async function Overview({ params }: { params: { slug: string } })
           <Stat label="Ready" value={s.ready} href={`${b}/images?status=READY`} />
           <Stat label="Waiting" value={s.waiting} href={`${b}/images?status=WAITING`} />
           <Stat label="Review" value={s.review} href={`${b}/images?status=REVIEW`} />
-          <Stat label="Approved" value={s.approved} href={`${b}/images?status=APPROVED`} tone="text-green-800" />
-          <Stat label="Redo" value={s.redo} href={`${b}/images?status=REDO`} tone="text-orange-800" />
+          <Stat label="Approved" value={s.approved} href={`${b}/images?status=APPROVED`} tone="text-[#3B6448]" />
+          <Stat label="Redo" value={s.redo} href={`${b}/images?status=REDO`} tone="text-[#A8513F]" />
           <Stat label="Kling clips" value={s.clips} href={`${b}/kling`} />
           <Stat label="Kling ready" value={s.clipsReady} href={`${b}/kling`} />
           <Stat label="Kling approved" value={s.clipsApproved} href={`${b}/kling`} />

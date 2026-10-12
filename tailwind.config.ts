@@ -1,10 +1,37 @@
 import type { Config } from 'tailwindcss';
+
+// Baby Chef Studio visual system ("4a · Colour-coded studio"): see app/globals.css for the CSS variables.
 const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
-      fontFamily: { sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Inter', 'sans-serif'] },
-      colors: { ink: '#1c1b19', paper: '#f6f5f2', line: '#e3e0d8', accent: '#9a3412' },
+      fontFamily: {
+        sans: ['"Schibsted Grotesk"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        mono: ['"DM Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      colors: {
+        bg: '#FCFBF9', paper: '#FCFBF9', surface: '#FFFFFF', sunken: '#F4F2EF',
+        line: { DEFAULT: '#EEEBE7', strong: '#E0DCD7' },
+        ink: { DEFAULT: '#1E1D22', 2: '#2A2830', secondary: '#6F6A75', muted: '#8C8792' },
+        sage: { tint: '#EAF1E9', mid: '#BFD5C2', deep: '#4C6B52' },
+        pink: { tint: '#F9ECEF', mid: '#EDBFCB', deep: '#9A4A60' },
+        blue: { tint: '#EAF0F8', mid: '#BACFE8', light: '#D7E4F4', deep: '#3E6290', hover: '#34547C' },
+        purple: { tint: '#F0EBF8', mid: '#CFC2EA', deep: '#6A55A2' },
+        gold: { bg: '#F4ECDA', border: '#D9C59B', text: '#8A6A35' },
+        accent: '#3E6290',
+      },
+      backgroundImage: {
+        'grad-sage': 'linear-gradient(165deg,#E4F0E4 0%,#EFF5EC 50%,#FBFCFA 100%)',
+        'grad-pink': 'linear-gradient(195deg,#FBE3EB 0%,#F7EAF5 50%,#FDFBFC 100%)',
+        'grad-blue': 'linear-gradient(135deg,#E5EFFB 0%,#ECEBFB 100%)',
+        'grad-purple': 'linear-gradient(135deg,#EFE8FB 0%,#F9E8F1 100%)',
+        'btn-blue': 'linear-gradient(135deg,#4670A8 0%,#6A55A2 100%)',
+        'btn-sage': 'linear-gradient(135deg,#4C6B52 0%,#5E8C7E 100%)',
+        logo: 'conic-gradient(from 200deg,#EDBFCB,#BACFE8,#CFC2EA,#BFD5C2,#EDBFCB)',
+      },
+      borderRadius: { xs: '4px', sm: '8px', md: '10px', lg: '12px', xl: '16px' },
+      boxShadow: { sm: '0 1px 2px rgba(30,29,34,.05)', md: '0 1px 2px rgba(30,29,34,.06), 0 12px 40px rgba(30,29,34,.10)' },
+      maxWidth: { text: '760px' },
     },
   },
   plugins: [],

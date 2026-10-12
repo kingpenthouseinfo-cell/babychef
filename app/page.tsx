@@ -25,9 +25,9 @@ export default async function Dashboard() {
       <Section title="Action center">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <Stat label="Ready for ChatGPT" value={ready} href="/queue?show=ready" tone="text-emerald-800" />
-          <Stat label="Waiting" value={waiting} href="/queue?show=waiting" tone="text-amber-800" />
+          <Stat label="Waiting" value={waiting} href="/queue?show=waiting" tone="text-[#8A6216]" />
           <Stat label="Needs review" value={review} href="/queue?show=review" tone="text-violet-800" />
-          <Stat label="Redo" value={redo} href="/queue?show=redo" tone="text-orange-800" />
+          <Stat label="Redo" value={redo} href="/queue?show=redo" tone="text-[#A8513F]" />
           <Stat label="Kling ready" value={klingReady} href={firstReady ? `/projects/${firstReady.project.slug}/kling` : '/projects'} />
           <Stat label="Publishing tasks" value={pubTasks} href="/projects" />
         </div>
@@ -37,7 +37,7 @@ export default async function Dashboard() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{recent.map((p, i) => <ProjectCard key={p.id} p={p} s={stats[i]} />)}</div>
       )}
       <h2 className="mb-3 mt-8">Recent activity</h2>
-      {act.length === 0 ? <p className="text-sm text-neutral-500">Nothing yet.</p> : <ul className="card divide-y divide-line p-0 text-sm">{act.map(a => <li key={a.id} className="flex justify-between gap-3 px-4 py-2">{a.href ? <Link href={a.href} className="hover:underline">{a.message}</Link> : <span>{a.message}</span>}<span className="shrink-0 text-xs text-neutral-400">{fmtDate(a.createdAt)}</span></li>)}</ul>}
+      {act.length === 0 ? <p className="text-sm text-ink-secondary">Nothing yet.</p> : <ul className="card divide-y divide-line p-0 text-sm">{act.map(a => <li key={a.id} className="flex justify-between gap-3 px-4 py-2">{a.href ? <Link href={a.href} className="hover:underline">{a.message}</Link> : <span>{a.message}</span>}<span className="shrink-0 text-xs text-ink-secondary">{fmtDate(a.createdAt)}</span></li>)}</ul>}
     </>
   );
 }

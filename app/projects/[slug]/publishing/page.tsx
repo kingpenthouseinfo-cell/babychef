@@ -34,14 +34,14 @@ export default async function Publishing({ params }: { params: { slug: string } 
   const imgOpts: [string, string][] = [['', '— none —'], ...images.map(i => [i.id, `${imageCode(i.seq)} ${i.title}`] as [string, string])];
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm">Nothing is posted automatically. For each item: <b>PREPARE PROMPT</b> → <b>COPY</b> → paste into ChatGPT/Claude → paste the answer back → write the <b>selected final text</b>.</div>
+      <div className="rounded-lg bg-sunken p-3 text-sm">Nothing is posted automatically. For each item: <b>PREPARE PROMPT</b> → <b>COPY</b> → paste into ChatGPT/Claude → paste the answer back → write the <b>selected final text</b>.</div>
       <Section title="Publishing context (what gets added to every publishing prompt)">
         <DirtyForm action={savePubContext} className="space-y-3"><input type="hidden" name="projectId" value={p.id} />
           <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">{PUB_CONTEXT_FIELDS.map(f => <label key={f} className="flex items-center gap-2 text-sm"><input type="checkbox" name="include" value={f} defaultChecked={inc.includes(f)} className="h-4 w-4" />{f}</label>)}</div>
           <div className="grid gap-3 sm:grid-cols-2">{['Funny moments', 'Recipe highlights', 'Cooking techniques', 'Notes'].map(f => <Area key={f} name={`x:${f}`} label={f} v={ctx[f]} rows={2} />)}</div>
           <SubmitBtn>SAVE CONTEXT</SubmitBtn>
         </DirtyForm>
-        <details className="mt-3"><summary className="cursor-pointer text-sm font-semibold">Preview context</summary><pre className="mono mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3">{preview || '(nothing selected / nothing filled in yet)'}</pre></details>
+        <details className="mt-3"><summary className="cursor-pointer text-sm font-semibold">Preview context</summary><pre className="mono mt-2 whitespace-pre-wrap rounded-lg bg-sunken p-3">{preview || '(nothing selected / nothing filled in yet)'}</pre></details>
       </Section>
 
       {assets.length === 0 ? (
@@ -51,11 +51,11 @@ export default async function Publishing({ params }: { params: { slug: string } 
       )}
 
       {platforms.map(pl => (
-        <Section key={pl} title={pl} right={<span className="text-xs text-neutral-500">{assets.filter(a => a.platform === pl && ['SELECTED', 'PUBLISHED'].includes(a.status)).length}/{assets.filter(a => a.platform === pl).length} selected</span>}>
+        <Section key={pl} title={pl} right={<span className="text-xs text-ink-secondary">{assets.filter(a => a.platform === pl && ['SELECTED', 'PUBLISHED'].includes(a.status)).length}/{assets.filter(a => a.platform === pl).length} selected</span>}>
           <div className="space-y-2">
             {assets.filter(a => a.platform === pl).map(a => (
               <details key={a.id} className="rounded-lg border border-line p-3">
-                <summary className="cursor-pointer text-sm"><b>{a.assetType}</b> <Chip>{a.status}</Chip> <span className="text-xs text-neutral-400">{a.code}{a.promptVersion ? ` · prompt v${a.promptVersion}` : ''}</span>{a.selected && <span className="ml-2 text-xs text-neutral-500">✓ {a.selected.slice(0, 50).replace(/\n/g, ' ')}</span>}</summary>
+                <summary className="cursor-pointer text-sm"><b>{a.assetType}</b> <Chip>{a.status}</Chip> <span className="text-xs text-ink-secondary">{a.code}{a.promptVersion ? ` · prompt v${a.promptVersion}` : ''}</span>{a.selected && <span className="ml-2 text-xs text-ink-secondary">✓ {a.selected.slice(0, 50).replace(/\n/g, ' ')}</span>}</summary>
                 <div className="mt-3 space-y-3">
                   <div className="flex flex-wrap gap-2"><form action={preparePublishingPrompt}><input type="hidden" name="id" value={a.id} /><SubmitBtn className="btn-primary" pendingText="…">{a.prompt ? 'REBUILD PROMPT' : 'PREPARE PROMPT'}</SubmitBtn></form>
                     {a.prompt && <CopyButton text={a.prompt} label="COPY PROMPT" />}{a.prompt && <a className="btn" href={`/api/export/text?type=publishing&id=${a.id}`}>DOWNLOAD PROMPT</a>}
@@ -68,7 +68,7 @@ export default async function Publishing({ params }: { params: { slug: string } 
                     <Text name="notes" label="Notes" v={a.notes} />
                     <div className="flex flex-wrap gap-2"><SubmitBtn>SAVE</SubmitBtn>{a.selected && <CopyButton text={a.selected} label="COPY SELECTED" />}</div>
                   </DirtyForm>
-                  <div className="text-[11px] text-neutral-400">Updated {fmtDate(a.updatedAt)}</div>
+                  <div className="text-[11px] text-ink-secondary">Updated {fmtDate(a.updatedAt)}</div>
                   <ConfirmForm action={deletePublishingAsset} message="Delete this publishing item?"><input type="hidden" name="id" value={a.id} /><button className="btn btn-sm btn-danger">Delete item</button></ConfirmForm>
                 </div>
               </details>))}
@@ -89,8 +89,8 @@ export default async function Publishing({ params }: { params: { slug: string } 
           <div key={g} className="mb-3"><h3 className="mb-1">{g}</h3>
             {checklist.filter(c => c.group === g).map(c => (
               <div key={c.id} className="flex items-center gap-2 py-0.5">
-                <form action={toggleChecklist}><input type="hidden" name="id" value={c.id} /><button className={`flex items-center gap-2 text-sm ${c.done ? 'text-neutral-400 line-through' : ''}`} aria-pressed={c.done}><span className={`inline-flex h-5 w-5 items-center justify-center rounded border ${c.done ? 'border-green-600 bg-green-600 text-white' : 'border-neutral-400'}`}>{c.done ? '✓' : ''}</span>{c.label}</button></form>
-                {c.custom && <form action={deleteChecklist}><input type="hidden" name="id" value={c.id} /><button className="text-xs text-red-700 underline">remove</button></form>}
+                <form action={toggleChecklist}><input type="hidden" name="id" value={c.id} /><button className={`flex items-center gap-2 text-sm ${c.done ? 'text-ink-secondary line-through' : ''}`} aria-pressed={c.done}><span className={`inline-flex h-5 w-5 items-center justify-center rounded border ${c.done ? 'border-green-600 bg-green-600 text-white' : 'border-neutral-400'}`}>{c.done ? '✓' : ''}</span>{c.label}</button></form>
+                {c.custom && <form action={deleteChecklist}><input type="hidden" name="id" value={c.id} /><button className="text-xs text-[#A8513F] underline">remove</button></form>}
               </div>))}
           </div>))}
         <form action={addChecklist} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="projectId" value={p.id} /><input name="label" className="input max-w-sm" placeholder="Add custom checklist item…" aria-label="Custom checklist item" /><button className="btn">Add</button></form>

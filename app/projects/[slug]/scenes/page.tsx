@@ -30,14 +30,14 @@ export default async function Scenes({ params, searchParams }: { params: { slug:
         <Link href={`/projects/${p.slug}/builder?type=continuity`} className="btn btn-sm">CONTINUITY REVIEW PROMPT</Link>
         <Link href={`/projects/${p.slug}/import`} className="btn btn-sm">IMPORT SCENES FROM TEXT</Link>
       </div>
-      {Object.keys(summary).length > 0 && <div className="rounded-xl border border-line bg-white p-3 text-sm"><b>Shot variety (informational):</b> {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}{!summary['BEAUTY SHOT'] ? ' · 0 beauty shots' : ''}</div>}
+      {Object.keys(summary).length > 0 && <div className="rounded-lg border border-line bg-white p-3 text-sm"><b>Shot variety (informational):</b> {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}{!summary['BEAUTY SHOT'] ? ' · 0 beauty shots' : ''}</div>}
       {searchParams.view === 'new' && <Section title="Add scene"><SceneForm projectId={p.id} /></Section>}
       {searchParams.view === 'progression' ? (
         <Section title="Food progression by ingredient">
-          {prog.size === 0 ? <p className="text-sm text-neutral-500">Add ingredient names (comma separated) and food-state fields to scenes to see progression.</p> :
+          {prog.size === 0 ? <p className="text-sm text-ink-secondary">Add ingredient names (comma separated) and food-state fields to scenes to see progression.</p> :
             [...prog.entries()].map(([ing, steps]) => <div key={ing} className="mb-4"><h3 className="mb-1">{ing}</h3><ol className="space-y-1 border-l-2 border-line pl-3 text-sm">{steps.map((s, i) => <li key={i}><b>{s.sc}:</b> {s.txt}</li>)}</ol></div>)}
           <h3 className="mb-1 mt-6">All scenes — before / during / after</h3>
-          <div className="space-y-2 text-sm">{scenes.map(s => <div key={s.id} className="rounded-lg bg-neutral-50 p-2"><b>{sceneCode(s.order)} {s.title}</b><div className="grid gap-1 sm:grid-cols-3"><div><i>Before:</i> {s.foodBefore || '—'}</div><div><i>During:</i> {s.foodDuring || '—'}</div><div><i>After:</i> {s.foodAfter || '—'}</div></div></div>)}</div>
+          <div className="space-y-2 text-sm">{scenes.map(s => <div key={s.id} className="rounded-lg bg-sunken p-2"><b>{sceneCode(s.order)} {s.title}</b><div className="grid gap-1 sm:grid-cols-3"><div><i>Before:</i> {s.foodBefore || '—'}</div><div><i>During:</i> {s.foodDuring || '—'}</div><div><i>After:</i> {s.foodAfter || '—'}</div></div></div>)}</div>
         </Section>
       ) : scenes.length === 0 ? <Empty title="No scenes yet." hint="Scenes are cooking/storytelling stages. Each scene can contain many planned images."><Link href={`${base}?view=new`} className="btn btn-primary">+ ADD SCENE</Link></Empty> : (
         <div className="space-y-4">{scenes.map(s => (
@@ -49,7 +49,7 @@ export default async function Scenes({ params, searchParams }: { params: { slug:
                 <form action={moveScene}><input type="hidden" name="id" value={s.id} /><input type="hidden" name="dir" value="down" /><button className="btn btn-sm" aria-label="Move scene down">↓</button></form></div>
             </div>
             <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
-              <div className="rounded-lg bg-amber-50 p-2"><div className="label">Before</div>{s.foodBefore || '—'}</div><div className="rounded-lg bg-amber-50 p-2"><div className="label">During</div>{s.foodDuring || '—'}</div><div className="rounded-lg bg-amber-50 p-2"><div className="label">After</div>{s.foodAfter || '—'}</div>
+              <div className="rounded-lg bg-[#F8EFD9] p-2"><div className="label">Before</div>{s.foodBefore || '—'}</div><div className="rounded-lg bg-[#F8EFD9] p-2"><div className="label">During</div>{s.foodDuring || '—'}</div><div className="rounded-lg bg-[#F8EFD9] p-2"><div className="label">After</div>{s.foodAfter || '—'}</div>
             </div>
             {s.images.length > 0 && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{s.images.map(i => <Link key={i.id} href={`/projects/${p.slug}/images/${i.id}`} className="w-24 shrink-0"><Thumb id={i.approvedAttempt?.assetId} alt={i.title} w={200} /><div className="mt-0.5 text-[11px] font-semibold">{imageCode(i.seq)}</div><Chip>{i.status}</Chip></Link>)}</div>}
             <div className="mt-3 flex flex-wrap gap-2"><Link href={`/projects/${p.slug}/images?scene=${s.id}&add=1`} className="btn btn-sm">+ ADD IMAGE</Link></div>

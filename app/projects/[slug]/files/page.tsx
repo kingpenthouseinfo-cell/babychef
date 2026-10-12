@@ -34,7 +34,7 @@ export default async function Files({ params, searchParams }: { params: { slug: 
     <div className="space-y-5">
       <Section title="Project folder on your computer">
         <p className="mono break-all text-sm">{root}/{folder}/</p>
-        <p className="mt-1 text-sm text-neutral-500">Everything below is a normal file inside this folder. “Write text files” also saves your scripts, prompts, scenes and publishing copy there as .txt so the folder is understandable without the app.</p>
+        <p className="mt-1 text-sm text-ink-secondary">Everything below is a normal file inside this folder. “Write text files” also saves your scripts, prompts, scenes and publishing copy there as .txt so the folder is understandable without the app.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <form action={writeTextFiles}><input type="hidden" name="projectId" value={p.id} /><SubmitBtn className="" pendingText="Writing…">WRITE TEXT FILES TO PROJECT FOLDER</SubmitBtn></form>
           <a className="btn" href={`/api/projects/${p.slug}/export?format=zip`}>EXPORT PROJECT (ZIP)</a><a className="btn" href={`/api/projects/${p.slug}/export?format=json`}>Export JSON</a>
@@ -44,8 +44,8 @@ export default async function Files({ params, searchParams }: { params: { slug: 
       {list.length === 0 ? <Empty title="No files yet." hint="References, imported results and exported prompts appear here." /> : (
         <div className="grid gap-3 md:grid-cols-2">{list.map(r => (
           <div key={r.cat + r.key} className="card flex gap-3">
-            <div className="w-20 shrink-0">{r.assetId ? <Thumb id={r.assetId} alt={r.name} w={200} ratio="aspect-square" /> : <div className="flex aspect-square items-center justify-center rounded-lg bg-neutral-100 text-xs text-neutral-500">TXT</div>}</div>
-            <div className="min-w-0 flex-1 text-sm"><div className="break-all font-semibold leading-tight">{r.name}</div><div className="text-xs text-neutral-500">{r.cat} · {r.ref} {r.version && `· ${r.version}`}</div><div className="mt-1 flex items-center gap-2"><Chip>{r.status}</Chip>{r.date && <span className="text-xs text-neutral-400">{fmtDay(r.date)}</span>}</div>
+            <div className="w-20 shrink-0">{r.assetId ? <Thumb id={r.assetId} alt={r.name} w={200} ratio="aspect-square" /> : <div className="flex aspect-square items-center justify-center rounded-lg bg-sunken text-xs text-ink-secondary">TXT</div>}</div>
+            <div className="min-w-0 flex-1 text-sm"><div className="break-all font-semibold leading-tight">{r.name}</div><div className="text-xs text-ink-secondary">{r.cat} · {r.ref} {r.version && `· ${r.version}`}</div><div className="mt-1 flex items-center gap-2"><Chip>{r.status}</Chip>{r.date && <span className="text-xs text-ink-secondary">{fmtDay(r.date)}</span>}</div>
               {r.assetId && <a className="btn btn-sm mt-2" href={`/api/files/${r.assetId}?download=1`}>Download</a>}</div>
           </div>))}</div>
       )}

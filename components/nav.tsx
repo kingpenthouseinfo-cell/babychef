@@ -1,27 +1,27 @@
 import Link from 'next/link';
-import { MobileNav } from './client';
+import { NavSearch, BottomNav, TopNavLinks } from './nav-client';
 
-export const NAV: [string, string][] = [['/', 'Dashboard'], ['/projects', 'Projects'], ['/babychefs', 'Baby Chefs'], ['/queue', 'Prompt Queue'], ['/references', 'References'], ['/corrections', "Don't Do This"], ['/templates', 'Prompt Templates'], ['/settings', 'Settings']];
-
-export function NavLinks() {
-  return <>{NAV.map(([h, l]) => <Link key={h} href={h} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">{l}</Link>)}</>;
-}
-
-export function Shell({ name, children }: { name: string; children: React.ReactNode }) {
+/** Top nav (64px). No sidebar. Task colours: sage = references, blue = prompts. */
+export function Shell({ name, queueCount, children }: { name: string; queueCount: number; children: React.ReactNode }) {
+  const [first, ...rest] = name.split(' ');
   return (
-    <div className="min-h-screen lg:flex">
-      <aside className="hidden w-56 shrink-0 border-r border-line bg-white p-4 lg:block">
-        <Link href="/" className="mb-5 block text-lg font-bold tracking-tight">{name}</Link>
-        <nav aria-label="Primary"><NavLinks /></nav>
-        <form action="/search" className="mt-5"><input name="q" placeholder="Search…" aria-label="Search" className="input" /></form>
-      </aside>
-      <div className="min-w-0 flex-1">
-        <header className="relative sticky top-0 z-20 flex h-14 items-center justify-between border-b border-line bg-white px-4 lg:hidden">
-          <Link href="/" className="font-bold tracking-tight">{name}</Link>
-          <MobileNav><nav aria-label="Primary mobile"><NavLinks /><form action="/search" className="mt-2"><input name="q" placeholder="Search…" aria-label="Search" className="input" /></form></nav></MobileNav>
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:py-8">{children}</main>
-      </div>
+    <div className="min-h-screen pb-[72px] md:pb-0">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface">
+        <div className="mx-auto flex h-14 max-w-[1680px] items-center gap-4 px-4 md:h-16 md:gap-6 md:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[17px] tracking-[-0.02em]">
+            <span className="h-4 w-4 rounded-full bg-logo" aria-hidden />
+            <span><b className="font-bold">{first}</b> <span className="text-ink-secondary">{rest.join(' ')}</span></span>
+          </Link>
+          <TopNavLinks queueCount={queueCount} />
+          <div className="ml-auto flex items-center gap-4">
+            <NavSearch />
+            <span className="hidden items-center gap-1.5 font-mono text-[12px] text-ink-muted lg:inline-flex" title="Files are stored on this computer"><span className="h-1.5 w-1.5 rounded-full bg-sage-deep" />On this Mac</span>
+            <Link href="/settings" className="hidden text-[14px] text-ink-secondary hover:text-ink md:inline">Settings</Link>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-[1680px] px-4 py-5 md:px-6 md:py-7">{children}</main>
+      <BottomNav queueCount={queueCount} />
     </div>
   );
 }

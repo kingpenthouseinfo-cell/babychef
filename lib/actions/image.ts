@@ -5,6 +5,7 @@ import { db } from '../db';
 import { importFile, nextCode, projectFolder, moveAssetToFolder } from '../files';
 import { bool, imageCode, pickText, sceneCode, str, strRaw, int, parseJson } from '../util';
 import { logActivity } from '../activity';
+import { readDownload, removeDownload } from '../downloads';
 import { IMAGE_STATUSES, PRIORITIES } from '../constants';
 
 const IMG_TEXT = ['title','shotType','purpose','priority','promptStatus','aspectRatio','cropImportance','startingComposition','characterVisibility','expression','bodyPosition','handPosition','ingredients','ingredientQty','ingredientState','foodTexture','foodColor','cookware','utensils','objectPlacement','actionMoment','physics','lighting','cameraAngle','cameraDistance','lens','depthOfField','focusPoint','background','safety','mustBeVisible','mustNotChange','mustNotAppear','continuity','restrictions','notes','dependsOnId'];
@@ -42,18 +43,45 @@ async function maybeVersion(imageId: string, type: 'FULL' | 'CONTINUATION', oldT
 export async function saveImage(fd: FormData) {
   const id = str(fd, 'id')!;
   const old = await db.plannedImage.findUniqueOrThrow({ where: { id } });
-  const full = strRaw(fd, 'fullPrompt'), cont = strRaw(fd, 'contPrompt');
-  const data: any = { ...pickText(fd, IMG_TEXT), fullPrompt: full, contPrompt: cont };
+  const data: any = { ...pickText(fd, IMG_TEXT) };
   if (!data.title) delete data.title;
   for (const k of ['shotType', 'priority', 'promptStatus', 'cropImportance']) if (!data[k]) delete data[k];
   if (data.priority && !PRIORITIES.includes(data.priority)) delete data.priority;
   if (data.dependsOnId === id) data.dependsOnId = null;
+  // Legacy: prompts only change here when the form actually contains them.
+  if (fd.has('fullPrompt')) data.fullPrompt = strRaw(fd, 'fullPrompt');
+  if (fd.has('contPrompt')) data.contPrompt = strRaw(fd, 'contPrompt');
+  const full = data.fullPrompt ?? old.fullPrompt, cont = data.contPrompt ?? old.contPrompt;
   if ((full.trim() || cont.trim()) && (data.promptStatus ?? old.promptStatus) === 'NOT STARTED') data.promptStatus = 'DRAFT';
   if (old.status === 'PLANNED' && (full.trim() || cont.trim())) data.status = 'PROMPT DRAFT';
-  const reason = str(fd, 'promptReason');
-  await maybeVersion(id, 'FULL', old.fullPrompt, full, reason);
-  await maybeVersion(id, 'CONTINUATION', old.contPrompt, cont, reason);
   await db.plannedImage.update({ where: { id }, data });
+  touch();
+}
+
+/** Autosave while typing: updates the live prompt text WITHOUT creating a version (versions are explicit snapshots). */
+export async function autosavePrompt(imageId: string, field: 'fullPrompt' | 'contPrompt', text: string): Promise<{ savedAt: string }> {
+  if (field !== 'fullPrompt' && field !== 'contPrompt') throw new Error('Invalid field');
+  const old = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId } });
+  const data: any = { [field]: text };
+  if (text.trim() && old.promptStatus === 'NOT STARTED') data.promptStatus = 'DRAFT';
+  if (text.trim() && old.status === 'PLANNED') data.status = 'PROMPT DRAFT';
+  await db.plannedImage.update({ where: { id: imageId }, data });
+  return { savedAt: new Date().toISOString() };
+}
+
+/** Make the current Full/Continuation text a numbered prompt version (only if it differs from the latest version). */
+export async function snapshotPrompts(imageId: string, reason: string | null) {
+  const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId } });
+  for (const [type, text] of [['FULL', img.fullPrompt], ['CONTINUATION', img.contPrompt]] as const) {
+    if (!text.trim()) continue;
+    const last = await db.promptVersion.findFirst({ where: { ownerId: imageId, type }, orderBy: { version: 'desc' } });
+    if (last && last.text === text) { if (!last.active) { await db.promptVersion.updateMany({ where: { ownerId: imageId, type }, data: { active: false } }); await db.promptVersion.update({ where: { id: last.id }, data: { active: true } }); } continue; }
+    await db.promptVersion.updateMany({ where: { ownerId: imageId, type }, data: { active: false } });
+    await db.promptVersion.create({ data: { ownerId: imageId, type, version: (last?.version ?? 0) + 1, text, reason: reason || (last ? 'Revision' : 'Initial'), active: true } });
+  }
+}
+export async function savePromptVersionAction(fd: FormData) {
+  await snapshotPrompts(str(fd, 'imageId')!, str(fd, 'reason'));
   touch();
 }
 
@@ -81,6 +109,7 @@ export async function setImageStatus(fd: FormData) {
   if (status === 'WAITING') { data.waitingAt = new Date(); data.waitingReason = str(fd, 'reason'); data.waitingNote = str(fd, 'note'); }
   else if (img.status === 'WAITING') { data.waitingAt = null; data.waitingReason = null; data.waitingNote = null; }
   if (status === 'READY' && img.promptStatus !== 'LOCKED') data.promptStatus = 'READY';
+  if (status === 'READY') await snapshotPrompts(id, 'Snapshot when marked READY');
   await db.plannedImage.update({ where: { id }, data });
   await logActivity(`${code} marked ${status}`, null, img.projectId);
   touch();
@@ -126,17 +155,25 @@ export async function moveRef(fd: FormData) {
 // ---- results / review
 export async function uploadResult(fd: FormData) {
   const imageId = str(fd, 'imageId')!;
-  const file = fd.get('file') as File | null;
+  let file = fd.get('file') as File | null;
+  const downloadName = str(fd, 'downloadName');
+  let downloadPath: string | null = null;
+  if ((!file || !file.size) && downloadName) {
+    const d = await readDownload(downloadName);
+    file = d.file; downloadPath = d.path;
+  }
   if (!file || !file.size) throw new Error('Choose the generated image file');
   const { img, code, sc, slug } = await pinfo(imageId);
   const n = (await db.attempt.aggregate({ where: { imageId }, _max: { number: true } }))._max.number ?? 0;
   const number = n + 1;
+  await snapshotPrompts(imageId, 'Snapshot when result was added'); // so the attempt can point at the exact prompt version used
   const asset = await importFile(file, { rootFolder: await projectFolder(img.projectId), folder: '02 Images', fileBase: `${slug}_${sc}_${code}_attempt-v${number}`, kind: 'GENERATED', version: number, projectSlug: slug });
+  if (downloadPath && bool(fd, 'moveOriginal')) await removeDownload(downloadPath);
   const pType = str(fd, 'promptType') || 'FULL';
   const pv = await db.promptVersion.findFirst({ where: { ownerId: imageId, type: pType === 'FULL' ? 'FULL' : 'CONTINUATION', active: true } });
   await db.attempt.create({ data: { imageId, number, assetId: asset.id, sourceTool: str(fd, 'sourceTool') || 'ChatGPT', promptType: pType, promptVersion: pv?.version ?? null, notes: str(fd, 'notes') } });
   await db.plannedImage.update({ where: { id: imageId }, data: { attemptCount: number, status: img.approvedAttemptId ? img.status : 'REVIEW', ...(img.waitingAt ? { waitingAt: null, waitingReason: null, waitingNote: null } : {}) } });
-  await logActivity(`${code} result uploaded (attempt ${number})`, `/projects/${slug}/images/${imageId}`, img.projectId);
+  await logActivity(`${code} result added (attempt ${number})`, `/projects/${slug}/images/${imageId}`, img.projectId);
   touch();
 }
 
@@ -155,7 +192,7 @@ export async function approveAttempt(fd: FormData) {
   await db.$transaction(async tx => {
     if (prev && prev !== id) await tx.attempt.update({ where: { id: prev }, data: { status: 'SUPERSEDED' } });
     await tx.plannedImage.update({ where: { id: img.id }, data: { approvedAttemptId: null } });
-    await tx.attempt.update({ where: { id }, data: { status: 'APPROVED', approvedAt: new Date(), checklist: JSON.stringify(fd.getAll('check').map(String)) } });
+    await tx.attempt.update({ where: { id }, data: { status: 'APPROVED', approvedAt: new Date(), ...(fd.has('check') ? { checklist: JSON.stringify(fd.getAll('check').map(String)) } : {}) } });
     await tx.plannedImage.update({ where: { id: img.id }, data: { approvedAttemptId: id, status: 'APPROVED' } });
   });
   await moveAssetToFolder(a.assetId, '02 Images');
@@ -166,7 +203,7 @@ export async function approveAttempt(fd: FormData) {
 export async function redoAttempt(fd: FormData) {
   const id = str(fd, 'attemptId')!;
   const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: { include: { project: true } } } });
-  await db.attempt.update({ where: { id }, data: { status: 'REDO', wrong: str(fd, 'wrong'), change: str(fd, 'change'), keep: str(fd, 'keep'), corrCategory: str(fd, 'corrCategory'), severity: str(fd, 'severity') || 'MEDIUM', notes: str(fd, 'notes') ?? a.notes, checklist: JSON.stringify(fd.getAll('check').map(String)) } });
+  await db.attempt.update({ where: { id }, data: { status: 'REDO', wrong: str(fd, 'wrong'), change: str(fd, 'change'), keep: str(fd, 'keep'), corrCategory: str(fd, 'corrCategory'), severity: str(fd, 'severity') || 'MEDIUM', notes: str(fd, 'notes') ?? a.notes, ...(fd.has('check') ? { checklist: JSON.stringify(fd.getAll('check').map(String)) } : {}) } });
   if (a.image.approvedAttemptId !== id) { await db.plannedImage.update({ where: { id: a.imageId }, data: { status: a.image.approvedAttemptId ? 'APPROVED' : 'REDO' } }); await moveAssetToFolder(a.assetId, '03 Redos'); }
   if (bool(fd, 'addToLibrary')) {
     await db.correction.create({ data: { code: await nextCode('correction', 'COR', 3), title: `${imageCode(a.image.seq)}: ${str(fd, 'corrCategory') || 'Correction'}`, category: str(fd, 'corrCategory') || 'Other', wrong: str(fd, 'wrong'), correct: str(fd, 'change'), projectId: a.image.projectId, severity: str(fd, 'severity') || 'MEDIUM', assetId: a.assetId } });
@@ -206,3 +243,21 @@ export async function batchImages(fd: FormData) {
   touch();
 }
 void int; void parseJson;
+
+/** Review checklist with three states per item (pass / unsure / fail). */
+export async function saveChecklistState(attemptId: string, state: Record<string, 'pass' | 'unsure' | 'fail'>) {
+  await db.attempt.update({ where: { id: attemptId }, data: { checklist: JSON.stringify(state) } });
+}
+
+/** Undo an approval: the attempt goes back to REVIEW and the image no longer has an approved result. */
+export async function undoApprove(fd: FormData) {
+  const id = str(fd, 'attemptId')!;
+  const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: { include: { project: true } } } });
+  if (a.image.approvedAttemptId !== id) return;
+  await db.$transaction([
+    db.plannedImage.update({ where: { id: a.imageId }, data: { approvedAttemptId: null, status: 'REVIEW' } }),
+    db.attempt.update({ where: { id }, data: { status: 'REVIEW', approvedAt: null } }),
+  ]);
+  await logActivity(`${imageCode(a.image.seq)} approval undone`, `/projects/${a.image.project.slug}/images/${a.imageId}`, a.image.projectId);
+  touch();
+}

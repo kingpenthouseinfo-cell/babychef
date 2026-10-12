@@ -40,11 +40,11 @@ export default async function Corrections({ searchParams }: { searchParams: { ch
             <div key={c.id} className="card flex gap-3">
               {c.asset && <div className="w-28 shrink-0"><BigImage id={c.asset.id} alt={c.title} /></div>}
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-1.5"><span className="font-mono text-xs text-neutral-500">{c.code}</span><Chip tone={c.severity === 'HIGH' ? 'HIGH' : undefined}>{c.severity}</Chip><span className="text-xs text-neutral-500">{c.category}</span></div>
+                <div className="flex flex-wrap items-center gap-1.5"><span className="font-mono text-xs text-ink-secondary">{c.code}</span><Chip tone={c.severity === 'HIGH' ? 'HIGH' : undefined}>{c.severity}</Chip><span className="text-xs text-ink-secondary">{c.category}</span></div>
                 <div className="font-semibold">{c.title}</div>
-                {c.wrong && <p className="text-sm"><b className="text-red-700">Wrong:</b> {c.wrong}</p>}
-                {c.correct && <p className="text-sm"><b className="text-green-800">Should be:</b> {c.correct}</p>}
-                <div className="text-xs text-neutral-500">{[c.babyChef?.displayName, c.project?.title, c.ingredient, c.action].filter(Boolean).join(' · ')} · {fmtDay(c.createdAt)}</div>
+                {c.wrong && <p className="text-sm"><b className="text-[#A8513F]">Wrong:</b> {c.wrong}</p>}
+                {c.correct && <p className="text-sm"><b className="text-[#3B6448]">Should be:</b> {c.correct}</p>}
+                <div className="text-xs text-ink-secondary">{[c.babyChef?.displayName, c.project?.title, c.ingredient, c.action].filter(Boolean).join(' · ')} · {fmtDay(c.createdAt)}</div>
                 <ConfirmForm action={deleteCorrection} message={`Delete correction ${c.code}?`}><input type="hidden" name="id" value={c.id} /><button className="btn btn-sm btn-danger">Delete</button></ConfirmForm>
               </div>
             </div>

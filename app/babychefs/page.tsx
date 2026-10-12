@@ -16,8 +16,8 @@ export default async function BabyChefs() {
             <Link key={c.id} href={`/babychefs/${c.id}`} className="card block hover:border-ink">
               <Thumb id={c.references[0]?.assetId} alt={c.displayName} />
               <div className="mt-3 flex items-center justify-between gap-2"><div className="font-semibold">{c.displayName}</div>{!c.active && <Chip>INACTIVE</Chip>}</div>
-              <div className="text-sm text-neutral-500">{[c.seriesName, c.cuisine].filter(Boolean).join(' · ') || '—'}</div>
-              <div className="mt-1 text-xs text-neutral-400">{c._count.references} references · {c._count.projects} projects</div>
+              <div className="text-sm text-ink-secondary">{[c.seriesName, c.cuisine].filter(Boolean).join(' · ') || '—'}</div>
+              <div className="mt-1 text-xs text-ink-secondary">{c._count.references} references · {c._count.projects} projects</div>
             </Link>
           ))}
         </div>

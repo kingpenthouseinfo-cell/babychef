@@ -140,19 +140,22 @@ async function newImage(title) {
   return page.url();
 }
 const img1Url = await newImage('Oil in pan');
-ok('Image gets global ID IMG-001', (await page.textContent('.font-mono')).includes('IMG-001'));
-const mainForm = () => page.locator('form:has(textarea[name=fullPrompt])');
-await page.fill('textarea[name=fullPrompt]', 'FULL: cinematic frame of a pan with 2 tbsp oil.');
-await page.fill('textarea[name=contPrompt]', 'CONT: same baby, same pan, 2 tbsp oil only.');
+ok('Image gets global ID IMG-001', (await page.locator('aside.zone-pink .font-mono').first().textContent()).includes('IMG-001'));
+await page.fill('textarea[aria-label="Full prompt"]', 'FULL: cinematic frame of a pan with 2 tbsp oil.');
+await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
+await page.click('button[role=tab]:has-text("Continuation")');
+await page.fill('textarea[aria-label="Continuation prompt"]', 'CONT: same baby, same pan, 2 tbsp oil only.');
+await page.locator('textarea[aria-label="Continuation prompt"]').blur(); await page.waitForTimeout(900);
 await page.fill('textarea[name=startingComposition]', 'Pan on stove; baby holds spoon above.');
 await page.fill('textarea[name=mustBeVisible]', '- pan\n- oil pool');
 await page.fill('textarea[name=actionMoment]', 'Spoon hovering above oil');
 await page.fill('input[name=ingredients]', 'Coconut Milk, oil');
-await mainForm().locator('button:has-text("SAVE IMAGE")').click();
+await page.click('button:has-text("SAVE IMAGE DETAILS")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 // attach masters + product ref
 async function attach(label, role) {
-  const sel = page.locator('aside form:has(select[name=target])');
+  if (!(await page.locator('aside details[open] summary:has-text("Edit & attach references")').count())) await page.click('summary:has-text("Edit & attach references")');
+  const sel = page.locator('aside details form:has(select[name=target])');
   const opts = await sel.locator('select[name=target] option').allTextContents();
   const idx = opts.findIndex(o => o.includes(label));
   if (idx < 0) return false;
@@ -184,22 +187,30 @@ ok('Prompt type preference switches to FULL', (await clip()).startsWith('FULL:')
 // ---- Import result -> redo -> import -> approve
 await page.goto(img1Url + '#results', { waitUntil: 'networkidle' });
 async function importResult(file) {
-  const f = page.locator('form:has(input[type=file][name=file]):has(button:has-text("IMPORT RESULT"))');
-  await f.locator('input[name=file]').setInputFiles(file);
-  await f.locator('button:has-text("IMPORT RESULT")').click();
-  await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+  await page.locator('button:has-text("Add result")').first().click();
+  const dlg = page.locator('[role=dialog]');
+  await dlg.locator('input[name=file]').setInputFiles(file);
+  await dlg.locator('button:has-text("Import")').click();
+  await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
 }
 await importResult(r1);
-ok('Attempt 1 in REVIEW', (await page.locator('text=Review — attempt 1').count()) > 0);
-await page.locator('details:has(summary:has-text("REDO — record")) summary').click();
-await page.fill('details:has(summary:has-text("REDO — record")) textarea[name=wrong]', 'Too much oil');
-await page.fill('details:has(summary:has-text("REDO — record")) textarea[name=change]', 'Only 2 tbsp small pool');
-await page.locator('details:has(summary:has-text("REDO — record")) button:has-text("REDO — save correction")').click();
+ok('Attempt 1 in REVIEW (review panel visible)', (await page.locator('text=Image review').count()) > 0);
+// 3-state checklist: click cycles ✓ -> ? and persists after reload
+const chip = page.locator('#review button:has-text("Same Baby Chef")');
+await chip.click(); await chip.click(); await page.waitForTimeout(700);
+await page.reload({ waitUntil: 'networkidle' });
+ok('Review checklist cycles ✓→? and persists', (await page.locator('#review button[aria-label^="Same Baby Chef: unsure"]').count()) === 1);
+ok('Compare modes available', (await page.locator('#review button:has-text("Single")').count()) === 1);
+await page.locator('aside details:has(> summary:text-is("Redo")) > summary').click();
+await page.fill('aside details:has(> summary:text-is("Redo")) textarea[name=wrong]', 'Too much oil');
+await page.fill('aside details:has(> summary:text-is("Redo")) textarea[name=change]', 'Only 2 tbsp small pool');
+await page.locator('aside details:has(> summary:text-is("Redo")) button:has-text("REDO — save correction")').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 ok('Redo saved: correction history shows', (await page.locator('text=Too much oil').count()) > 0);
+ok('Attempt chip shows v1 Redo', (await page.locator('a:has-text("v1"):has-text("Redo")').count()) > 0);
 await importResult(r2);
 ok('Attempt 2 uploaded; attempt 1 preserved', (await page.locator('text=Attempt 1').count()) > 0 && (await page.locator('text=Attempt 2').count()) > 0);
-await page.locator('#review button:has-text("APPROVE")').click();
+await page.locator('#approve-form button').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Approve works: APPROVED RESULT badge', (await page.locator('text=APPROVED RESULT').count()) > 0);
 const genFiles = walk(path.join(STORE, PROJ));
@@ -216,12 +227,23 @@ ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.l
 async function quickApprove(url, file) {
   await page.goto(url + '#results', { waitUntil: 'networkidle' });
   await importResult(file);
-  await page.locator('#review button:has-text("APPROVE")').click();
+  await page.locator('#approve-form button').click();
   await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 }
 await quickApprove(img2Url, r3);
 const img3Url = await newImage('Seeds crackle'); await quickApprove(img3Url, r4);
-const img4Url = await newImage('Portrait reaction'); await quickApprove(img4Url, portrait);
+const img4Url = await newImage('Portrait reaction');
+await page.goto(img4Url + '#results', { waitUntil: 'networkidle' }); await importResult(portrait);
+const ab = page.locator('#approve-form button'); await ab.focus();
+await page.keyboard.down('Enter'); await page.waitForTimeout(250); await page.keyboard.up('Enter'); await page.waitForTimeout(600);
+ok('Keyboard: short press does NOT approve (hold required)', (await page.locator('text=APPROVED RESULT').count()) === 0);
+await ab.focus(); await page.keyboard.down('Enter'); await page.waitForTimeout(1100); await page.keyboard.up('Enter');
+await page.waitForLoadState('networkidle'); await page.waitForTimeout(900);
+ok('Keyboard: holding Enter 0.7s approves', (await page.locator('text=APPROVED RESULT').count()) > 0);
+await page.click('#review button:has-text("Undo")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+ok('Undo approval returns attempt to REVIEW', (await page.locator('text=APPROVED RESULT').count()) === 0 && (await page.locator('#review button:has-text("Redo")').count()) > 0);
+await page.locator('#approve-form button').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+ok('Re-approve by click', (await page.locator('text=APPROVED RESULT').count()) > 0);
 
 // ---- Kling
 await go(`/projects/${slug}/kling`);
@@ -236,9 +258,19 @@ for (const code of ['IMG-001', 'IMG-002', 'IMG-003', 'IMG-004']) {
 }
 ok('Kling refs labeled @image1..@image3', ['@image1', '@image2', '@image3'].every(l => page.locator(`span.font-mono:has-text("${l}")`).count().then(c => c > 0)) && (await page.locator('span.font-mono:has-text("@image3")').count()) > 0);
 ok('Orientation mismatch warning (portrait vs landscape)', (await page.locator('text=orientations do not match').count()) > 0);
+const codeAt = async n => (await page.locator('ol[aria-label="Reference strip"] li').nth(n).locator('.font-mono').nth(1).textContent()).trim();
+const before = await codeAt(0);
+await page.locator('ol[aria-label="Reference strip"] li').first().locator('button[aria-label$="later"]').click(); await page.waitForTimeout(900);
+await page.reload({ waitUntil: 'networkidle' });
+ok('@image reorder persists (first image moved later)', (await codeAt(0)) !== before && (await codeAt(1)) === before, `${before} -> ${await codeAt(0)}`);
 await page.fill('textarea[name=finalPrompt]', '@image1 baby lifts spoon. Transition to @image2 seeds fall.');
+await page.click('button:has-text("Dialogue")');
 await page.fill('textarea[name=dialogue]', Array.from({ length: 45 }, (_, i) => 'word' + i).join(' '));
 await page.click('button:has-text("SAVE CLIP")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+const pfBefore = await page.locator('text=to review').first().textContent();
+await page.locator('button:has-text("Mark fixed")').first().click();
+ok('Pre-flight: Mark fixed dismisses a warning', (await page.locator('text=to review').first().textContent()) !== pfBefore);
+await page.reload({ waitUntil: 'networkidle' });
 ok('Pre-flight warns (dialogue too long / blank fields)', (await page.locator('text=Dialogue may be too long').count()) > 0 && (await page.locator('text=No ending frame description').count()) > 0);
 await page.locator('button:has-text("COPY KLING PROMPT") >> nth=0').click(); await page.waitForTimeout(300);
 ok('Copy Kling prompt', (await clip()).includes('@image1 baby lifts spoon'));
@@ -262,7 +294,7 @@ const tr = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]
 ok('D: Redo prompt includes failure, correction, only-listed-problem rule', tr.includes('Too much oil') && tr.includes('Only 2 tbsp small pool') && tr.includes('too much oil') && /Change ONLY the listed problem/i.test(tr));
 await go(`/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`);
 const tk = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
-ok('E: Final Kling writer has @image order, voice, ASMR/ending rules', ['@image1 = IMG-001', '@image2 = IMG-002', '@image3 = IMG-003', 'Raspy toddler voice', 'ENDING STATE', 'Place @image1'.toUpperCase()].every(s => tk.toUpperCase().includes(s.toUpperCase())));
+ok('E: Final Kling writer has @image order, voice, ASMR/ending rules', ['@image1 = IMG-002', '@image2 = IMG-001', '@image3 = IMG-003', 'Raspy toddler voice', 'ENDING STATE', 'Place @image1'.toUpperCase()].every(s => tk.toUpperCase().includes(s.toUpperCase())));
 // save version + paste result + apply
 await page.click('button:has-text("SAVE VERSION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Save prompt version records metadata', (await page.locator('text=Bible v').count()) > 0);
@@ -274,7 +306,7 @@ ok('Apply pasted result → Kling prompt (versioned)', (await page.inputValue('t
 await go('/settings/bible');
 ok('Bible: 27 editable sections', (await page.locator('nav[aria-label="Rule sections"] a').count()) >= 27);
 await page.fill('textarea[name=content]', 'EDITED RULE FOR PHILOSOPHY');
-await page.click('button:has-text("SAVE (creates")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+await page.click('button:has-text("Save as v")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 await go(`/projects/${slug}/builder?type=plan`);
 ok('Edited rule flows into the next prompt', (await page.inputValue('textarea[aria-label="Final copy-ready prompt"]')).includes('EDITED RULE FOR PHILOSOPHY'));
 

@@ -17,7 +17,7 @@ export default async function ProjectRefs({ params }: { params: { slug: string }
   const grid = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold tracking-wide text-white">REFERENCE IMAGE = SOURCE OF TRUTH</div>
+      <div className="rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold tracking-wide text-white">REFERENCE IMAGE = SOURCE OF TRUTH</div>
       <Section title={`From Baby Chef master library${p.babyChef ? ' — ' + p.babyChef.displayName : ''}`} right={p.babyChef && <Link className="btn btn-sm" href={`/babychefs/${p.babyChef.id}`}>Manage master refs</Link>}>
         {master.length ? <div className={grid}>{master.map(r => <ReferenceCard key={r.id} r={r} cats={REF_CATEGORIES} />)}</div> : <Empty title="No master references." hint="Select a Baby Chef and upload master references on their page." />}
       </Section>

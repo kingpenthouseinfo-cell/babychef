@@ -31,7 +31,7 @@ export default async function Templates() {
           <Section key={c} title={c}>
             {list.map(t => (
               <details key={t.id} className="border-b border-line py-2 last:border-0">
-                <summary className="cursor-pointer text-sm"><b>{t.name}</b> <span className="font-mono text-xs text-neutral-400">{t.code}</span> {t.isDefault && <Chip>DEFAULT</Chip>} {!t.active && <Chip>INACTIVE</Chip>}<span className="ml-2 text-neutral-500">{t.purpose}</span></summary>
+                <summary className="cursor-pointer text-sm"><b>{t.name}</b> <span className="font-mono text-xs text-ink-secondary">{t.code}</span> {t.isDefault && <Chip>DEFAULT</Chip>} {!t.active && <Chip>INACTIVE</Chip>}<span className="ml-2 text-ink-secondary">{t.purpose}</span></summary>
                 <div className="mt-3"><Form t={t} />
                   <div className="mt-2 flex gap-2"><form action={duplicateTemplate}><input type="hidden" name="id" value={t.id} /><SubmitBtn className="" pendingText="…">DUPLICATE TEMPLATE</SubmitBtn></form>
                     <ConfirmForm action={deleteTemplate} message={t.isDefault ? 'Deactivate this default template?' : 'Delete this template?'}><input type="hidden" name="id" value={t.id} /><button className="btn btn-danger">{t.isDefault ? 'Deactivate' : 'Delete'}…</button></ConfirmForm></div></div>

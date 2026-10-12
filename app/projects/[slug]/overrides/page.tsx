@@ -15,7 +15,7 @@ export default async function Overrides({ params }: { params: { slug: string } }
   const d = parseJson<Record<string, string>>(doc?.data, {});
   return (
     <div className="space-y-4">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm">Project-specific instructions <b>override</b> the Baby Chef profile, which overrides the global <Link href="/settings/bible" className="underline">Production Bible</Link>. They are included in every Production Brain prompt for this project.</div>
+      <div className="rounded-lg bg-sunken p-3 text-sm">Project-specific instructions <b>override</b> the Baby Chef profile, which overrides the global <Link href="/settings/bible" className="underline">Production Bible</Link>. They are included in every Production Brain prompt for this project.</div>
       <Section title="Production overrides">
         <DirtyForm action={saveOverrides} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="projectId" value={p.id} />
           {OVERRIDE_FIELDS.map(f => <Area key={f} name={`f:${f}`} label={f} v={d[f]} rows={3} />)}

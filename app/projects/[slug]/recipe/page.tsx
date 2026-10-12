@@ -12,7 +12,7 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
   const versions = await db.recipeVersion.findMany({ where: { projectId: p.id }, orderBy: { version: 'desc' } });
   return (
     <div className="space-y-5">
-      <Section title={`Recipe (version ${p.recipeVersion})`} right={<span className="text-xs text-neutral-500">Last modified {fmtDate(p.updatedAt)}</span>}>
+      <Section title={`Recipe (version ${p.recipeVersion})`} right={<span className="text-xs text-ink-secondary">Last modified {fmtDate(p.updatedAt)}</span>}>
         <DirtyForm action={saveRecipe} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="id" value={p.id} />
           <Text name="recipeName" label="Recipe title" v={p.recipeName} />

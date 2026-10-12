@@ -120,3 +120,11 @@ export async function reviewKlingAttempt(fd: FormData) {
   await logActivity(`${klingCode(a.kling.order)} attempt ${a.number} ${result}`, null, a.kling.projectId);
   touch();
 }
+
+/** Drag-and-drop reorder of the @image reference strip. */
+export async function reorderKlingRefs(klingId: string, orderedIds: string[]) {
+  const refs = await db.klingRef.findMany({ where: { klingId } });
+  const valid = orderedIds.filter(id => refs.some(r => r.id === id));
+  await db.$transaction(valid.map((id, i) => db.klingRef.update({ where: { id }, data: { order: i } })));
+  touch();
+}

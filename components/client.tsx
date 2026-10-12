@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 
-export function CopyButton({ text, label = 'COPY', className = '', disabled }: { text: string; label?: string; className?: string; disabled?: boolean }) {
+export function CopyButton({ text, label = 'COPY', className = '', disabled, variant = 'primary' }: { text: string; label?: string; className?: string; disabled?: boolean; variant?: 'primary' | 'secondary' }) {
   const [done, setDone] = useState(false);
   async function copy() {
     try { await navigator.clipboard.writeText(text); }
@@ -10,11 +10,18 @@ export function CopyButton({ text, label = 'COPY', className = '', disabled }: {
       const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
     }
-    setDone(true); setTimeout(() => setDone(false), 1500);
+    setDone(true); setTimeout(() => setDone(false), 1600);
   }
+  const base = variant === 'secondary' ? 'btn-copy-secondary' : 'btn-copy';
   return (
-    <button type="button" onClick={copy} disabled={disabled || !text} className={`btn ${done ? 'border-green-600 bg-green-600 text-white' : 'btn-primary'} ${className}`} aria-live="polite">
-      {done ? 'COPIED' : label}
+    <button type="button" onClick={copy} disabled={disabled || !text}
+      style={done ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)', color: '#fff' } : undefined}
+      className={`btn ${base} ${className}`} aria-live="polite">
+      {/* both labels are rendered so the button width never shifts */}
+      <span className="relative inline-grid">
+        <span className={`col-start-1 row-start-1 text-center ${done ? 'invisible' : ''}`}>{label}</span>
+        <span className={`col-start-1 row-start-1 text-center ${done ? '' : 'invisible'}`} aria-hidden={!done}>✓ COPIED</span>
+      </span>
     </button>
   );
 }
@@ -41,7 +48,7 @@ export function DirtyForm({ action, children, className = '' }: { action: (fd: F
   }, [dirty]);
   return (
     <form ref={ref} action={async fd => { setDirty(false); await action(fd); }} onChange={() => setDirty(true)} className={className}>
-      {dirty && <div className="mb-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900">Unsaved changes — press SAVE</div>}
+      {dirty && <div className="mb-2 rounded-md bg-[#F8EFD9] px-3 py-1.5 text-xs font-semibold text-[#8A6216]">Unsaved changes — press SAVE</div>}
       {children}
     </form>
   );
@@ -81,22 +88,22 @@ export function NextPrompt({ items }: { items: { id: string; code: string; title
   function choose(p: 'FULL' | 'CONT') { setPref(p); try { localStorage.setItem('bcs-pref', p); } catch { /* ignore */ } }
   const it = items[0];
   if (!it) return (
-    <div className="card border-dashed text-sm text-neutral-600">No images ready. Finish a prompt, mark an image READY, or resolve dependencies.</div>
+    <div className="card border-dashed text-sm text-ink-secondary">No images ready. Finish a prompt, mark an image READY, or resolve dependencies.</div>
   );
   const text = pref === 'FULL' ? it.full : it.cont;
   return (
-    <div className="card border-2 border-ink">
+    <div className="zone-blue rounded-lg border p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h3>Next up</h3><div className="text-lg font-semibold">{it.code} — {it.title}</div><div className="text-xs text-neutral-500">{it.project}</div></div>
+        <div><div className="eyebrow text-blue-deep">NEXT</div><div className="text-lg font-semibold">{it.code} — {it.title}</div><div className="text-xs text-ink-secondary">{it.project}</div></div>
         <div className="flex gap-1" role="group" aria-label="Prompt type">
-          <button type="button" className={`btn btn-sm ${pref === 'FULL' ? 'btn-primary' : ''}`} onClick={() => choose('FULL')}>FULL PROMPT</button>
-          <button type="button" className={`btn btn-sm ${pref === 'CONT' ? 'btn-primary' : ''}`} onClick={() => choose('CONT')}>CONTINUATION</button>
+          <button type="button" className={`btn btn-sm ${pref === 'FULL' ? 'btn-copy-secondary border-blue-deep' : ''}`} onClick={() => choose('FULL')}>FULL PROMPT</button>
+          <button type="button" className={`btn btn-sm ${pref === 'CONT' ? 'btn-copy-secondary border-blue-deep' : ''}`} onClick={() => choose('CONT')}>CONTINUATION</button>
         </div>
       </div>
       <button type="button" className="mt-2 text-xs underline" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Show'} reference checklist ({it.checklist.length})</button>
-      {open && <ol className="mt-1 list-decimal pl-5 text-sm">{it.checklist.map((c, i) => <li key={i}>{c.label} <span className="text-xs font-semibold text-neutral-500">{c.required ? 'REQUIRED' : 'OPTIONAL'}</span></li>)}</ol>}
-      {!text.trim() && <p className="mt-2 text-sm text-red-700">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</p>}
-      <div className="mt-3"><CopyButton text={text} label={`COPY NEXT PROMPT (${pref === 'FULL' ? 'FULL' : 'CONTINUATION'})`} className="w-full sm:w-auto" /></div>
+      {open && <ol className="mt-1 list-decimal pl-5 text-sm">{it.checklist.map((c, i) => <li key={i}>{c.label} <span className="text-xs font-semibold text-ink-secondary">{c.required ? 'REQUIRED' : 'OPTIONAL'}</span></li>)}</ol>}
+      {!text.trim() && <p className="mt-2 text-sm text-[#A8513F]">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</p>}
+      <div className="mt-4"><CopyButton text={text} label={`COPY NEXT PROMPT (${pref === 'FULL' ? 'FULL' : 'CONTINUATION'})`} className="min-h-[48px] w-full sm:w-auto sm:min-w-[320px]" /></div>
     </div>
   );
 }
@@ -111,16 +118,16 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Lightbox({ src, alt, thumb }: { src: string; alt: string; thumb: string }) {
+export function Lightbox({ src, alt, thumb, imgClass = 'aspect-[4/3] w-full object-cover', wrapClass = 'bg-sunken' }: { src: string; alt: string; thumb: string; imgClass?: string; wrapClass?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="block w-full overflow-hidden rounded-lg bg-neutral-100" aria-label={`View larger: ${alt}`}>
-        <img src={thumb} alt={alt} loading="lazy" className="aspect-[4/3] w-full object-cover" />
+      <button type="button" onClick={() => setOpen(true)} className={`block w-full overflow-hidden rounded-md border border-line ${wrapClass}`} aria-label={`View larger: ${alt}`}>
+        <img src={thumb} alt={alt} loading="lazy" className={imgClass} />
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setOpen(false)} role="dialog" aria-label={alt}>
-          <img src={src} alt={alt} className="max-h-full max-w-full rounded-lg" />
+          <img src={src} alt={alt} className="max-h-full max-w-full rounded-md" />
           <button className="btn absolute right-4 top-4" onClick={() => setOpen(false)}>Close</button>
         </div>
       )}
@@ -137,7 +144,7 @@ export function PromptBox({ name, label, initial, rows = 12, downloadHref, copyL
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <CopyButton text={t} label={copyLabel} />
         {downloadHref && <a className="btn btn-sm" href={downloadHref}>DOWNLOAD</a>}
-        <span className="text-xs text-neutral-500">{t.trim() ? t.trim().split(/\s+/).length + ' words' : 'empty'}</span>
+        <span className="text-xs text-ink-secondary">{t.trim() ? t.trim().split(/\s+/).length + ' words' : 'empty'}</span>
       </div>
     </div>
   );

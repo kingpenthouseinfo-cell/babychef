@@ -31,7 +31,7 @@ export default async function Prompts({ params, searchParams }: { params: { slug
   const qs = (o: Record<string, string>) => `${base}?${new URLSearchParams({ ...(sc ? { scene: sc.id } : {}), ...(img ? { image: img.id } : {}), ...(kl ? { kling: kl.id } : {}), ...o }).toString()}`;
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm">These tools only <b>prepare text</b> from your stored project data. Copy it into ChatGPT/Claude yourself — Baby Chef Studio never calls an AI service.</div>
+      <div className="rounded-lg bg-sunken p-3 text-sm">These tools only <b>prepare text</b> from your stored project data. Copy it into ChatGPT/Claude yourself — Baby Chef Studio never calls an AI service.</div>
       <div className="flex flex-wrap gap-1.5">{TEMPLATE_CATEGORIES.map(c => <Link key={c} href={qs({ cat: c })} className={`btn btn-sm ${c === cat ? 'btn-primary' : ''}`}>{c}</Link>)}</div>
       {inCat.length === 0 ? <Empty title="No templates in this category." hint="Create one under Prompt Templates."><Link href="/templates" className="btn">Open templates</Link></Empty> : (
         <>
@@ -43,10 +43,10 @@ export default async function Prompts({ params, searchParams }: { params: { slug
             <div><button className="btn btn-primary">PREPARE PROMPT</button></div></form>
           {tpl && (
             <>
-              <Section title="Template"><p className="mb-2 text-xs text-neutral-500">{tpl.purpose}</p><pre className="mono max-h-60 overflow-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-3">{tpl.text}</pre></Section>
+              <Section title="Template"><p className="mb-2 text-xs text-ink-secondary">{tpl.purpose}</p><pre className="mono max-h-60 overflow-auto whitespace-pre-wrap rounded-lg bg-sunken p-3">{tpl.text}</pre></Section>
               <Section title="Project data used">
-                <div className="grid gap-1 text-xs sm:grid-cols-2 lg:grid-cols-3">{used.map(k => <div key={k} className={missing.includes(k) ? 'text-amber-800' : ''}><b className="font-mono">{`{{${k}}}`}</b> {missing.includes(k) ? '— not set' : `— ${(vars[k] ?? '').slice(0, 50).replace(/\n/g, ' ')}${(vars[k] ?? '').length > 50 ? '…' : ''}`}</div>)}</div>
-                {missing.length > 0 && <p className="mt-2 text-xs font-semibold text-amber-800">Some variables are empty ({missing.length}). Fill them in the project or edit the prompt below.</p>}
+                <div className="grid gap-1 text-xs sm:grid-cols-2 lg:grid-cols-3">{used.map(k => <div key={k} className={missing.includes(k) ? 'text-[#8A6216]' : ''}><b className="font-mono">{`{{${k}}}`}</b> {missing.includes(k) ? '— not set' : `— ${(vars[k] ?? '').slice(0, 50).replace(/\n/g, ' ')}${(vars[k] ?? '').length > 50 ? '…' : ''}`}</div>)}</div>
+                {missing.length > 0 && <p className="mt-2 text-xs font-semibold text-[#8A6216]">Some variables are empty ({missing.length}). Fill them in the project or edit the prompt below.</p>}
               </Section>
               <Section title="Final assembled prompt (editable)">
                 <LivePromptForm projectId={p.id} templateId={tpl.id} category={cat} initial={out} name={tpl.name} imageId={img?.id} klingId={kl?.id} />
@@ -56,7 +56,7 @@ export default async function Prompts({ params, searchParams }: { params: { slug
         </>
       )}
       <Section title="Saved project prompts">
-        {saved.length === 0 ? <p className="text-sm text-neutral-500">None yet.</p> : saved.map(s => <details key={s.id} className="border-b border-line py-2 last:border-0"><summary className="cursor-pointer text-sm"><b>{s.name}</b> <Chip>{s.category}</Chip></summary><pre className="mono mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-neutral-50 p-2">{s.text}</pre><div className="mt-1 flex gap-2"><CopyButton text={s.text} label="COPY" className="btn-sm" /><ConfirmForm action={deleteProjectPrompt} message="Delete this saved prompt?"><input type="hidden" name="id" value={s.id} /><button className="btn btn-sm btn-danger">Delete</button></ConfirmForm></div></details>)}
+        {saved.length === 0 ? <p className="text-sm text-ink-secondary">None yet.</p> : saved.map(s => <details key={s.id} className="border-b border-line py-2 last:border-0"><summary className="cursor-pointer text-sm"><b>{s.name}</b> <Chip>{s.category}</Chip></summary><pre className="mono mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-sunken p-2">{s.text}</pre><div className="mt-1 flex gap-2"><CopyButton text={s.text} label="COPY" className="btn-sm" /><ConfirmForm action={deleteProjectPrompt} message="Delete this saved prompt?"><input type="hidden" name="id" value={s.id} /><button className="btn btn-sm btn-danger">Delete</button></ConfirmForm></div></details>)}
       </Section>
     </div>
   );
