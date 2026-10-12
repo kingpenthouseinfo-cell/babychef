@@ -3,6 +3,7 @@
  * It never calls an AI. It collects database context into blocks, resolves the
  * editable task template, and returns the final text plus a context preview.
  */
+import { negativeStates, DEFAULT_NEGATIVE } from './negative-states';
 import { db } from './db';
 import { bibleText, chefProductionText, currentBibleVersion, OVERRIDE_FIELDS } from './bible';
 import { buildVars, render } from './template-engine';
@@ -166,7 +167,11 @@ const BLOCKS: Record<string, (c: Ctx, o: { bibleKeys?: string[]; type: BuilderTy
     if (!i) return null;
     const t = kv([['Image', `${imageCode(i.seq)} — ${i.title}`], ['Purpose', i.purpose], ['Shot type', i.shotType], ['Preferred aspect ratio', i.aspectRatio || c.project.aspectRatio], ['Vertical crop importance', i.cropImportance], ['STARTING COMPOSITION', i.startingComposition], ['Character visibility', i.characterVisibility], ['Character expression', i.expression], ['Body positioning', i.bodyPosition], ['Hand positioning', i.handPosition], ['Ingredient(s)', i.ingredients], ['Ingredient quantity', i.ingredientQty], ['Ingredient current state', i.ingredientState], ['Food texture', i.foodTexture], ['Food color', i.foodColor], ['Cookware', i.cookware], ['Utensils', i.utensils], ['Object placement', i.objectPlacement], ['EXACT ACTION MOMENT', i.actionMoment], ['Physics notes', i.physics], ['Lighting', i.lighting], ['Camera angle', i.cameraAngle], ['Camera distance', i.cameraDistance], ['Lens / look', i.lens], ['Depth of field', i.depthOfField], ['Focus point', i.focusPoint], ['Background', i.background], ['Safety / adult assistance', i.safety], ['Continuity requirements', i.continuity], ['Special restrictions', i.restrictions]]);
     const lists = [['WHAT MUST BE VISIBLE', i.mustBeVisible], ['WHAT MUST NOT CHANGE', i.mustNotChange], ['WHAT MUST NOT APPEAR', i.mustNotAppear]].filter(([, v]) => val(v)).map(([k, v]) => `${k}:\n${lines(v).map(x => '- ' + x).join('\n')}`).join('\n');
-    return { text: H('PLANNED IMAGE', `${t}\n${lists}`), detail: `${imageCode(i.seq)} planned-image fields` };
+    const neg = negativeStates(c.scene ?? null, i as any, c.project.scenes as any, c.project.ingredients.map(x => x.name));
+    const manual = new Set(lines(i.mustNotAppear).map(x => x.toLowerCase()));
+    const auto = neg.filter(x => !manual.has(x.toLowerCase()));
+    const negBlock = `\nSCENE-SPECIFIC NEGATIVE STATES (work out from the food-state timeline; state these in the prompt):\n${(auto.length ? auto.map(x => '- ' + x).join('\n') : '- (nothing special for this moment)')}\nFINISH THE PROMPT WITH: ${DEFAULT_NEGATIVE} Only keep restrictions that make sense for this picture and never forbid something the picture needs.`;
+    return { text: H('PLANNED IMAGE', `${t}\n${lists}${negBlock}`), detail: `${imageCode(i.seq)} planned-image fields${auto.length ? `; ${auto.length} negative state(s)` : ''}` };
   },
   refs: c => {
     const i = c.img;
