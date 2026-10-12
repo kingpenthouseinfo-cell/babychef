@@ -1,0 +1,598 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NOTE: SQLite has no enums / Json in Prisma 5, so enums are validated strings
+// (see lib/constants.ts) and structured blobs are JSON strings.
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  message   String
+  href      String?
+  projectId String?
+  createdAt DateTime @default(now())
+}
+
+// Every uploaded file. Friendly name for humans, internalName/relPath for storage.
+model Asset {
+  id           String   @id @default(cuid())
+  displayName  String
+  originalName String
+  internalName String
+  relPath      String
+  mime         String
+  size         Int      @default(0)
+  width        Int?
+  height       Int?
+  orientation  String   @default("UNKNOWN") // LANDSCAPE | PORTRAIT | SQUARE | UNKNOWN
+  kind         String   @default("OTHER") // REFERENCE | INGREDIENT_REF | CORRECTION | GENERATED | KLING_VIDEO | OTHER
+  projectSlug  String?
+  version      Int      @default(1)
+  status       String   @default("ACTIVE")
+  altText      String?
+  createdAt    DateTime @default(now())
+
+  references  Reference[]
+  attempts    Attempt[]
+  corrections Correction[]
+  klingTries  KlingAttempt[]
+}
+
+model BabyChef {
+  id               String    @id @default(cuid())
+  displayName      String
+  slug             String    @unique
+  seriesName       String?
+  cuisine          String?
+  age              String?
+  gender           String?
+  appearance       String?
+  skinTone         String?
+  facialFeatures   String?
+  hair             String?
+  bodyNotes        String?
+  outfit           String?
+  accessories      String?
+  personality      String?
+  dialogueStyle    String?
+  voiceInstruction String?
+  recurringJokes   String?
+  recurringReacts  String?
+  behaviorNotes    String?
+  kitchen          String?
+  lighting         String?
+  cinematography   String?
+  safetyRules      String?
+  continuityRules  String?
+  active           Boolean   @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  projects    Project[]
+  references  Reference[]
+  corrections Correction[]
+}
+
+// Unified reference: baby/kitchen masters, project refs, ingredient product refs.
+model Reference {
+  id          String    @id @default(cuid())
+  code        String    @unique // REF-0001
+  kind        String    @default("MASTER") // MASTER | PROJECT | INGREDIENT
+  babyChefId  String?
+  projectId   String?
+  ingredientId String?
+  assetId     String
+  title       String
+  category    String    @default("Other")
+  description String?
+  notes       String?
+  isGold      Boolean   @default(true)
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  babyChef   BabyChef?   @relation(fields: [babyChefId], references: [id])
+  project    Project?    @relation(fields: [projectId], references: [id])
+  ingredient Ingredient? @relation(fields: [ingredientId], references: [id])
+  asset      Asset       @relation(fields: [assetId], references: [id])
+  imageLinks ImageRef[]
+}
+
+model Correction {
+  id           String   @id @default(cuid())
+  code         String   @unique // COR-001
+  title        String
+  category     String   @default("Other")
+  wrong        String?
+  correct      String?
+  babyChefId   String?
+  projectId    String?
+  ingredient   String?
+  action       String?
+  severity     String   @default("MEDIUM")
+  assetId      String?
+  createdAt    DateTime @default(now())
+
+  babyChef BabyChef? @relation(fields: [babyChefId], references: [id])
+  project  Project?  @relation(fields: [projectId], references: [id])
+  asset    Asset?    @relation(fields: [assetId], references: [id])
+}
+
+model Project {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  title            String
+  recipeName       String?
+  cuisine          String?
+  description      String?
+  babyChefId       String?
+  longDuration     String?
+  shortDuration    String?   @default("45-60 seconds")
+  aspectRatio      String    @default("16:9")
+  verticalCrop     Boolean   @default(true)
+  status           String    @default("PLANNING")
+  // recipe
+  recipeSource     String?
+  recipeNotes      String?
+  recipeOriginal   String?
+  recipeAdapted    String?
+  recipeYield      String?
+  prepTime         String?
+  cookTime         String?
+  recipeVersion    Int       @default(1)
+  // publishing-related
+  finishedFood     String?
+  mainHook         String?
+  longHook         String?
+  shortHook        String?
+  ctaPreference    String    @default("Minimal")
+  ctaCustom        String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  babyChef    BabyChef?  @relation(fields: [babyChefId], references: [id])
+  recipes     RecipeVersion[]
+  ingredients Ingredient[]
+  references  Reference[]
+  corrections Correction[]
+  docs        ProjectDoc[]
+  notes       ProjectNote[]
+  scripts     ScriptVersion[]
+  scenes      Scene[]
+  images      PlannedImage[]
+  clips       KlingClip[]
+  short       ShortVersion?
+  prompts     ProjectPrompt[]
+  publishing  PublishingAsset[]
+  checklist   ChecklistItem[]
+}
+
+model RecipeVersion {
+  id        String   @id @default(cuid())
+  projectId String
+  version   Int
+  original  String?
+  adapted   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id             String   @id @default(cuid())
+  projectId      String
+  order          Int      @default(0)
+  name           String
+  quantity       String?
+  unit           String?
+  prepNote       String?
+  stage          String?
+  brand          String?
+  product        String?
+  packageSize    String?
+  importance     String   @default("OPTIONAL") // PACKAGE_CRITICAL | TEXTURE_CRITICAL | OPTIONAL
+  packageVisible Boolean  @default(false)
+  appearance     String?
+  continuity     String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  references Reference[]
+}
+
+// Generic per-project JSON documents: continuity, longform notes, publishing context, capcut
+model ProjectDoc {
+  id        String   @id @default(cuid())
+  projectId String
+  key       String
+  data      String   @default("{}")
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, key])
+}
+
+model ProjectNote {
+  id        String   @id @default(cuid())
+  projectId String
+  category  String   @default("General")
+  content   String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ScriptVersion {
+  id        String   @id @default(cuid())
+  projectId String
+  version   Int
+  title     String?
+  content   String   @default("")
+  notes     String?
+  status    String   @default("DRAFT") // DRAFT | REVIEW | APPROVED | LOCKED
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Scene {
+  id             String   @id @default(cuid())
+  projectId      String
+  order          Int
+  title          String
+  recipeStep     String?
+  purpose        String?
+  narrative      String?
+  dialogue       String?
+  babyReaction   String?
+  mainAction     String?
+  secondaryAction String?
+  ingredients    String?
+  utensils       String?
+  cookware       String?
+  babyPosition   String?
+  adultAssist    String   @default("NO") // YES | NO | OPTIONAL
+  adultNotes     String?
+  cameraAngle    String?
+  cameraMovement String?
+  shotPriority   String   @default("MAIN NARRATIVE SHOT")
+  cropImportance String   @default("PREFERRED")
+  asmr           String?
+  safetyNotes    String?
+  foodBefore     String?
+  foodDuring     String?
+  foodAfter      String?
+  continuity     String?
+  shortKeep      Boolean  @default(false)
+  hook           Boolean  @default(false)
+  beauty         Boolean  @default(false)
+  notes          String?
+  status         String   @default("PLANNED")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  images  PlannedImage[]
+  clips   KlingScene[]
+  shortItems ShortItem[]
+}
+
+model PlannedImage {
+  id              String   @id @default(cuid())
+  projectId       String
+  sceneId         String
+  seq             Int
+  title           String
+  shotType        String   @default("MAIN NARRATIVE SHOT")
+  purpose         String?
+  priority        String   @default("NORMAL")
+  status          String   @default("PLANNED")
+  promptStatus    String   @default("NOT STARTED")
+  aspectRatio     String?
+  cropImportance  String   @default("PREFERRED")
+  startingComposition String?
+  characterVisibility String?
+  expression      String?
+  bodyPosition    String?
+  handPosition    String?
+  ingredients     String?
+  ingredientQty   String?
+  ingredientState String?
+  foodTexture     String?
+  foodColor       String?
+  cookware        String?
+  utensils        String?
+  objectPlacement String?
+  actionMoment    String?
+  physics         String?
+  lighting        String?
+  cameraAngle     String?
+  cameraDistance  String?
+  lens            String?
+  depthOfField    String?
+  focusPoint      String?
+  background      String?
+  safety          String?
+  mustBeVisible   String?
+  mustNotChange   String?
+  mustNotAppear   String?
+  continuity      String?
+  restrictions    String?
+  notes           String?
+  fullPrompt      String   @default("")
+  contPrompt      String   @default("")
+  dependsOnId     String?
+  approvedAttemptId String? @unique
+  attemptCount    Int      @default(0)
+  waitingAt       DateTime?
+  waitingReason   String?
+  waitingNote     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scene     Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  dependsOn PlannedImage?  @relation("Depends", fields: [dependsOnId], references: [id], onDelete: SetNull)
+  dependents PlannedImage[] @relation("Depends")
+  approvedAttempt Attempt? @relation("Approved", fields: [approvedAttemptId], references: [id], onDelete: SetNull)
+  attempts  Attempt[] @relation("AllAttempts")
+  refs      ImageRef[] @relation("ImageRefs")
+  asSource  ImageRef[] @relation("SourceImage")
+  klingRefs KlingRef[]
+
+  @@unique([projectId, seq])
+}
+
+// A reference attached to a planned image: either a Reference asset or the approved
+// result of another planned image (PREVIOUS APPROVED FRAME etc).
+model ImageRef {
+  id            String   @id @default(cuid())
+  imageId       String
+  referenceId   String?
+  sourceImageId String?
+  role          String   @default("CUSTOM REFERENCE")
+  required      Boolean  @default(true)
+  notes         String?
+  order         Int      @default(0)
+
+  image       PlannedImage  @relation("ImageRefs", fields: [imageId], references: [id], onDelete: Cascade)
+  reference   Reference?    @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+  sourceImage PlannedImage? @relation("SourceImage", fields: [sourceImageId], references: [id], onDelete: Cascade)
+}
+
+// Prompt history for images (FULL/CONTINUATION), kling (KLING) and publishing (PUBLISHING)
+model PromptVersion {
+  id        String   @id @default(cuid())
+  ownerId   String
+  type      String
+  version   Int
+  text      String
+  reason    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+}
+
+model Attempt {
+  id            String   @id @default(cuid())
+  imageId       String
+  number        Int
+  assetId       String
+  sourceTool    String   @default("ChatGPT")
+  promptVersion Int?
+  promptType    String   @default("FULL")
+  notes         String?
+  status        String   @default("REVIEW") // REVIEW | APPROVED | REDO | REJECTED | SUPERSEDED
+  checklist     String   @default("[]")
+  // correction (ImageCorrection)
+  wrong         String?
+  change        String?
+  keep          String?
+  corrCategory  String?
+  severity      String?
+  approvedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  image    PlannedImage  @relation("AllAttempts", fields: [imageId], references: [id], onDelete: Cascade)
+  asset    Asset         @relation(fields: [assetId], references: [id])
+  approvedFor PlannedImage? @relation("Approved")
+}
+
+model KlingClip {
+  id             String   @id @default(cuid())
+  projectId      String
+  order          Int
+  title          String
+  status         String   @default("PLANNED")
+  durationTarget Int?
+  durationMin    Int?
+  durationMax    Int?
+  aspectRatio    String?
+  purpose        String?
+  startingComposition String?
+  actionSequence String?
+  majorActions   String   @default("[]") // JSON string[]
+  physicalMovement String?
+  foodPhysics    String?
+  dialogue       String?
+  useProfileVoice Boolean @default(true)
+  voiceOverride  String?
+  offScreen      Boolean  @default(false)
+  lipSync        Boolean  @default(false)
+  cameraBehavior String?
+  focusBehavior  String?
+  asmrLines      String?
+  ambient        String?
+  lighting       String?
+  continuity     String?
+  safety         String?
+  restrictions   String?
+  endingComposition String?
+  foodState      String?
+  finalPrompt    String   @default("")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  project  Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes   KlingScene[]
+  refs     KlingRef[]
+  attempts KlingAttempt[]
+  shortItems ShortItem[]
+}
+
+model KlingScene {
+  klingId String
+  sceneId String
+  kling   KlingClip @relation(fields: [klingId], references: [id], onDelete: Cascade)
+  scene   Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@id([klingId, sceneId])
+}
+
+model KlingRef {
+  id      String @id @default(cuid())
+  klingId String
+  imageId String
+  order   Int    @default(0)
+  kling   KlingClip    @relation(fields: [klingId], references: [id], onDelete: Cascade)
+  image   PlannedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+}
+
+model KlingAttempt {
+  id            String   @id @default(cuid())
+  klingId       String
+  number        Int
+  externalName  String?
+  assetId       String?
+  notes         String?
+  status        String   @default("REVIEW") // REVIEW | APPROVED | REDO
+  wrong         String?
+  change        String?
+  keep          String?
+  promptNotes   String?
+  createdAt     DateTime @default(now())
+  kling KlingClip @relation(fields: [klingId], references: [id], onDelete: Cascade)
+  asset Asset?    @relation(fields: [assetId], references: [id])
+}
+
+model ShortVersion {
+  id           String   @id @default(cuid())
+  projectId    String   @unique
+  targetSeconds Int     @default(55)
+  hook         String?
+  hookVisual   String?
+  hookDialogue String?
+  endVisual    String?
+  endDialogue  String?
+  cta          String?
+  editNotes    String?
+  transcriptCues String?
+  mustKeepLines String?
+  jumpCuts     String?
+  montage      String?
+  asmrKeep     String?
+  music        String?
+  cropNotes    String?
+  onScreenText String?
+  transitions  String?
+  subtitles    String?
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items   ShortItem[]
+}
+
+model ShortItem {
+  id          String  @id @default(cuid())
+  shortId     String
+  order       Int     @default(0)
+  sceneId     String?
+  klingId     String?
+  imageIds    String?
+  dialogue    String?
+  visual      String?
+  seconds     Int     @default(5)
+  reason      String?
+  hookImp     Boolean @default(false)
+  comedyImp   Boolean @default(false)
+  recipeImp   Boolean @default(false)
+  foodImp     Boolean @default(false)
+  vertical    String  @default("MAY REQUIRE REFRAMING")
+  notes       String?
+  short   ShortVersion @relation(fields: [shortId], references: [id], onDelete: Cascade)
+  scene   Scene?       @relation(fields: [sceneId], references: [id], onDelete: SetNull)
+  kling   KlingClip?   @relation(fields: [klingId], references: [id], onDelete: SetNull)
+}
+
+model PromptTemplate {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String
+  purpose     String?
+  description String?
+  text        String
+  active      Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  babyChefId  String?
+  cuisine     String?
+  projectId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProjectPrompt {
+  id         String   @id @default(cuid())
+  projectId  String
+  name       String
+  category   String   @default("GENERAL")
+  text       String
+  templateId String?
+  createdAt  DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model PublishingAsset {
+  id            String   @id @default(cuid())
+  code          String
+  projectId     String
+  platform      String
+  assetType     String
+  prompt        String   @default("")
+  promptVersion Int      @default(0)
+  returned      String   @default("")
+  selected      String   @default("")
+  status        String   @default("NEEDS PROMPT")
+  notes         String?
+  publishedAt   DateTime?
+  publishedUrl  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ChecklistItem {
+  id        String  @id @default(cuid())
+  projectId String
+  label     String
+  group     String  @default("")
+  done      Boolean @default(false)
+  order     Int     @default(0)
+  custom    Boolean @default(false)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
