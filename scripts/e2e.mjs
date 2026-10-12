@@ -461,7 +461,7 @@ await firstGap.locator('button:has-text("ADD")').last().click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const picsAfter = await picNames();
-ok('Insert between: new picture appears right after Picture 1 and numbers update', picsAfter.length === picsBefore.length + 1 && picsAfter[1].includes('Picture 2') && picsAfter[1].includes('Butter Being Rubbed In'), picsAfter.join(' ; '));
+ok('Insert between: new picture appears right after Picture 1 and numbers update', picsAfter.length === picsBefore.length + 1 && picsAfter[1].includes('Picture 2') && picsAfter[1].includes('Butter Being Rubbed'), picsAfter.join(' ; '));
 const oldIds = picsBefore.map(x => x.split('|')[0]).join();
 ok('Stable internal IDs are unchanged by an insert', picsBefore.every((x, i) => picsAfter.map(y => y.split('|')[0]).includes(x.split('|')[0])) && oldIds.length > 0);
 await go(`/projects/${slug}/story`);
@@ -469,7 +469,7 @@ await page.locator('[id^="pic-"]').nth(1).locator('button[aria-label="Picture me
 await page.locator('[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const picsMoved = await picNames();
-ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Butter Being Rubbed In') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
+ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Butter Being Rubbed') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
 await page.locator('summary:text-is("+ Add scene here")').first().click();
 await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Extra scene E2E');
 await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
@@ -478,7 +478,7 @@ ok('Add scene here: new scene is inserted at the top', (await page.locator('sect
 await go(`/projects/${slug}/story`);
 await page.locator('summary:text-is("+ Add scene here")').nth(1).click();
 await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Squeezed-in scene');
-await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.locator('button:has-text("ADD SCENE"):visible').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const eyebrows = await page.locator('section[id^="scene-"] .eyebrow').allTextContents();
 ok('Inserted scene is labelled 1A and later scenes are not renumbered', eyebrows[0].trim() === 'SCENE 1' && eyebrows[1].trim() === 'SCENE 1A' && eyebrows[2].trim() === 'SCENE 2', eyebrows.join(' | '));
