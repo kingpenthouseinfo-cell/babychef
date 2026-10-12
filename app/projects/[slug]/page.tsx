@@ -17,6 +17,7 @@ export default async function Overview({ params }: { params: { slug: string } })
   const b = `/projects/${p.slug}`;
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Production Brain</b> — assemble your rules + Baby Chef + recipe into one copy-ready prompt for ChatGPT / Claude.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">PREPARE PRODUCTION PLAN</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Production overrides</Link></div>
       <Section title="Production summary">
         <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
           <div><span className="label">Recipe</span>{p.recipeName || '—'}</div><div><span className="label">Cuisine</span>{p.cuisine || '—'}</div>

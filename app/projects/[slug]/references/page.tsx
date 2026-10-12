@@ -23,7 +23,7 @@ export default async function ProjectRefs({ params }: { params: { slug: string }
       </Section>
       <Section title="Project-specific references (incl. ingredient products)">
         {own.length ? <div className={grid}>{own.map(r => <ReferenceCard key={r.id} r={r} cats={r.kind === 'INGREDIENT' ? INGREDIENT_REF_TYPES : PROJECT_REF_CATEGORIES} />)}</div> : <Empty title="No project references yet." />}
-        <details className="mt-4 rounded-lg border border-line p-3"><summary className="cursor-pointer font-semibold">+ Upload project reference</summary><div className="mt-3"><UploadReferenceForm projectId={p.id} babyChefId={p.babyChefId} mode="project" /></div></details>
+        <details className="mt-4 rounded-lg border border-line p-3"><summary className="cursor-pointer font-semibold">+ Add project reference</summary><div className="mt-3"><UploadReferenceForm projectId={p.id} babyChefId={p.babyChefId} mode="project" /></div></details>
       </Section>
     </div>
   );

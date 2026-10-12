@@ -53,7 +53,7 @@ export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug
       <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
         <Link href={href} className="btn btn-sm">Open</Link>
         <CopyButton text={img.contPrompt || img.fullPrompt} label="Copy prompt" className="btn-sm" />
-        {img.status === 'REVIEW' ? <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link> : <Link href={`${href}#results`} className="btn btn-sm">Upload</Link>}
+        {img.status === 'REVIEW' ? <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link> : <Link href={`${href}#results`} className="btn btn-sm">Import</Link>}
       </div>
     </div>
   );

@@ -46,6 +46,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
         <div className="mt-3 flex flex-wrap gap-2"><CopyButton text={k.finalPrompt} label="COPY KLING PROMPT" />
           {k.status !== 'READY' && statusBtn('READY', 'btn-accent')}{statusBtn('GENERATING EXTERNALLY')}{statusBtn('DRAFT')}{statusBtn('SKIPPED')}
           <a className="btn" href={`/api/export/text?type=kling&id=${k.id}`}>DOWNLOAD PROMPT</a></div>
+        <div className="mt-3 rounded-lg bg-neutral-50 p-3"><div className="label">Production Brain — have ChatGPT / Claude WRITE the Kling prompt</div><div className="flex flex-wrap gap-2"><Link href={`/projects/${p.slug}/builder?type=kling-final&kling=${k.id}`} className="btn btn-sm btn-primary">PREPARE FINAL KLING PROMPT</Link></div></div>
       </Section>
 
       <Section title="Reference images (@image order)">
@@ -115,6 +116,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
             {a.asset && <video src={`/api/files/${a.assetId}`} controls className="mt-2 max-h-72 w-full rounded-lg bg-black" />}
             {a.notes && <p className="mt-1">{a.notes}</p>}
             {a.wrong && <p className="mt-1"><b className="text-red-700">Wrong:</b> {a.wrong}</p>}{a.change && <p><b className="text-green-800">Change:</b> {a.change}</p>}{a.keep && <p><b>Keep:</b> {a.keep}</p>}{a.promptNotes && <p><b>Prompt revision notes:</b> {a.promptNotes}</p>}
+            <Link href={`/projects/${p.slug}/builder?type=kling-redo&kling=${k.id}&kattempt=${a.id}`} className="btn btn-sm mt-2">PREPARE KLING REDO PROMPT</Link>
             {a.status === 'REVIEW' && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <form action={reviewKlingAttempt}><input type="hidden" name="id" value={a.id} /><input type="hidden" name="result" value="APPROVED" /><SubmitBtn className="btn-accent" pendingText="…">APPROVE</SubmitBtn></form>

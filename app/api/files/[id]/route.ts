@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { db } from '@/lib/db';
-import { storage } from '@/lib/storage';
+import fs from 'fs/promises';
+import { storage, THUMB_DIR } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +18,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (download) headers['Content-Disposition'] = `attachment; filename="${filename}"`;
   try {
     if (w > 0 && a.mime.startsWith('image/') && a.mime !== 'image/gif') {
-      const thumbRel = `_thumbs/${a.id}_${w}.webp`;
-      if (!(await storage.exists(thumbRel))) {
+      const thumbPath = path.join(THUMB_DIR, `${a.id}_${w}.webp`);
+      let data: Buffer;
+      try { data = await fs.readFile(thumbPath); }
+      catch {
         const sharp = (await import('sharp')).default;
-        const out = await sharp(await storage.read(a.relPath)).rotate().resize({ width: Math.min(w, 1600), withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
-        await storage.put(thumbRel, out);
+        data = await sharp(await storage.read(a.relPath)).rotate().resize({ width: Math.min(w, 1600), withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
+        await fs.mkdir(THUMB_DIR, { recursive: true }); await fs.writeFile(thumbPath, data);
       }
-      return new NextResponse(await storage.read(thumbRel), { headers: { ...headers, 'Content-Type': 'image/webp' } });
+      return new NextResponse(data, { headers: { ...headers, 'Content-Type': 'image/webp' } });
     }
     return new NextResponse(await storage.read(a.relPath), { headers });
   } catch {

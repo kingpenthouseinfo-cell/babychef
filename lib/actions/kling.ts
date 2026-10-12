@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
-import { saveUpload } from '../files';
+import { importFile, projectFolder } from '../files';
 import { bool, int, klingCode, pickText, str, strRaw } from '../util';
 import { logActivity } from '../activity';
 import { KLING_STATUSES } from '../constants';
@@ -99,7 +99,7 @@ export async function recordKlingAttempt(fd: FormData) {
   const file = fd.get('file') as File | null;
   let assetId: string | null = null;
   if (file && file.size) {
-    const a = await saveUpload(file, { projectSlug: k.project.slug, folder: 'generated-videos', friendlyBase: `${k.project.slug}_${klingCode(k.order)}`, versionLabel: `video-v${n + 1}`, kind: 'KLING_VIDEO', version: n + 1 });
+    const a = await importFile(file, { rootFolder: await projectFolder(k.projectId), folder: '04 Kling', fileBase: `${k.project.slug}_${klingCode(k.order)}_video-v${n + 1}`, kind: 'KLING_VIDEO', version: n + 1, projectSlug: k.project.slug });
     assetId = a.id;
   }
   await db.klingAttempt.create({ data: { klingId, number: n + 1, externalName: str(fd, 'externalName'), assetId, notes: str(fd, 'notes'), status: 'REVIEW' } });

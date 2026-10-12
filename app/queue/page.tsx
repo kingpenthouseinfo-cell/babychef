@@ -53,7 +53,7 @@ export default async function Queue({ searchParams }: { searchParams: { project?
                 {['READY', 'GENERATING'].includes(i.status) && <form action={setImageStatus} className="flex gap-1"><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="WAITING" /><select name="reason" className="input w-44" aria-label="Waiting reason">{WAITING_REASONS.map(r => <option key={r}>{r}</option>)}</select><SubmitBtn className="" pendingText="…">MARK WAITING</SubmitBtn></form>}
                 {i.status === 'WAITING' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Return to READY</SubmitBtn></form>}
                 {i.status === 'REDO' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Mark READY again</SubmitBtn></form>}
-                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-accent">{i.status === 'REVIEW' ? 'REVIEW' : 'UPLOAD RESULT'}</Link>
+                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-accent">{i.status === 'REVIEW' ? 'REVIEW' : 'IMPORT RESULT'}</Link>
               </div>
             </div>
           );

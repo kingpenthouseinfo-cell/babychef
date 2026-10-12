@@ -8,6 +8,7 @@ import { ConfirmForm, CopyButton, DirtyForm, PromptBox, SubmitBtn } from '@/comp
 import { approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, uploadResult, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, SOURCE_TOOLS, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
+import { imagePromptWarnings } from '@/lib/prompt-quality';
 
 export default async function ImagePage({ params }: { params: { slug: string; imageId: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -58,6 +59,9 @@ export default async function ImagePage({ params }: { params: { slug: string; im
         {img.status !== 'READY' && statusBtn('READY', 'btn-accent')}{img.status === 'READY' && statusBtn('GENERATING')}
       </div>
 
+      {img.status !== 'READY' && img.status !== 'APPROVED' && imagePromptWarnings(img).length > 0 && (
+        <details className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm"><summary className="cursor-pointer font-semibold text-amber-900">Prompt-quality check: {imagePromptWarnings(img).length} thing(s) missing (warning only)</summary><ul className="mt-1 list-disc pl-5">{imagePromptWarnings(img).map((w, i) => <li key={i}>{w}</li>)}</ul></details>
+      )}
       {blocked && <Warn>Waiting for {imageCode(img.dependsOn!.seq)} — it is not approved yet. (You can still proceed.)</Warn>}
       {img.status === 'WAITING' && <div className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm"><b>WAITING</b> since {fmtDate(img.waitingAt)} — {img.waitingReason || 'no reason'}{img.waitingNote ? `: ${img.waitingNote}` : ''}</div>}
       {pkgAttached.length > 0 && (
@@ -123,7 +127,8 @@ export default async function ImagePage({ params }: { params: { slug: string; im
                 <PromptBox name="contPrompt" label="CONTINUATION PROMPT" initial={img.contPrompt} copyLabel="COPY CONTINUATION PROMPT" downloadHref={`/api/export/text?type=image-cont&id=${img.id}`} />
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3"><Text name="promptReason" label="Reason for revision (saved with the new prompt version)" className="sm:col-span-2" /><Sel name="promptStatus" label="Prompt status" v={img.promptStatus} options={PROMPT_STATUSES} /></div>
-              <div className="mt-2"><Link href={`/projects/${p.slug}/prompts?cat=IMAGE GENERATION&image=${img.id}`} className="btn btn-sm">PREPARE IMAGE PROMPT from template</Link></div>
+              <div className="mt-3 rounded-lg bg-neutral-50 p-3"><div className="label">Production Brain — have ChatGPT / Claude WRITE the prompt</div><div className="flex flex-wrap gap-2"><Link href={`/projects/${p.slug}/builder?type=image-full&image=${img.id}`} className="btn btn-sm btn-primary">PREPARE FULL IMAGE PROMPT</Link><Link href={`/projects/${p.slug}/builder?type=image-cont&image=${img.id}`} className="btn btn-sm btn-primary">PREPARE CONTINUATION PROMPT</Link>{img.attempts.length > 0 && <Link href={`/projects/${p.slug}/builder?type=image-redo&image=${img.id}`} className="btn btn-sm btn-accent">PREPARE REDO PROMPT</Link>}</div></div>
+              <div className="mt-2"><Link href={`/projects/${p.slug}/prompts?cat=IMAGE GENERATION&image=${img.id}`} className="btn btn-sm">Assemble prompt directly from the fields above</Link></div>
             </Section>
             <Section title="Planning">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -181,10 +186,10 @@ export default async function ImagePage({ params }: { params: { slug: string; im
         <h2>Generated results & history</h2>
         <div className="card">
           <form action={uploadResult} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><input type="hidden" name="imageId" value={img.id} />
-            <Field label="UPLOAD RESULT"><input type="file" name="file" accept="image/*" required className="input" /></Field>
+            <Field label="IMPORT RESULT (choose the file you downloaded)"><input type="file" name="file" accept="image/*" required className="input" /></Field>
             <Sel name="sourceTool" label="Source tool" options={SOURCE_TOOLS} /><Sel name="promptType" label="Prompt used" options={[['FULL', 'Full prompt'], ['CONTINUATION', 'Continuation prompt']]} />
             <Text name="notes" label="Notes" />
-            <div className="sm:col-span-2 lg:col-span-4"><SubmitBtn pendingText="Uploading…">UPLOAD RESULT (as {slugBase}_attempt-v{img.attemptCount + 1})</SubmitBtn></div></form>
+            <div className="sm:col-span-2 lg:col-span-4"><SubmitBtn pendingText="Uploading…">IMPORT RESULT — saved to your project folder as {slugBase}_attempt-v{img.attemptCount + 1}</SubmitBtn></div></form>
         </div>
 
         {review.map(a => (
@@ -240,7 +245,7 @@ export default async function ImagePage({ params }: { params: { slug: string; im
                   {a.change && <p><b className="text-green-800">Correction:</b> {a.change}</p>}
                   {a.keep && <p><b>Keep:</b> {a.keep}</p>}
                   {a.notes && <p className="text-neutral-600">{a.notes}</p>}
-                  <div className="flex flex-wrap gap-2 pt-1"><a className="btn btn-sm" href={`/api/files/${a.assetId}?download=1${approved ? `&name=${slugBase}_approved-v${a.number}` : ''}`}>Download</a>
+                  <div className="flex flex-wrap gap-2 pt-1"><Link className="btn btn-sm btn-accent" href={`/projects/${p.slug}/builder?type=image-redo&image=${img.id}&attempt=${a.id}`}>PREPARE REDO PROMPT</Link><a className="btn btn-sm" href={`/api/files/${a.assetId}?download=1${approved ? `&name=${slugBase}_approved-v${a.number}` : ''}`}>Download</a>
                     {a.status !== 'APPROVED' && a.status !== 'REVIEW' && <form action={approveAttempt}><input type="hidden" name="attemptId" value={a.id} /><SubmitBtn className="btn-sm" pendingText="…" confirm={img.approvedAttemptId ? 'Replace the current approved result with this attempt?' : undefined}>Approve this one</SubmitBtn></form>}</div>
                 </div>
               </div>

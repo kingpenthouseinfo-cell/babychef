@@ -12,6 +12,23 @@ export function safeExt(name: string, mime?: string): string {
   return ext === '.jpeg' ? '.jpg' : ext;
 }
 
+/** Folder/file segment that is safe on macOS/Windows/Linux but keeps spaces & capitals readable. */
+export function safeSegment(s: string): string {
+  return (s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ').replace(/^[.\s-]+|[\s.]+$/g, '').slice(0, 80) || 'Untitled';
+}
+
+/** Human-readable project folder name (e.g. "Jamaican Beef Patties"), fixed once assigned. */
+export async function projectFolder(projectId: string): Promise<string> {
+  const p = await db.project.findUniqueOrThrow({ where: { id: projectId } });
+  if (p.folderName) return p.folderName;
+  let name = safeSegment(p.title), n = 1;
+  while (await db.project.findFirst({ where: { folderName: name, id: { not: p.id } } })) name = `${safeSegment(p.title)} (${++n})`;
+  await db.project.update({ where: { id: p.id }, data: { folderName: name } });
+  return name;
+}
+
+export const PROJECT_SUBFOLDERS = ['01 References/Baby', '01 References/Kitchen', '01 References/Products', '01 References/Food', '01 References/Actions', '01 References/Corrections', '02 Images', '03 Redos', '04 Kling', '05 Prompts', '06 Publishing'];
+
 /** Read pixel dimensions from PNG / JPEG / GIF / WEBP headers without native deps. */
 export function imageSize(buf: Buffer): { width: number; height: number } | null {
   try {
@@ -36,43 +53,53 @@ export function imageSize(buf: Buffer): { width: number; height: number } | null
   return null;
 }
 
-export type UploadOpts = {
-  projectSlug?: string | null;      // null => shared library folder
-  folder: string;                   // e.g. references/baby
-  friendlyBase: string;             // e.g. REF_baby_jamaican-master-face
+export type ImportOpts = {
+  rootFolder: string;          // e.g. "Jamaican Beef Patties" or "00 Baby Chefs/Jamaican Baby Chef"
+  folder: string;              // e.g. "01 References/Products" ('' for none)
+  dir?: string;                // explicit full directory (overrides rootFolder/folder)
+  fileBase: string;            // friendly name without extension, e.g. "REF-PRODUCT-001_grace-coconut-milk_front"
   kind: string;
   version?: number;
+  projectSlug?: string | null;
   altText?: string | null;
-  versionLabel?: string;            // suffix before ext, e.g. "attempt-v2"; default `_${NN}`
-  separator?: string;
 };
 
 /**
- * Save an uploaded File. Friendly name is stored as displayName and in the
- * stored filename; a short random suffix guarantees nothing is overwritten.
+ * Import a local file (chosen with the browser file picker) into the organized
+ * project folder. The on-disk name IS the friendly name; if a file with that
+ * name already exists, a numeric suffix is added so nothing is ever overwritten.
  */
-export async function saveUpload(file: File, o: UploadOpts) {
+export async function importFile(file: File, o: ImportOpts) {
   const buf = Buffer.from(await file.arrayBuffer());
   const ext = safeExt(file.name, file.type);
-  const base = slugify(o.friendlyBase).replace(/-/g, '-');
-  const friendlyRaw = o.friendlyBase.replace(/[^A-Za-z0-9._\-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  const version = o.version ?? 1;
-  const label = o.versionLabel ?? String(version).padStart(2, '0');
-  const displayName = `${friendlyRaw || base}_${label}${ext}`;
-  const rand = Math.random().toString(36).slice(2, 7);
-  const internalName = `${friendlyRaw || base}_${label}_${rand}${ext}`;
-  const relPath = [o.projectSlug || '_library', ...o.folder.split('/').map(s => slugify(s))].join('/') + '/' + internalName;
+  const base = o.fileBase.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'file';
+  const dir = o.dir ?? [...o.rootFolder.split('/'), ...o.folder.split('/')].filter(Boolean).map(safeSegment).join('/');
+  let name = `${base}${ext}`, n = 1;
+  while (await storage.exists(`${dir}/${name}`) || await db.asset.findFirst({ where: { relPath: `${dir}/${name}` } })) name = `${base}_dup${++n}${ext}`;
+  const relPath = `${dir}/${name}`;
   await storage.put(relPath, buf);
   const dim = file.type.startsWith('image/') ? imageSize(buf) : null;
   return db.asset.create({
     data: {
-      displayName, originalName: (file.name || 'upload').slice(0, 200), internalName, relPath,
-      mime: file.type || 'application/octet-stream', size: buf.length,
-      width: dim?.width ?? null, height: dim?.height ?? null,
-      orientation: orientationOf(dim?.width, dim?.height),
-      kind: o.kind, projectSlug: o.projectSlug ?? null, version, altText: o.altText ?? null,
+      displayName: name, originalName: (file.name || 'file').slice(0, 200), internalName: name, relPath,
+      mime: file.type || 'application/octet-stream', size: buf.length, width: dim?.width ?? null, height: dim?.height ?? null,
+      orientation: orientationOf(dim?.width, dim?.height), kind: o.kind, projectSlug: o.projectSlug ?? null, version: o.version ?? 1, altText: o.altText ?? null,
     },
   });
+}
+
+/** Move an already-imported file to another subfolder of its project (e.g. 02 Images -> 03 Redos). */
+export async function moveAssetToFolder(assetId: string, subfolder: string) {
+  const a = await db.asset.findUnique({ where: { id: assetId } });
+  if (!a) return;
+  const parts = a.relPath.split('/');
+  const rootFolder = parts[0];
+  const target = [rootFolder, ...subfolder.split('/').map(safeSegment), parts[parts.length - 1]].join('/');
+  if (target === a.relPath) return;
+  let final = target, n = 1;
+  while (await storage.exists(final)) final = target.replace(/(\.[a-z0-9]+)$/i, `_${++n}$1`);
+  await storage.move(a.relPath, final);
+  await db.asset.update({ where: { id: a.id }, data: { relPath: final } });
 }
 
 export async function deleteAssetIfOrphan(assetId: string) {
@@ -84,9 +111,15 @@ export async function deleteAssetIfOrphan(assetId: string) {
   await db.asset.delete({ where: { id: a.id } });
 }
 
+/** Next code like REF-PRODUCT-003 (counter is per prefix). */
 export async function nextCode(model: 'reference' | 'correction', prefix: string, width: number): Promise<string> {
   const rows = await (model === 'reference' ? db.reference.findMany({ select: { code: true } }) : db.correction.findMany({ select: { code: true } }));
   let max = 0;
-  for (const r of rows) { const n = parseInt(r.code.replace(/\D/g, ''), 10); if (n > max) max = n; }
+  for (const r of rows) {
+    if (!r.code.startsWith(prefix + '-')) continue;
+    const n = parseInt(r.code.slice(prefix.length + 1).replace(/\D/g, ''), 10);
+    if (n > max) max = n;
+  }
   return `${prefix}-${String(max + 1).padStart(width, '0')}`;
 }
+void slugify;

@@ -25,6 +25,10 @@ export default async function Scenes({ params, searchParams }: { params: { slug:
         <Link href={base} className={`btn btn-sm ${searchParams.view !== 'progression' && searchParams.view !== 'new' ? 'btn-primary' : ''}`}>Scenes</Link>
         <Link href={`${base}?view=progression`} className={`btn btn-sm ${searchParams.view === 'progression' ? 'btn-primary' : ''}`}>Food progression</Link>
         <Link href={`${base}?view=new`} className="btn btn-sm">+ ADD SCENE</Link>
+        <Link href={`/projects/${p.slug}/builder?type=scenes`} className="btn btn-sm btn-primary">PREPARE SCENE BREAKDOWN PROMPT</Link>
+        <Link href={`/projects/${p.slug}/builder?type=image-plan`} className="btn btn-sm btn-primary">PREPARE IMAGE PLAN PROMPT</Link>
+        <Link href={`/projects/${p.slug}/builder?type=continuity`} className="btn btn-sm">CONTINUITY REVIEW PROMPT</Link>
+        <Link href={`/projects/${p.slug}/import`} className="btn btn-sm">IMPORT SCENES FROM TEXT</Link>
       </div>
       {Object.keys(summary).length > 0 && <div className="rounded-xl border border-line bg-white p-3 text-sm"><b>Shot variety (informational):</b> {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}{!summary['BEAUTY SHOT'] ? ' · 0 beauty shots' : ''}</div>}
       {searchParams.view === 'new' && <Section title="Add scene"><SceneForm projectId={p.id} /></Section>}

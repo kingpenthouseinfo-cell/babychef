@@ -30,7 +30,7 @@ export default async function BabyChefPage({ params, searchParams }: { params: {
         {refs.length === 0 ? <Empty title="No references yet." hint="Upload face, outfit, kitchen and Gold Standard images below." /> : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{refs.map(r => <ReferenceCard key={r.id} r={r} cats={REF_CATEGORIES} showOrigin={false} />)}</div>
         )}
-        <details className="mt-5 rounded-lg border border-line p-3" open={refs.length === 0}><summary className="cursor-pointer font-semibold">+ Upload reference</summary><div className="mt-3"><UploadReferenceForm babyChefId={b.id} mode="master" /></div></details>
+        <details className="mt-5 rounded-lg border border-line p-3" open={refs.length === 0}><summary className="cursor-pointer font-semibold">+ Add reference image</summary><div className="mt-3"><UploadReferenceForm babyChefId={b.id} mode="master" /></div></details>
       </Section>
       <h2 className="mb-3 mt-8">Profile</h2>
       <BabyChefForm b={b} />

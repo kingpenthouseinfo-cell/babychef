@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
-import { saveUpload, nextCode } from '../files';
+import { importFile, nextCode, projectFolder, moveAssetToFolder } from '../files';
 import { bool, imageCode, pickText, sceneCode, str, strRaw, int, parseJson } from '../util';
 import { logActivity } from '../activity';
 import { IMAGE_STATUSES, PRIORITIES } from '../constants';
@@ -131,7 +131,7 @@ export async function uploadResult(fd: FormData) {
   const { img, code, sc, slug } = await pinfo(imageId);
   const n = (await db.attempt.aggregate({ where: { imageId }, _max: { number: true } }))._max.number ?? 0;
   const number = n + 1;
-  const asset = await saveUpload(file, { projectSlug: slug, folder: 'generated-images/drafts', friendlyBase: `${slug}_${sc}_${code}`, versionLabel: `attempt-v${number}`, kind: 'GENERATED', version: number });
+  const asset = await importFile(file, { rootFolder: await projectFolder(img.projectId), folder: '02 Images', fileBase: `${slug}_${sc}_${code}_attempt-v${number}`, kind: 'GENERATED', version: number, projectSlug: slug });
   const pType = str(fd, 'promptType') || 'FULL';
   const pv = await db.promptVersion.findFirst({ where: { ownerId: imageId, type: pType === 'FULL' ? 'FULL' : 'CONTINUATION', active: true } });
   await db.attempt.create({ data: { imageId, number, assetId: asset.id, sourceTool: str(fd, 'sourceTool') || 'ChatGPT', promptType: pType, promptVersion: pv?.version ?? null, notes: str(fd, 'notes') } });
@@ -158,6 +158,7 @@ export async function approveAttempt(fd: FormData) {
     await tx.attempt.update({ where: { id }, data: { status: 'APPROVED', approvedAt: new Date(), checklist: JSON.stringify(fd.getAll('check').map(String)) } });
     await tx.plannedImage.update({ where: { id: img.id }, data: { approvedAttemptId: id, status: 'APPROVED' } });
   });
+  await moveAssetToFolder(a.assetId, '02 Images');
   await logActivity(`${imageCode(img.seq)} approved (attempt ${a.number})`, `/projects/${img.project.slug}/images/${img.id}`, img.projectId);
   touch();
 }
@@ -166,7 +167,7 @@ export async function redoAttempt(fd: FormData) {
   const id = str(fd, 'attemptId')!;
   const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: { include: { project: true } } } });
   await db.attempt.update({ where: { id }, data: { status: 'REDO', wrong: str(fd, 'wrong'), change: str(fd, 'change'), keep: str(fd, 'keep'), corrCategory: str(fd, 'corrCategory'), severity: str(fd, 'severity') || 'MEDIUM', notes: str(fd, 'notes') ?? a.notes, checklist: JSON.stringify(fd.getAll('check').map(String)) } });
-  if (a.image.approvedAttemptId !== id) await db.plannedImage.update({ where: { id: a.imageId }, data: { status: a.image.approvedAttemptId ? 'APPROVED' : 'REDO' } });
+  if (a.image.approvedAttemptId !== id) { await db.plannedImage.update({ where: { id: a.imageId }, data: { status: a.image.approvedAttemptId ? 'APPROVED' : 'REDO' } }); await moveAssetToFolder(a.assetId, '03 Redos'); }
   if (bool(fd, 'addToLibrary')) {
     await db.correction.create({ data: { code: await nextCode('correction', 'COR', 3), title: `${imageCode(a.image.seq)}: ${str(fd, 'corrCategory') || 'Correction'}`, category: str(fd, 'corrCategory') || 'Other', wrong: str(fd, 'wrong'), correct: str(fd, 'change'), projectId: a.image.projectId, severity: str(fd, 'severity') || 'MEDIUM', assetId: a.assetId } });
   }
@@ -177,7 +178,7 @@ export async function rejectAttempt(fd: FormData) {
   const id = str(fd, 'attemptId')!;
   const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: true } });
   await db.attempt.update({ where: { id }, data: { status: 'REJECTED', notes: str(fd, 'notes') ?? a.notes } });
-  if (a.image.approvedAttemptId !== id) await db.plannedImage.update({ where: { id: a.imageId }, data: { status: a.image.approvedAttemptId ? 'APPROVED' : 'REJECTED' } });
+  if (a.image.approvedAttemptId !== id) { await db.plannedImage.update({ where: { id: a.imageId }, data: { status: a.image.approvedAttemptId ? 'APPROVED' : 'REJECTED' } }); await moveAssetToFolder(a.assetId, '03 Redos'); }
   touch();
 }
 

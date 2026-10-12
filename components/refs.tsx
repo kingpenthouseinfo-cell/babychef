@@ -39,7 +39,7 @@ export function ReferenceCard({ r, cats, showOrigin = true }: { r: any; cats: st
         </form>
         <form action={replaceReference} className="mt-3 space-y-2 border-t border-line pt-2">
           <input type="hidden" name="id" value={r.id} />
-          <Field label="Replace image (keeps old file as previous version)"><input type="file" name="file" accept="image/*" required className="input" /></Field>
+          <Field label="Replace image (old file stays in the folder as the previous version)"><input type="file" name="file" accept="image/*" required className="input" /></Field>
           <SubmitBtn className="btn-sm" pendingText="Uploading…">Replace</SubmitBtn>
         </form>
         <ConfirmForm action={deleteReference} message={`Delete reference ${r.code} "${r.title}"? It will be removed from any image it is attached to.`} className="mt-3 border-t border-line pt-2">
@@ -58,14 +58,14 @@ export function UploadReferenceForm({ babyChefId, projectId, ingredientId, mode 
       {projectId && <input type="hidden" name="projectId" value={projectId} />}
       {ingredientId && <input type="hidden" name="ingredientId" value={ingredientId} />}
       <div className="grid gap-2 sm:grid-cols-2">
-        <Field label="Image file(s)"><input type="file" name="file" accept="image/*" required className="input" /></Field>
+        <Field label="Image file (copied into your folder)"><input type="file" name="file" accept="image/*" required className="input" /></Field>
         <Text name="title" label="Title" placeholder={mode === 'ingredient' ? 'e.g. Front label' : 'e.g. Master face'} />
         <Sel name="category" label={mode === 'ingredient' ? 'Reference type' : 'Category'} options={cats} />
         <Text name="notes" label="Notes" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {mode !== 'ingredient' ? <Check name="isGold" label="Mark as Gold Standard" /> : <span />}
-        <SubmitBtn pendingText="Uploading…">Upload reference</SubmitBtn>
+        <SubmitBtn pendingText="Uploading…">Add reference</SubmitBtn>
       </div>
     </form>
   );

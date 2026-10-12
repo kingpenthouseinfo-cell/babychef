@@ -20,7 +20,7 @@ export default async function Script({ params, searchParams }: { params: { slug:
   const sel = versions.find(v => v.id === searchParams.v) ?? versions.find(v => v.isCurrent) ?? versions[0];
   return (
     <div className="space-y-5">
-      <div className="rounded-xl bg-neutral-100 p-3 text-sm">Scripts are written elsewhere (ChatGPT / Claude) and pasted here. Use <Link className="underline" href={`/projects/${p.slug}/prompts?cat=SCRIPT`}>PREPARE SCRIPT PROMPT</Link> to build the request.</div>
+      <div className="rounded-xl bg-neutral-100 p-3 text-sm">Scripts are written elsewhere (ChatGPT / Claude) and pasted here. Use <Link className="underline" href={`/projects/${p.slug}/builder?type=script`}>PREPARE SCRIPT PROMPT</Link> (or <Link className="underline" href={`/projects/${p.slug}/builder?type=script-revision`}>PREPARE SCRIPT REVISION PROMPT</Link>) to build the request — it includes your Production Bible, the Baby Chef profile and the recipe.</div>
       {!sel ? <Empty title="No script yet." hint="Create Script v1, then paste your script into it."><form action={createScript}><input type="hidden" name="projectId" value={p.id} /><SubmitBtn pendingText="Creating…">+ CREATE SCRIPT v1</SubmitBtn></form></Empty> : (
         <>
           <div className="flex flex-wrap gap-1.5">

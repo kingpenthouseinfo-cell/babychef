@@ -46,7 +46,7 @@ export default async function Ingredients({ params }: { params: { slug: string }
             </div>
           </div>
           {i.references.length > 0 && <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{i.references.map(r => <ReferenceCard key={r.id} r={r} cats={INGREDIENT_REF_TYPES} showOrigin={false} />)}</div>}
-          <details className="rounded-lg border border-line p-3"><summary className="cursor-pointer text-sm font-semibold">+ Upload product reference ({i.references.length})</summary><div className="mt-3"><UploadReferenceForm ingredientId={i.id} mode="ingredient" /></div></details>
+          <details className="rounded-lg border border-line p-3"><summary className="cursor-pointer text-sm font-semibold">+ Add product reference photo ({i.references.length})</summary><div className="mt-3"><UploadReferenceForm ingredientId={i.id} mode="ingredient" /></div></details>
           <details className="mt-2 rounded-lg border border-line p-3"><summary className="cursor-pointer text-sm font-semibold">Edit ingredient</summary><div className="mt-3"><IngForm projectId={p.id} i={i} /></div>
             <ConfirmForm action={deleteIngredient} message={`Delete ingredient "${i.name}" and detach its product references?`} className="mt-3"><input type="hidden" name="id" value={i.id} /><button className="btn btn-sm btn-danger">Delete ingredient…</button></ConfirmForm></details>
         </section>

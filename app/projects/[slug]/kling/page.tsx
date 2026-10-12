@@ -23,6 +23,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
             <div className="mt-2 flex gap-1.5">{c.refs.slice(0, 5).map((r, i) => <div key={r.id} className="w-16"><Thumb id={r.image.approvedAttempt?.assetId} alt={r.image.title} w={160} ratio="aspect-square" /><div className="text-[10px] font-semibold">@image{i + 1} {imageCode(r.image.seq)}</div></div>)}</div>
           </Link>))}</div>
       )}
+      <div className="flex flex-wrap gap-2"><Link href={`/projects/${p.slug}/builder?type=kling-group`} className="btn btn-primary">PREPARE KLING GROUPING PROMPT</Link></div>
       <Section title="+ New Kling clip">
         <form action={createKling} className="grid gap-3 sm:grid-cols-3"><input type="hidden" name="projectId" value={p.id} />
           <Text name="title" label="Title *" required className="sm:col-span-2" /><Text name="durationTarget" label="Target duration (sec)" type="number" />

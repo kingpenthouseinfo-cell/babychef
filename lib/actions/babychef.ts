@@ -2,11 +2,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
-import { saveUpload, deleteAssetIfOrphan, nextCode } from '../files';
+import { importFile, deleteAssetIfOrphan, nextCode, projectFolder, safeSegment } from '../files';
 import { bool, pickText, slugify, str } from '../util';
 import { logActivity } from '../activity';
 
-const FIELDS = ['displayName','seriesName','cuisine','age','gender','appearance','skinTone','facialFeatures','hair','bodyNotes','outfit','accessories','personality','dialogueStyle','voiceInstruction','recurringJokes','recurringReacts','behaviorNotes','kitchen','lighting','cinematography','safetyRules','continuityRules'];
+const FIELDS = ['displayName','seriesName','cuisine','age','gender','appearance','skinTone','facialFeatures','hair','bodyNotes','outfit','accessories','personality','dialogueStyle','voiceInstruction','recurringJokes','recurringReacts','behaviorNotes','kitchen','lighting','cinematography','safetyRules','continuityRules','humorPatterns','typicalExpressions','ingredientReactions','ctaBehavior','culturalNotes'];
 
 async function uniqueSlug(base: string) {
   let s = slugify(base), i = 1;
@@ -38,6 +38,16 @@ export async function deleteBabyChef(fd: FormData) {
   redirect('/babychefs');
 }
 
+function groupFor(category: string): { sub: string; prefix: string } {
+  const c = category.toLowerCase();
+  if (c.includes('kitchen') || c.includes('counter') || c.includes('cookware') || c.includes('lighting') || c.includes('cinematography')) return { sub: 'Kitchen', prefix: 'REF-KITCHEN' };
+  if (c.includes('food') || c.includes('texture')) return { sub: 'Food', prefix: 'REF-FOOD' };
+  if (c.includes('action')) return { sub: 'Actions', prefix: 'REF-ACTION' };
+  if (c.includes('product') || c.includes('label') || c.includes('package') || c.includes('poured') || c.includes('bowl')) return { sub: 'Products', prefix: 'REF-PRODUCT' };
+  if (c.includes('correction')) return { sub: 'Corrections', prefix: 'REF-CORRECTION' };
+  return { sub: 'Baby', prefix: 'REF-BABY' };
+}
+
 export async function uploadReference(fd: FormData) {
   const file = fd.get('file') as File | null;
   if (!file || !file.size) throw new Error('Choose an image file');
@@ -52,26 +62,23 @@ export async function uploadReference(fd: FormData) {
     projectId ? db.project.findUnique({ where: { id: projectId } }) : null,
     ingredientId ? db.ingredient.findUnique({ where: { id: ingredientId } }) : null,
   ]);
-  const catSlug = slugify(category);
-  let folder = 'references/other', base = `REF_${catSlug}_${slugify(title)}`;
-  if (ing) { folder = 'references/ingredients'; base = `REF_ingredient_${slugify(ing.name)}${ing.brand ? '_' + slugify(ing.brand) : ''}_${catSlug}`; }
-  else if (chef && kind === 'MASTER') {
-    const c = category.toLowerCase();
-    folder = c.includes('kitchen') || c.includes('counter') || c.includes('cookware') || c.includes('lighting') || c.includes('cinematography') ? 'references/kitchen' : c.includes('food') ? 'references/food' : 'references/baby';
-    base = `REF_${folder.endsWith('kitchen') ? 'kitchen' : folder.endsWith('food') ? 'food' : 'baby'}_${slugify(chef.displayName)}-${slugify(title)}`;
-  } else if (kind === 'PROJECT') { folder = 'references/' + (category.toLowerCase().includes('action') ? 'actions' : category.toLowerCase().includes('food') ? 'food' : category.toLowerCase().includes('kitchen') ? 'kitchen' : 'baby'); base = `REF_${catSlug}_${slugify(title)}`; }
-  const slug = project?.slug ?? (ing ? (await db.project.findUnique({ where: { id: ing.projectId } }))?.slug : null) ?? (chef ? `_library/${chef.slug}` : null);
-  // version = how many files already share this base
-  const existing = await db.asset.count({ where: { displayName: { startsWith: base } } });
-  const asset = await saveUpload(file, { projectSlug: slug, folder, friendlyBase: base, kind: ing ? 'INGREDIENT_REF' : 'REFERENCE', version: existing + 1, altText: str(fd, 'altText') });
-  const code = await nextCode('reference', 'REF', 4);
+  const g = ing ? { sub: 'Products', prefix: 'REF-PRODUCT' } : groupFor(category);
+  const code = await nextCode('reference', g.prefix, 3);
+  const projId = project?.id ?? ing?.projectId ?? null;
+  const owner = projId ? await db.project.findUnique({ where: { id: projId } }) : null;
+  // Shared (master) references live with the Baby Chef; project/ingredient refs live inside the project folder.
+  const rootFolder = owner && kind !== 'MASTER' ? await projectFolder(owner.id) : `00 Baby Chefs/${safeSegment(chef?.displayName || 'Unassigned')}`;
+  const folder = owner && kind !== 'MASTER' ? `01 References/${g.sub}` : `References/${g.sub}`;
+  const nameBits = ing ? [slugify(ing.name), ing.brand ? slugify(ing.brand) : '', slugify(category)] : [slugify(title), slugify(category)];
+  const base = `${code}_${nameBits.filter(Boolean).join('_')}`;
+  const asset = await importFile(file, { rootFolder, folder, fileBase: base, kind: ing ? 'INGREDIENT_REF' : 'REFERENCE', version: 1, projectSlug: owner?.slug ?? null, altText: str(fd, 'altText') });
   const ref = await db.reference.create({
     data: {
-      code, kind, babyChefId: chef?.id ?? project?.babyChefId ?? null, projectId: project?.id ?? ing?.projectId ?? null, ingredientId: ing?.id ?? null, assetId: asset.id,
+      code, kind, babyChefId: chef?.id ?? owner?.babyChefId ?? null, projectId: projId, ingredientId: ing?.id ?? null, assetId: asset.id,
       title, category, description: str(fd, 'description'), notes: str(fd, 'notes'), isGold: bool(fd, 'isGold'), version: 1,
     },
   });
-  await logActivity(`Reference ${code} "${title}" uploaded`, null, ref.projectId);
+  await logActivity(`Reference ${code} "${title}" added`, null, ref.projectId);
   revalidatePath('/', 'layout');
 }
 
@@ -86,15 +93,16 @@ export async function toggleGold(fd: FormData) {
   await db.reference.update({ where: { id }, data: { isGold: !r.isGold } });
   revalidatePath('/', 'layout');
 }
-/** Replace image: new version, old file kept (never overwritten). */
+/** Replace image: new version saved next to the old file (never overwritten). */
 export async function replaceReference(fd: FormData) {
   const id = str(fd, 'id')!;
   const file = fd.get('file') as File | null;
   if (!file || !file.size) throw new Error('Choose an image file');
   const r = await db.reference.findUniqueOrThrow({ where: { id }, include: { asset: true } });
   const version = r.version + 1;
-  const base = r.asset.displayName.replace(/_\d+(\.[a-z0-9]+)?$/i, '');
-  const asset = await saveUpload(file, { projectSlug: r.asset.projectSlug, folder: 'references/versions', friendlyBase: base, kind: r.asset.kind, version });
+  const dir = r.asset.relPath.split('/').slice(0, -1).join('/');
+  const base = r.asset.displayName.replace(/(_v\d+)?\.[a-z0-9]+$/i, '');
+  const asset = await importFile(file, { rootFolder: '', folder: '', dir, fileBase: `${base}_v${version}`, kind: r.asset.kind, version, projectSlug: r.asset.projectSlug });
   await db.reference.update({ where: { id }, data: { assetId: asset.id, version } });
   revalidatePath('/', 'layout');
 }
@@ -112,7 +120,8 @@ export async function saveCorrection(fd: FormData) {
   const data: any = { ...pickText(fd, ['title', 'category', 'wrong', 'correct', 'babyChefId', 'projectId', 'ingredient', 'action', 'severity']) };
   if (!data.title) throw new Error('Title is required');
   if (file && file.size) {
-    const a = await saveUpload(file, { projectSlug: null, folder: 'references/corrections', friendlyBase: `REF_correction_${slugify(data.title)}`, kind: 'CORRECTION', version: 1 });
+    const ccode = await nextCode('correction', 'COR', 3);
+    const a = await importFile(file, { rootFolder: '00 Baby Chefs', folder: '_Corrections', fileBase: `${ccode}_${slugify(data.title)}`, kind: 'CORRECTION', version: 1 });
     data.assetId = a.id;
   }
   if (id) await db.correction.update({ where: { id }, data });

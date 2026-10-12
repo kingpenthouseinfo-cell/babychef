@@ -2,6 +2,7 @@ import { db } from './db';
 import { imageCode, sceneCode, klingCode, parseJson, lines, ratioLabel } from './util';
 import { CROP_GUIDANCE, CONTINUITY_FIELDS } from './constants';
 import { getSettings } from './settings';
+import { bibleText, chefProductionText, OVERRIDE_FIELDS } from './bible';
 
 export const VARIABLES = [
   'project_title','recipe_name','cuisine','baby_name','baby_personality','baby_profile','dialogue_style','recurring_jokes','safety_rules','voice_instruction','kitchen',
@@ -10,7 +11,7 @@ export const VARIABLES = [
   'image_id','image_title','full_prompt','starting_composition','action_moment','image_ingredients','ingredient_state','camera','must_be_visible','must_not_change','must_not_appear',
   'continuity_bible','corrections','principles','crop_guidance',
   'short_keep_moments','short_hook','short_timeline','short_edit_notes','hook','finished_food_description','long_form_duration','short_form_duration','cta',
-  'ingredient_list','ingredient_brand_references',
+  'ingredient_list','ingredient_brand_references','production_bible','baby_chef_production','project_overrides',
   'kling_id','kling_title','kling_duration','kling_references','kling_start','kling_actions','kling_movement','kling_food_physics','kling_dialogue','kling_voice','kling_camera','kling_focus','kling_asmr','kling_ambient','kling_lighting','kling_continuity','kling_restrictions','kling_ending','kling_final_prompt','kling_last_wrong','kling_last_change','kling_last_keep',
 ];
 
@@ -82,6 +83,8 @@ export async function buildVars(projectId: string, opts: { sceneId?: string | nu
     hook: v(p.mainHook) || v(p.longHook), finished_food_description: v(p.finishedFood),
     long_form_duration: v(p.longDuration), short_form_duration: v(p.shortDuration), cta,
     ingredient_list: ingList, ingredient_brand_references: brandRefs,
+    production_bible: await bibleText(), baby_chef_production: chefProductionText(b),
+    project_overrides: OVERRIDE_FIELDS.filter(f => v(doc('overrides')[f])).map(f => `${f}: ${doc('overrides')[f]}`).join('\n'),
   };
 
   const scene = opts.sceneId ? p.scenes.find(s => s.id === opts.sceneId) : undefined;

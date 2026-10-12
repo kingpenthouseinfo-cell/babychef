@@ -1,3 +1,4 @@
+import { TASK_TEMPLATES } from './task-templates';
 type T = { code: string; name: string; category: string; purpose: string; description: string; text: string };
 
 const COMMON = `Baby Chef: {{baby_name}}
@@ -5,121 +6,6 @@ Personality: {{baby_personality}}
 Voice / accent: {{voice_instruction}}`;
 
 export const DEFAULT_TEMPLATES: T[] = [
-  {
-    code: 'TPL-SCRIPT', name: 'Prepare Baby Chef Script', category: 'SCRIPT',
-    purpose: 'Ask ChatGPT/Claude to write the full narration/dialogue script.', description: 'Paste the result into the Script tab.',
-    text: `Write a complete script for a realistic AI-generated Baby Chef cooking video.
-
-PROJECT: {{project_title}}
-RECIPE: {{recipe_name}} ({{cuisine}})
-LONG-FORM LENGTH: {{long_form_duration}}
-SHORT-FORM LENGTH: {{short_form_duration}}
-
-${COMMON}
-Dialogue style: {{dialogue_style}}
-Recurring jokes / reactions: {{recurring_jokes}}
-
-INGREDIENTS (exact quantities must be preserved):
-{{ingredient_list}}
-
-RECIPE:
-{{recipe_text}}
-
-CONTINUITY / SAFETY:
-{{continuity_bible}}
-{{safety_rules}}
-
-REQUIREMENTS:
-- Keep every ingredient quantity accurate and mention important quantities out loud.
-- Pace the video so the cooking moves logically and visibly through each stage.
-- Include a strong opening hook using the finished food: {{hook}}
-- Mark moments for a short version using [SHORT KEEP]. Also use [HOOK], [ASMR], [REACTION], [OFF-SCREEN], [ADULT ASSIST], [BEAUTY SHOT], [VOICEOVER], [CAMERA INSERT] and [IMPORTANT QUANTITY] where appropriate.
-- Any dangerous action (knives, hot pans, boiling water, oven, stove) must be handled with [ADULT ASSIST] or safe off-screen staging.
-- Include funny, in-character Baby Chef reactions.
-- Return the script as plain text with scene headings.`,
-  },
-  {
-    code: 'TPL-SCRIPT-REV', name: 'Revise Script', category: 'SCRIPT REVISION',
-    purpose: 'Ask for a revision of the current script.', description: '',
-    text: `Revise the following Baby Chef script.
-
-Project: {{project_title}} — {{recipe_name}}
-${COMMON}
-
-What I want changed:
-(describe here: faster pacing / funnier / shorter / more accurate quantities)
-
-CURRENT SCRIPT:
-{{script_text}}
-
-Keep all [markers] and ingredient quantities intact unless I say otherwise.`,
-  },
-  {
-    code: 'TPL-SCENES', name: 'Scene Breakdown', category: 'SCENE BREAKDOWN',
-    purpose: 'Convert an approved script into scenes with food progression and image requirements.', description: '',
-    text: `Convert this approved Baby Chef script into a production scene breakdown.
-
-Project: {{project_title}} ({{recipe_name}}, {{cuisine}})
-${COMMON}
-
-INGREDIENTS:
-{{ingredient_list}}
-
-SCRIPT:
-{{script_text}}
-
-For EACH scene return:
-- Scene number and short title
-- Recipe step / purpose
-- Dialogue
-- Baby reaction, main action, secondary action
-- Ingredients, utensils, cookware
-- Adult assistance needed (YES/NO/OPTIONAL) and notes
-- Shot priority (MAIN NARRATIVE SHOT, CINEMATIC INSERT, MACRO ASMR, REACTION SHOT, OVERHEAD, TRANSITION, BEAUTY SHOT)
-- FOOD STATE BEFORE / DURING / AFTER (be specific; food must progress logically)
-- Suggested still images (several per scene is normal) with shot type
-- ASMR opportunities
-- Whether it is a SHORT KEEP moment
-- Vertical-crop importance (CRITICAL / PREFERRED / NOT IMPORTANT)
-
-Crop guidance: {{crop_guidance}}`,
-  },
-  {
-    code: 'TPL-IMGPLAN', name: 'Image Planning', category: 'IMAGE PLANNING',
-    purpose: 'Ask ChatGPT/Claude to write detailed still-image prompts for a scene.', description: '',
-    text: `Write detailed still-image generation prompts for this scene of a photorealistic Baby Chef cooking video.
-
-SCENE: {{scene_code}} — {{scene_title}}
-Narrative: {{scene_narrative}}
-Main action: {{scene_action}}
-Dialogue: {{scene_dialogue}}
-Cookware: {{scene_cookware}} | Utensils: {{scene_utensils}}
-Adult assistance: {{scene_adult}}
-
-FOOD STATE
-Before: {{food_state_before}}
-During: {{food_state_during}}
-After: {{food_state_after}}
-
-BABY CHEF
-{{baby_profile}}
-
-KITCHEN
-{{kitchen}}
-
-INGREDIENT PRODUCT REFERENCES
-{{ingredient_brand_references}}
-
-KNOWN CORRECTIONS (do not repeat these mistakes)
-{{corrections}}
-
-PRODUCTION PRINCIPLES
-{{principles}}
-
-Crop guidance: {{crop_guidance}}
-
-For each image give: a FULL PROMPT (complete visual context) and a CONTINUATION PROMPT (only what changes, for use in an ongoing ChatGPT chat). Include starting composition, what must be visible, what must not change, what must not appear.`,
-  },
   {
     code: 'TPL-IMGGEN', name: 'Image Generation (Full)', category: 'IMAGE GENERATION',
     purpose: 'Assemble a full image prompt from the planned image fields.', description: 'Use "Prepare prompt" on an image to fill this.',
@@ -176,24 +62,6 @@ Must not change: {{must_not_change}}
 Do not add: {{must_not_appear}}`,
   },
   {
-    code: 'TPL-CONTREV', name: 'Continuity Review', category: 'CONTINUITY REVIEW',
-    purpose: 'Manual AI review of scene / food-state continuity.', description: '',
-    text: `Review these scene descriptions and approved-image notes for continuity problems in a Baby Chef cooking video.
-
-Project: {{project_title}}
-
-CONTINUITY BIBLE
-{{continuity_bible}}
-
-FOOD PROGRESSION BY INGREDIENT / SCENE
-{{food_progression}}
-
-APPROVED IMAGES
-{{approved_images}}
-
-Look for: ingredients that appear or vanish unexplained, food that regresses (cooked → raw), quantity changes, cookware/kitchen changes, lighting changes, and unsafe actions. List each problem with the scene ID and a suggested fix.`,
-  },
-  {
     code: 'TPL-KLING', name: 'Kling Prompt', category: 'KLING',
     purpose: 'Structured multi-reference Kling prompt.', description: '',
     text: `{{kling_id}} — {{kling_title}} (target {{kling_duration}} seconds)
@@ -242,18 +110,6 @@ RESTRICTIONS
 
 ENDING FRAME
 {{kling_ending}}`,
-  },
-  {
-    code: 'TPL-KLING-REV', name: 'Kling Revision', category: 'KLING REVISION',
-    purpose: 'Revise a Kling prompt after a failed generation.', description: '',
-    text: `Revise this Kling prompt. The last generation had problems.
-
-WHAT WENT WRONG: {{kling_last_wrong}}
-WHAT MUST CHANGE: {{kling_last_change}}
-WHAT MUST STAY THE SAME: {{kling_last_keep}}
-
-CURRENT PROMPT:
-{{kling_final_prompt}}`,
   },
   {
     code: 'TPL-CAPCUT', name: 'CapCut Editing Prompt', category: 'CAPCUT',
@@ -430,4 +286,5 @@ ${COMMON}
 Ingredients:
 {{ingredient_list}}`,
   },
+  ...TASK_TEMPLATES,
 ];

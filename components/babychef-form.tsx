@@ -32,6 +32,11 @@ export function BabyChefForm({ b }: { b?: any }) {
         <Area name="recurringJokes" label="Recurring jokes" v={b?.recurringJokes} />
         <Area name="recurringReacts" label="Recurring reactions" v={b?.recurringReacts} />
         <Area name="behaviorNotes" label="Behavior notes" v={b?.behaviorNotes} />
+        <Area name="humorPatterns" label="Humor patterns" v={b?.humorPatterns} hint="Included automatically in Production Plan prompts" />
+        <Area name="typicalExpressions" label="Typical expressions" v={b?.typicalExpressions} />
+        <Area name="ingredientReactions" label="Ingredient reactions" v={b?.ingredientReactions} placeholder="e.g. suspicious of Scotch bonnet; delighted by butter" />
+        <Area name="ctaBehavior" label="Character-specific CTA behavior" v={b?.ctaBehavior} />
+        <Area name="culturalNotes" label="Cultural / language notes" v={b?.culturalNotes} />
       </div>
       <div className="card grid gap-3 sm:grid-cols-2">
         <h2 className="sm:col-span-2">Kitchen & rules</h2>
