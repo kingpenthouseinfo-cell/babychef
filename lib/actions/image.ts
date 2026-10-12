@@ -262,6 +262,14 @@ export async function undoApprove(fd: FormData) {
   touch();
 }
 
+/** Prompt Queue: park an image as WAITING (e.g. ChatGPT generation limit) with a reason. */
+export async function markWaitingById(imageId: string, reason: string, note: string) {
+  const { img, code } = await pinfo(imageId);
+  await db.plannedImage.update({ where: { id: imageId }, data: { status: 'WAITING', waitingAt: new Date(), waitingReason: reason || 'Other', waitingNote: note || null } });
+  await logActivity(`${code} marked WAITING (${reason})`, null, img.projectId);
+  touch();
+}
+
 /** Prompt Queue: copying the next prompt marks the image GENERATING so the queue advances. */
 export async function startGenerating(imageId: string) {
   const { img, code } = await pinfo(imageId);

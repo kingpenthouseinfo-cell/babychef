@@ -8,7 +8,7 @@ import { storage } from '@/lib/storage';
 import { addProjectFile, writeTextFiles } from '@/lib/actions/settings';
 import { Chip, Empty, fileUrl } from '@/components/ui';
 import { RevealButton } from '@/components/image-workspace';
-import { SubmitBtn } from '@/components/client';
+import { SubmitBtn, CopyButton } from '@/components/client';
 import { fmtDay, imageCode, klingCode, sceneCode } from '@/lib/util';
 
 type Row = { key: string; dir: string; name: string; ref: string; version: string; status: string; date: Date | null; assetId?: string; idTag?: string };
@@ -70,6 +70,7 @@ export default async function Files({ params, searchParams }: { params: { slug: 
                 <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-medium">{r.name}</div><div className="truncate font-mono text-[11px] text-ink-secondary">{r.ref}</div></div>
                 <span className="hidden font-mono text-[11px] text-ink-secondary sm:block">{r.version}</span><Chip>{r.status}</Chip>
                 {r.assetId && <a className="text-[12px] text-blue-deep underline" href={`/api/files/${r.assetId}?download=1`}>Download</a>}
+                <CopyButton text={r.ref.split(' · ').pop() || r.name} label="Copy name" variant="secondary" className="btn-sm" />
               </div>
             ))}
           </div>
@@ -84,7 +85,7 @@ export default async function Files({ params, searchParams }: { params: { slug: 
                 </div>
                 <div className="p-3"><div className="truncate text-[14px] font-semibold">{r.name}</div><div className="mt-0.5 break-all font-mono text-[10px] leading-tight text-ink-secondary">{r.ref}</div>
                   <div className="mt-2 flex items-center justify-between text-[11px] text-ink-muted"><span>{r.version}</span><span>{r.date ? fmtDay(r.date) : ''}</span></div>
-                  {r.assetId && <a className="mt-2 inline-block text-[12px] font-medium text-blue-deep underline" href={`/api/files/${r.assetId}?download=1`}>Download</a>}</div>
+                  <div className="mt-2 flex items-center gap-3">{r.assetId && <a className="text-[12px] font-medium text-blue-deep underline" href={`/api/files/${r.assetId}?download=1`}>Download</a>}<CopyButton text={r.ref.split(' · ').pop() || r.name} label="Copy name" variant="secondary" className="btn-sm" /></div></div>
               </div>
             ))}
           </div>

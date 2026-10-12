@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { getProjectBySlug } from '@/lib/queries';
 import { DirtyForm, SubmitBtn } from '@/components/client';
 import { Area, Section, Thumb, Chip, GoldBadge } from '@/components/ui';
-import { saveDoc } from '@/lib/actions/project';
+import { saveDoc, copyDefaultsToContinuity } from '@/lib/actions/project';
 import { CONTINUITY_FIELDS, INGREDIENT_IMPORTANCE } from '@/lib/constants';
 import { parseJson, sceneCode, imageCode } from '@/lib/util';
 
@@ -29,6 +29,7 @@ export default async function Continuity({ params }: { params: { slug: string } 
           {CONTINUITY_FIELDS.map(f => <Area key={f} name={`f:${f}`} label={f} v={data[f]} rows={2} />)}
           <div className="sm:col-span-2"><SubmitBtn>SAVE CONTINUITY BIBLE</SubmitBtn></div>
         </DirtyForm>
+        <form action={copyDefaultsToContinuity} className="mt-3 border-t border-line pt-3"><input type="hidden" name="projectId" value={p.id} /><SubmitBtn className="btn-sm" pendingText="Copying…">Copy production defaults from Settings into “General restrictions”</SubmitBtn></form>
       </Section>
       <Section title="Approved image sequence">
         {approved.length === 0 ? <p className="text-sm text-ink-secondary">No approved images yet.</p> : (

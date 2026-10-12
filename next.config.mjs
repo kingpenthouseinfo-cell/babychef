@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverActions: { bodySizeLimit: '50mb' },
+    serverActions: { bodySizeLimit: '600mb' },
     serverComponentsExternalPackages: ['sharp', '@prisma/client'],
   },
 };

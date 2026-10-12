@@ -103,6 +103,18 @@ export async function saveDoc(fd: FormData) {
   revalidatePath('/', 'layout');
 }
 
+/** Copy the Settings "production defaults" into this project's Continuity Bible (explicit action). */
+export async function copyDefaultsToContinuity(fd: FormData) {
+  const projectId = str(fd, 'projectId')!;
+  const s = await getSettings();
+  const doc = await db.projectDoc.findUnique({ where: { projectId_key: { projectId, key: 'continuity' } } });
+  const data = JSON.parse(doc?.data || '{}') as Record<string, string>;
+  const cur = data['General restrictions'] || '';
+  if (!cur.includes(s.principles.slice(0, 40))) data['General restrictions'] = [cur, s.principles].filter(Boolean).join('\n');
+  await db.projectDoc.upsert({ where: { projectId_key: { projectId, key: 'continuity' } }, update: { data: JSON.stringify(data) }, create: { projectId, key: 'continuity', data: JSON.stringify(data) } });
+  revalidatePath('/', 'layout');
+}
+
 export async function addNote(fd: FormData) {
   const content = str(fd, 'content');
   if (!content) return;

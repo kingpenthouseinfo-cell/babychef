@@ -225,6 +225,9 @@ ok('Suggests previous approved IMG-001', (await page.locator('text=Suggested pre
 await page.click('button:has-text("USE PREVIOUS APPROVED IMAGE")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Approved Frame').count()) > 0 && (await page.locator('aside img[src*="/api/files/"]').count()) > 0);
+await page.click('summary:has-text("Edit & attach references")').catch(() => {});
+ok('Attach same Front Label to a 2nd image', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
+ok('Reference is linked, not copied (linked in 2 images, still 2 files on disk)', (await page.locator('text=linked in 2').count()) > 0 && walk(path.join(STORE, PROJ, '01 References', 'Products')).length === 2);
 // third image + approve quickly, 4th for kling
 async function quickApprove(url, file) {
   await page.goto(url + '#results', { waitUntil: 'networkidle' });
@@ -303,6 +306,64 @@ ok('Save prompt version records metadata', (await page.locator('text=Bible v').c
 await page.fill('textarea[name=result]', '@image1 AI-WRITTEN KLING PROMPT'); await page.click('button:has-text("SAVE RESULT")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);
 await page.click('button:has-text("USE RESULT AS KLING PROMPT")'); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 ok('Apply pasted result → Kling prompt (versioned)', (await page.inputValue('textarea[name=finalPrompt]')).includes('AI-WRITTEN'));
+
+// ---- Correction library -> flows into image prompts
+await go('/corrections');
+await page.click('summary:has-text("Add correction")');
+const cf = page.locator('form:has(input[name=title]):has(button:has-text("Add correction"))');
+await cf.locator('input[name=title]').fill('Too much oil in pan'); await cf.locator('textarea[name=correct]').fill('Exactly 2 tablespoons of oil forming a small shallow pool'); await cf.locator('textarea[name=wrong]').fill('Oil covered the whole pan');
+await cf.locator('input[name=ingredient]').fill('oil'); await cf.locator('button:has-text("Add correction")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+await go(`/projects/${slug}/builder?type=image-full&image=${imgId1}`);
+ta = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
+ok('Relevant correction appears in image prompt context', ta.includes('KNOWN CORRECTIONS TO RESPECT') && ta.includes('Exactly 2 tablespoons'));
+ok('Context preview lists the correction', (await page.locator('text=Known corrections').count()) > 0 && (await page.locator('text=Too much oil in pan').count()) > 0);
+ok('Approved previous-frame context is included for IMG-002', await (async () => { const id2 = img2Url.split('/').pop(); await go(`/projects/${slug}/builder?type=image-full&image=${id2}`); const t2 = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]'); return t2.includes('IMG-001 Previous Approved Frame') && t2.includes('CURRENT VISUAL STATE') && t2.includes('Do not reset the cookware'); })());
+
+// ---- every remaining builder produces a real, context-rich prompt
+async function builder(type, extra = '') { await go(`/projects/${slug}/builder?type=${type}${extra}`); return (await page.inputValue('textarea[aria-label="Final copy-ready prompt"]')).toUpperCase(); }
+let b = await builder('script');
+ok('Script prompt: purpose, chef voice, recipe, rules', ['PURPOSE: SCRIPT PROMPT', 'RASPY TODDLER VOICE', 'LENTILS', 'SCRIPT RULES', 'DO NOT MAKE THE BABY CHEF SOUND LIKE A GENERIC ADULT', 'OFF-SCREEN NARRATION'].every(x => b.includes(x)));
+b = await builder('script-revision');
+ok('Script revision prompt includes the current script', b.includes('CURRENT SCRIPT') && b.includes('V1 TEXT'));
+b = await builder('scenes');
+ok('Scene breakdown prompt: script + do-not-fragment rule + output format', ['CURRENT SCRIPT', 'DO NOT CREATE ONE SCENE FOR EVERY SENTENCE', 'FOOD STATE BEFORE:', 'KLING GROUPING NOTE:'].every(x => b.includes(x)));
+b = await builder('image-plan');
+ok('Image plan prompt: scenes + food states + multi-image rule', ['SCENES & FOOD-STATE PROGRESSION', 'TEMPER THE CUMIN', 'ONE SCENE MAY REQUIRE MULTIPLE STILL IMAGES', 'POSSIBLE KLING GROUP:', 'PRODUCT REFERENCE SUMMARY'].every(x => b.includes(x)));
+b = await builder('continuity');
+ok('Continuity review prompt: food state rules + approved images', ['FOOD STATE RULES', 'APPROVED IMAGES', 'REGRESSES'].every(x => b.includes(x)));
+b = await builder('kling-group');
+ok('Kling grouping prompt: approved images + grouping principle', b.includes('APPROVED IMAGES') && b.includes('NOT EVERY STILL IMAGE REQUIRES') && b.includes('SPLIT WARNING IF TOO COMPLEX'));
+// record a failed Kling generation, then build the Kling redo prompt
+await page.goto(klingUrl, { waitUntil: 'networkidle' });
+await page.fill('input[name=externalName]', 'kling_try1.mp4'); await page.click('button:has-text("RECORD GENERATION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.click('summary:has-text("REDO — what went wrong")');
+await page.fill('textarea[name=wrong]', 'Hands morphed between images'); await page.fill('textarea[name=change]', 'Use a natural cut between image 2 and 3'); await page.fill('textarea[name=keep]', 'Same kitchen and voice');
+await page.click('button:has-text("SAVE REDO")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+b = await builder('kling-redo', `&kling=${klingUrl.split('/').pop()}`);
+ok('Kling redo prompt: failure, correction, keep list, original prompt, reference order', ['FAILED KLING GENERATION', 'HANDS MORPHED BETWEEN IMAGES', 'NATURAL CUT BETWEEN IMAGE 2 AND 3', 'SAME KITCHEN AND VOICE', 'ORIGINAL KLING PROMPT', 'KEEP THE REFERENCE ORDER'].every(x => b.includes(x)));
+
+// ---- context toggles, target selector, edit protection
+await go(`/projects/${slug}/builder?type=plan`);
+await page.locator('input[name=inc][value=bible]').uncheck();
+await page.selectOption('select[name=target]', 'CLAUDE');
+await page.click('button:has-text("REBUILD FROM TEMPLATE")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+ta = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
+ok('Unchecking a context block removes it; target label is applied', !ta.includes('LEVEL 1') && ta.includes('PREPARED FOR: CLAUDE') && (await page.locator('text=Production Bible >> nth=0').count()) > 0);
+await page.fill('textarea[aria-label="Final copy-ready prompt"]', ta + '\nMY HAND EDIT');
+await page.click('button:has-text("REBUILD FROM TEMPLATE")'); await page.waitForTimeout(500);
+ok('Edited prompt is protected: banner asks before rebuilding', (await page.locator('text=You\'ve edited this prompt').count()) > 0 && (await page.locator('text=EDITED').count()) > 0);
+await page.click('button:has-text("Keep my edits")'); await page.waitForTimeout(300);
+ok('Keep my edits preserves the text', (await page.inputValue('textarea[aria-label="Final copy-ready prompt"]')).includes('MY HAND EDIT'));
+
+// ---- Mark waiting from the Prompt Queue NEXT card
+await go(`/projects/${slug}/images`);
+await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD IMAGE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+await page.click('button[role=tab]:has-text("Continuation")'); await page.fill('textarea[aria-label="Continuation prompt"]', 'CONT: waiting test'); await page.locator('textarea[aria-label="Continuation prompt"]').blur(); await page.waitForTimeout(900);
+await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+await go('/queue');
+await page.click('button:has-text("Mark waiting")'); await page.selectOption('select[aria-label="Waiting reason"]', 'ChatGPT generation limit'); await page.locator('button.btn-primary:has-text("MARK WAITING")').click(); await page.waitForTimeout(1200);
+await page.goto(`${BASE}/queue?show=waiting`, { waitUntil: 'networkidle' });
+ok('Mark waiting from Queue stores reason + time', (await page.locator('text=Waiting test image').count()) > 0 && (await page.locator('text=ChatGPT generation limit').count()) > 0);
 
 // ---- Bible edit
 await go('/settings/bible');

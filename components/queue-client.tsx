@@ -3,7 +3,8 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CopyButton } from './client';
-import { startGenerating } from '@/lib/actions/image';
+import { startGenerating, markWaitingById } from '@/lib/actions/image';
+import { WAITING_REASONS } from '@/lib/constants';
 
 export type QItem = { id: string; slug: string; code: string; title: string; project: string; scene: string; shot: string; aspect: string; priority: string; full: string; cont: string; refs: { label: string; assetId: string | null; required: boolean }[] };
 const TARGET = 20;
@@ -17,6 +18,8 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
   const [done, setDone] = useState(0);
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
+  const [waitOpen, setWaitOpen] = useState(false);
+  const [reason, setReason] = useState(WAITING_REASONS[0]);
   useEffect(() => {
     try {
       const p = localStorage.getItem('bcs-pref'); if (p === 'FULL' || p === 'CONT') setPref(p);
@@ -69,8 +72,16 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
           <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy hidden min-h-[48px] min-w-[240px] px-6 text-[15px] md:inline-flex" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
           <CopyButton text={pref === 'CONT' ? cur.full : cur.cont} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
           <a href={chatgpt} target="_blank" rel="noopener noreferrer" className="btn">Open ChatGPT ↗</a>
+          <button type="button" className="btn" onClick={() => setWaitOpen(!waitOpen)} aria-expanded={waitOpen}>Mark waiting</button>
+          <Link href={`/projects/${cur.slug}/images/${cur.id}#results`} className="btn">Add result</Link>
           <button type="button" className="btn btn-ghost ml-auto" onClick={() => setSkipped([...skipped, cur.id])}>Skip → next</button>
         </div>
+        {waitOpen && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#E7D3A0] bg-[#F8EFD9]/60 p-3">
+            <select value={reason} onChange={e => setReason(e.target.value)} className="input !w-auto text-[13px]" aria-label="Waiting reason">{WAITING_REASONS.map(r => <option key={r}>{r}</option>)}</select>
+            <button type="button" className="btn btn-sm btn-primary" disabled={pending} onClick={() => start(async () => { await markWaitingById(cur.id, reason, ''); setWaitOpen(false); router.refresh(); })}>MARK WAITING</button>
+          </div>
+        )}
         <p className="mt-2 text-[11px] text-ink-secondary">Copy Next Prompt marks this image GENERATING and moves to the next one.</p>
       </section>
 

@@ -15,7 +15,7 @@ const touch = () => revalidatePath('/', 'layout');
 // ---- templates
 export async function saveTemplate(fd: FormData) {
   const id = str(fd, 'id');
-  const data: any = { ...pickText(fd, ['name', 'category', 'purpose', 'description', 'cuisine']), text: strRaw(fd, 'text'), active: bool(fd, 'active') };
+  const data: any = { ...pickText(fd, ['name', 'category', 'purpose', 'description', 'cuisine', 'babyChefId', 'projectId']), text: strRaw(fd, 'text'), active: bool(fd, 'active') };
   if (!data.name) throw new Error('Template name is required');
   if (id) await db.promptTemplate.update({ where: { id }, data });
   else {

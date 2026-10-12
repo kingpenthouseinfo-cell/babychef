@@ -62,6 +62,7 @@ export function UploadReferenceForm({ babyChefId, projectId, ingredientId, mode 
         <Text name="title" label="Title" placeholder={mode === 'ingredient' ? 'e.g. Front label' : 'e.g. Master face'} />
         <Sel name="category" label={mode === 'ingredient' ? 'Reference type' : 'Category'} options={cats} />
         <Text name="notes" label="Notes" />
+        <Text name="altText" label="Alt text (describes the image, optional)" className="sm:col-span-2" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {mode !== 'ingredient' ? <Check name="isGold" label="Mark as Gold Standard" /> : <span />}

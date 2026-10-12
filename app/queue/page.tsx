@@ -55,6 +55,7 @@ export default async function Queue({ searchParams }: { searchParams: { project?
                 <div className="text-right text-xs text-ink-secondary">{cl.filter(c => c.required).length} required refs</div>
               </div>
               {isBlocked && <div className="mt-2 text-sm font-semibold text-[#8A6216]">Waiting for {imageCode(i.dependsOn.seq)}.</div>}
+              {i.status === 'WAITING' && <div className="mt-2 rounded-md border border-[#E7D3A0] bg-[#F8EFD9]/60 px-3 py-2 text-[12px]"><b>Reason:</b> {i.waitingReason || '—'} · <b>Marked:</b> <span className="font-mono">{fmtDate(i.waitingAt)}</span>{i.waitingNote ? <> · <b>Notes:</b> {i.waitingNote}</> : null}</div>}
               <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]"><div><RefThumbs list={cl} max={8} /><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">VIEW REFERENCES (checklist)</summary><div className="mt-2"><ChecklistText list={cl} /></div></details></div></div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <CopyButton text={i.fullPrompt} label="COPY FULL PROMPT" /><CopyButton text={i.contPrompt} label="COPY CONTINUATION PROMPT" variant="secondary" />
