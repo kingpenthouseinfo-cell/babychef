@@ -57,7 +57,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const warnings = imagePromptWarnings(img);
   const fullV = versions.find(v => v.type === 'FULL' && v.active)?.version ?? versions.find(v => v.type === 'FULL')?.version ?? 0;
   const contV = versions.find(v => v.type === 'CONTINUATION' && v.active)?.version ?? versions.find(v => v.type === 'CONTINUATION')?.version ?? 0;
-  const attemptLabel = (s: string) => s === 'REDO' ? 'Redo' : s === 'REVIEW' ? 'In review' : s === 'APPROVED' ? 'Approved' : s === 'REJECTED' ? 'Rejected' : 'Replaced';
+  const attemptLabel = (s: string) => s === 'REDO' ? 'Needs fixing' : s === 'REVIEW' ? 'Check this' : s === 'APPROVED' ? 'Looks good' : s === 'REJECTED' ? "Don't use" : 'Replaced';
   const attemptColor = (s: string) => s === 'REDO' ? 'text-[#A8513F]' : s === 'REVIEW' ? 'text-[#33507A]' : s === 'APPROVED' ? 'text-[#3B6448]' : 'text-ink-muted';
   const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, next: s.attemptCount + 1, seq: s.seq, sceneOrder: s.scene.order }));
   const approveConfirm = img.approvedAttemptId && selected && selected.id !== img.approvedAttemptId ? `${code} already has an approved result (attempt ${img.attempts.find(x => x.id === img.approvedAttemptId)?.number}). Replace it with attempt ${selected.number}? The old one stays in history.` : undefined;
@@ -98,9 +98,9 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           {prevSuggest && (
             <form action={usePreviousApproved} className="rounded-md border border-sage-mid bg-surface p-2.5"><input type="hidden" name="imageId" value={img.id} /><input type="hidden" name="sourceId" value={prevSuggest.id} />
               <div className="mb-2 flex items-center gap-2.5 text-[12px]"><img src={fileUrl(prevSuggest.approvedAttempt!.assetId, 160)} alt="" className="h-[44px] w-[60px] rounded-sm border border-line object-cover" /><span>Suggested previous: <b className="font-mono">{imageCode(prevSuggest.seq)}</b> {prevSuggest.title}</span></div>
-              <SubmitBtn className="btn-approve btn-sm w-full" pendingText="…">USE PREVIOUS APPROVED IMAGE</SubmitBtn></form>
+              <SubmitBtn className="btn-approve btn-sm w-full" pendingText="…">USE PREVIOUS PICTURE</SubmitBtn></form>
           )}
-          {!prevSuggest && !prev && <p className="text-[12px] text-ink-secondary">No earlier approved image yet — approve one to use it as the Previous Approved Frame.</p>}
+          {!prevSuggest && !prev && <p className="text-[12px] text-ink-secondary">No earlier approved image yet — approve one to use it as the Previous Picture.</p>}
           <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
             {checklist.length === 0 && <p className="text-[13px] text-ink-secondary md:col-span-full">No references attached. Attach at least the Baby Chef master and the kitchen master.</p>}
             {img.refs.map((r, i) => {
@@ -138,7 +138,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
                 <Field label="Attach reference"><select name="target" className="input" required defaultValue=""><option value="" disabled>— choose —</option>{pool.groups.map(g => <optgroup key={g.label} label={g.label}>{g.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</optgroup>)}</select></Field>
                 <Sel name="role" label="Role" options={IMAGE_REF_ROLES} /><Text name="notes" label="Notes" /><Check name="required" label="Required" v />
                 <SubmitBtn className="btn-sm btn-primary" pendingText="…">Attach</SubmitBtn></form>
-              <p className="text-[11px] text-ink-secondary">Masters establish identity/kitchen. The Previous Approved Frame establishes current food, cookware and composition. A reference is one stored file linked to many images — never copied.</p>
+              <p className="text-[11px] text-ink-secondary">Masters establish identity/kitchen. The Previous Picture establishes current food, cookware and composition. A reference is one stored file linked to many images — never copied.</p>
             </div>
           </details>
           <RevealButton projectFolder={`${folder}/01 References`} className="btn btn-sm w-full" />
@@ -159,7 +159,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
             <div className="flex aspect-video max-h-[270px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-pink-mid bg-pink-tint/50 text-center">
               <div className="text-[15px] font-semibold">No result yet</div>
               <p className="text-[13px] text-ink-secondary">Drop a generated image anywhere on this page, or</p>
-              <AddResultButton label="Add result" className="btn btn-primary" />
+              <AddResultButton label="Add finished picture" className="btn btn-primary" />
             </div>
           )}</div>
           {img.attempts.length > 0 && (
@@ -172,12 +172,12 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
                   <span className={`text-[12px] ${attemptColor(a.status)}`}>{attemptLabel(a.status)}{a.status === 'REDO' && a.wrong ? ` · ${a.wrong.slice(0, 28)}${a.wrong.length > 28 ? '…' : ''}` : ''}</span>
                 </Link>
               ))}
-              <AddResultButton label="+ Add result" className="btn btn-sm" />
+              <AddResultButton label="+ Add finished picture" className="btn btn-sm" />
             </div>
           )}
           <div className="order-1 space-y-3.5 lg:order-none">
-            <div className="rounded-lg border border-purple-mid bg-grad-purple p-4" aria-label="Expected result filename">
-              <div className="eyebrow text-purple-deep">EXPECTED RESULT FILENAME</div>
+            <div className="rounded-lg border border-purple-mid bg-grad-purple p-4" aria-label="Save this picture as">
+              <div className="eyebrow text-purple-deep">SAVE THIS PICTURE AS</div>
               <div className="mt-2 flex flex-wrap items-center gap-3"><code className="min-w-0 flex-1 break-all font-mono text-[14px] font-medium leading-snug" data-testid="expected-filename">{expected}</code><CopyButton text={expected} label="COPY FILENAME" variant="secondary" className="min-w-[160px]" /></div>
               <p className="mt-2 text-[12px] text-ink-secondary">Save the generated image into <span className="font-mono">{folder}/02 Images</span> with exactly this name — Baby Chef Studio detects it automatically and adds it to {code} for review. COPY PROMPT adds a FILE ORGANIZATION section with this filename.</p>
               <div className="mt-2"><RevealButton projectFolder={`${folder}/02 Images`} label="Show folder in Finder" /></div>
@@ -187,7 +187,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
             <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>
             <div className="flex flex-wrap gap-2">
               <Link href={`/projects/${p.slug}/builder?type=image-full&image=${img.id}`} className="btn btn-sm btn-copy-secondary">PREPARE FULL IMAGE PROMPT</Link>
-              <Link href={`/projects/${p.slug}/builder?type=image-cont&image=${img.id}`} className="btn btn-sm btn-copy-secondary">PREPARE CONTINUATION PROMPT</Link>
+              <Link href={`/projects/${p.slug}/builder?type=image-cont&image=${img.id}`} className="btn btn-sm btn-copy-secondary">MAKE NEXT IMAGE PROMPT</Link>
               {img.attempts.length > 0 && <Link href={`/projects/${p.slug}/builder?type=image-redo&image=${img.id}${selected ? `&attempt=${selected.id}` : ''}`} className="btn btn-sm btn-copy-secondary">PREPARE REDO PROMPT</Link>}
               <Link href={`/projects/${p.slug}/prompts?cat=IMAGE GENERATION&image=${img.id}`} className="btn btn-sm btn-ghost">Assemble from fields</Link>
             </div>
@@ -216,12 +216,12 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           </dl>
 
           <div className="mt-auto flex flex-col gap-2.5">
-            <CopyButton text={fullCopy} label="COPY FULL PROMPT" className="min-h-[40px] w-full" />
-            <CopyButton text={contCopy} label="COPY CONTINUATION PROMPT" variant="secondary" className="w-full" />
+            <CopyButton text={fullCopy} label="COPY IMAGE PROMPT" className="min-h-[40px] w-full" />
+            <CopyButton text={contCopy} label="COPY NEXT IMAGE PROMPT" variant="secondary" className="w-full" />
             <div className="flex gap-2">
-              <AddResultButton label="Add result" className="btn flex-1" />
+              <AddResultButton label="Add finished picture" className="btn flex-1" />
               <details className="relative flex-1">
-                <summary className="btn btn-ghost w-full cursor-pointer list-none">Mark waiting</summary>
+                <summary className="btn btn-ghost w-full cursor-pointer list-none">Waiting on something</summary>
                 <form action={setImageStatus} className="absolute bottom-full left-0 z-20 mb-2 w-[260px] space-y-2 rounded-lg border border-line bg-surface p-3 shadow-md"><input type="hidden" name="id" value={img.id} /><input type="hidden" name="status" value="WAITING" />
                   <Sel name="reason" label="Reason" options={WAITING_REASONS} /><Text name="note" label="Optional note" /><SubmitBtn className="btn-sm btn-primary" pendingText="…">MARK WAITING</SubmitBtn></form>
               </details>
@@ -236,13 +236,13 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               <>
                 <div className="flex gap-2">
                   <details className="flex-1">
-                    <summary className="btn btn-danger w-full cursor-pointer list-none">Redo</summary>
+                    <summary className="btn btn-danger w-full cursor-pointer list-none">Fix this picture</summary>
                     <form action={redoAttempt} className="mt-2 space-y-2 rounded-lg border border-line bg-surface p-3"><input type="hidden" name="attemptId" value={selected.id} />
-                      <div className="text-[12px] text-ink-secondary">Redo for attempt v{selected.number}</div>
-                      <Area name="wrong" label="What went wrong?" rows={2} /><Area name="change" label="What must change?" rows={2} /><Area name="keep" label="What must stay?" rows={2} />
+                      <div className="text-[12px] text-ink-secondary">Fix attempt v{selected.number}</div>
+                      <Area name="wrong" label="WHAT IS WRONG?" rows={2} /><Area name="change" label="WHAT SHOULD CHANGE?" rows={2} /><Area name="keep" label="WHAT SHOULD STAY THE SAME?" rows={2} />
                       <Sel name="corrCategory" label="Category" options={CORRECTION_CATEGORIES} /><Sel name="severity" label="Severity" v="MEDIUM" options={SEVERITIES} />
                       <Text name="notes" label="Notes" /><Check name="addToLibrary" label="Add to Corrections library" />
-                      <SubmitBtn className="btn-danger btn-sm" pendingText="…">REDO — save correction</SubmitBtn></form>
+                      <SubmitBtn className="btn-danger btn-sm" pendingText="…">SAVE FIX</SubmitBtn></form>
                   </details>
                   <form id="approve-form" action={approveAttempt} className="flex flex-[1.4]"><input type="hidden" name="attemptId" value={selected.id} /><HoldApprove formId="approve-form" confirm={approveConfirm} /></form>
                 </div>
@@ -255,7 +255,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
 
       {/* sticky copy bar for phones */}
       <div className="fixed inset-x-0 bottom-14 z-40 flex gap-2 border-t border-line bg-surface p-2 md:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom) * 0)' }}>
-        <CopyButton text={fullCopy} label="Copy full prompt" className="flex-1" /><AddResultButton label="Add result" className="btn flex-1" />
+        <CopyButton text={fullCopy} label="Copy image prompt" className="flex-1" /><AddResultButton label="Add finished picture" className="btn flex-1" />
       </div>
 
       {/* REVIEW / REDO */}
@@ -279,7 +279,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
             <div key={a.id} className={`card flex flex-col gap-3 sm:flex-row ${approved ? 'border-sage-deep' : ''}`}>
               <div className="w-full shrink-0 sm:w-56"><BigImage id={a.assetId} alt={`${code} attempt ${a.number}`} /></div>
               <div className="min-w-0 flex-1 space-y-1 text-[13px]">
-                <div className="flex flex-wrap items-center gap-2"><b>Attempt {a.number}</b><Chip>{a.status}</Chip>{approved && <Chip tone="APPROVED">APPROVED RESULT</Chip>}<span className="text-xs text-ink-secondary">{a.sourceTool} · {a.promptType}{a.promptVersion ? ` v${a.promptVersion}` : ''} · {fmtDate(a.createdAt)}</span></div>
+                <div className="flex flex-wrap items-center gap-2"><b>Version {a.number}</b><Chip>{a.status}</Chip>{approved && <Chip tone="APPROVED">THE ONE TO USE</Chip>}<span className="text-xs text-ink-secondary">{a.sourceTool} · {a.promptType}{a.promptVersion ? ` v${a.promptVersion}` : ''} · {fmtDate(a.createdAt)}</span></div>
                 <div className="break-all font-mono text-[11px] text-ink-secondary">{a.asset.relPath.split('/').slice(-2).join(' / ')}{approved && <> → approved as <b>{slugBase}_approved-v{a.number}{a.asset.displayName.slice(a.asset.displayName.lastIndexOf('.'))}</b></>}</div>
                 <div className="text-[11px] text-ink-muted">{a.asset.orientation}{a.asset.width ? ` · ${a.asset.width}×${a.asset.height}` : ''}</div>
                 {a.wrong && <p><b className="text-[#A8513F]">Wrong:</b> {a.wrong}</p>}

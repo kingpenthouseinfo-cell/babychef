@@ -13,8 +13,8 @@ export default async function KlingList({ params }: { params: { slug: string } }
   const clips = await db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { refs: { orderBy: { order: 'asc' }, include: { image: { include: { approvedAttempt: true } } } }, scenes: { include: { scene: true } } } });
   return (
     <div className="space-y-5">
-      <div className="rounded-lg bg-sunken p-3 text-sm">A Kling clip is a video-generation unit. It can use several approved images (<b>@image1, @image2…</b>) and cover several closely related scenes. Baby Chef Studio never calls Kling — you copy the prompt.</div>
-      {clips.length === 0 ? <Empty title="No Kling clips yet." hint="Create a clip, attach approved images, and write the prompt." /> : (
+      <div className="rounded-lg bg-sunken p-3 text-sm">A Video clip is a video-generation unit. It can use several approved images (<b>@image1, @image2…</b>) and cover several closely related scenes. Baby Chef Studio never calls Kling — you copy the prompt.</div>
+      {clips.length === 0 ? <Empty title="No Video clips yet." hint="Create a clip, attach approved images, and write the prompt." /> : (
         <div className="grid gap-4 md:grid-cols-2">{clips.map(c => (
           <Link key={c.id} href={`/projects/${p.slug}/kling/${c.id}`} className="card block hover:border-ink">
             <div className="flex items-center justify-between gap-2"><span className="font-mono text-lg font-bold">{klingCode(c.order)}</span><Chip>{c.status}</Chip></div>
@@ -24,10 +24,10 @@ export default async function KlingList({ params }: { params: { slug: string } }
           </Link>))}</div>
       )}
       <div className="flex flex-wrap gap-2"><Link href={`/projects/${p.slug}/builder?type=kling-group`} className="btn btn-primary">PREPARE KLING GROUPING PROMPT</Link></div>
-      <Section title="+ New Kling clip">
+      <Section title="+ New Video clip">
         <form action={createKling} className="grid gap-3 sm:grid-cols-3"><input type="hidden" name="projectId" value={p.id} />
           <Text name="title" label="Title *" required className="sm:col-span-2" /><Text name="durationTarget" label="Target duration (sec)" type="number" />
-          <div className="sm:col-span-3"><SubmitBtn pendingText="Creating…">CREATE CLIP (next: {klingCode((clips[clips.length - 1]?.order ?? 0) + 1)})</SubmitBtn></div></form>
+          <div className="sm:col-span-3"><SubmitBtn pendingText="Creating…">ADD VIDEO CLIP (next: {klingCode((clips[clips.length - 1]?.order ?? 0) + 1)})</SubmitBtn></div></form>
       </Section>
     </div>
   );

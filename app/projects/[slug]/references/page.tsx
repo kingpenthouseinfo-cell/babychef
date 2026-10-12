@@ -21,7 +21,7 @@ export default async function ProjectRefs({ params }: { params: { slug: string }
       <Section title={`From Baby Chef master library${p.babyChef ? ' — ' + p.babyChef.displayName : ''}`} right={p.babyChef && <Link className="btn btn-sm" href={`/babychefs/${p.babyChef.id}`}>Manage master refs</Link>}>
         {master.length ? <div className={grid}>{master.map(r => <ReferenceCard key={r.id} r={r} cats={REF_CATEGORIES} />)}</div> : <Empty title="No master references." hint="Select a Baby Chef and upload master references on their page." />}
       </Section>
-      <Section title="Project-specific references (incl. ingredient products)">
+      <Section title="Example pictures for this recipe video (incl. product photos)">
         {own.length ? <div className={grid}>{own.map(r => <ReferenceCard key={r.id} r={r} cats={r.kind === 'INGREDIENT' ? INGREDIENT_REF_TYPES : PROJECT_REF_CATEGORIES} />)}</div> : <Empty title="No project references yet." />}
         <details className="mt-4 rounded-lg border border-line p-3"><summary className="cursor-pointer font-semibold">+ Add project reference</summary><div className="mt-3"><UploadReferenceForm projectId={p.id} babyChefId={p.babyChefId} mode="project" /></div></details>
       </Section>

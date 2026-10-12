@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 
 type Item = { href: string; label: string; dot?: string };
 const MAIN: Item[] = [
-  { href: '/', label: 'Dashboard' }, { href: '/projects', label: 'Projects' }, { href: '/babychefs', label: 'Baby Chefs', dot: '#4C6B52' },
-  { href: '/queue', label: 'Prompt Queue', dot: '#3E6290' }, { href: '/references', label: 'References', dot: '#4C6B52' },
+  { href: '/', label: 'Home' }, { href: '/projects', label: 'My Recipe Videos' }, { href: '/babychefs', label: 'Baby Chefs', dot: '#4C6B52' },
+  { href: '/queue', label: 'Pictures to Make', dot: '#3E6290' }, { href: '/references', label: 'Example Pictures', dot: '#4C6B52' },
 ];
-const MORE: Item[] = [{ href: '/corrections', label: "Don't Do This" }, { href: '/templates', label: 'Prompt Templates' }, { href: '/settings/bible', label: 'Production Bible' }, { href: '/settings', label: 'Settings' }, { href: '/search', label: 'Search' }];
+const MORE: Item[] = [{ href: '/corrections', label: "Don't Do This" }, { href: '/templates', label: 'Prompt Templates' }, { href: '/settings/bible', label: 'My Video Style' }, { href: '/settings', label: 'Settings' }, { href: '/search', label: 'Search' }];
 
 const isActive = (path: string, href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
 
@@ -48,7 +48,7 @@ export function BottomNav({ queueCount, unmatchedCount }: { queueCount: number; 
   const path = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
-  const tabs: Item[] = [{ href: '/', label: 'Dashboard' }, { href: '/projects', label: 'Projects' }, { href: '/queue', label: 'Queue' }, { href: '/references', label: 'References' }];
+  const tabs: Item[] = [{ href: '/', label: 'Home' }, { href: '/projects', label: 'Recipe Videos' }, { href: '/queue', label: 'Pictures' }, { href: '/references', label: 'Examples' }];
   return (
     <div className="md:hidden">
       {more && (

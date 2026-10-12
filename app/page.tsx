@@ -3,7 +3,8 @@ import { db } from '@/lib/db';
 import { actionCenter, projectStats } from '@/lib/queries';
 import { Chip, Empty, fileUrl } from '@/components/ui';
 import { ProjectCard } from '@/components/project-card';
-import { fmtDate, klingCode } from '@/lib/util';
+import { fmtDate } from '@/lib/util';
+import { nextStep } from '@/lib/next-step';
 
 const BAR: Record<string, string> = { READY: '#3E6290', REVIEW: '#9A4A60', REDO: '#C8705C', WAITING: '#C99A3A', KLING: '#6A55A2', PUB: '#6A55A2' };
 const CTA_COLOR: Record<string, string> = { READY: 'text-blue-deep', REVIEW: 'text-pink-deep', REDO: 'text-[#A8513F]', WAITING: 'text-[#8A6216]', KLING: 'text-purple-deep', PUB: 'text-purple-deep' };
@@ -12,53 +13,50 @@ export default async function Dashboard() {
   const projects = await db.project.findMany({ where: { deletedAt: null }, orderBy: { updatedAt: 'desc' }, include: { babyChef: true } });
   const live = projects.filter(p => p.status !== 'ARCHIVED');
   const active = live.filter(p => p.status !== 'COMPLETE');
-  const pids = { projectId: { in: live.map(p => p.id) } };
-  const [ready, waitingImgs, reviewImgs, klingReady, klingReview, pubAssets, items, chefs] = await Promise.all([
-    db.plannedImage.count({ where: { ...pids, status: 'READY' } }), db.plannedImage.findMany({ where: { ...pids, status: 'WAITING' }, select: { waitingReason: true } }),
-    db.plannedImage.count({ where: { ...pids, status: 'REVIEW' } }), db.klingClip.findMany({ where: { ...pids, status: 'READY' }, orderBy: { order: 'asc' } }),
-    db.klingClip.count({ where: { ...pids, status: 'REVIEW' } }), db.publishingAsset.findMany({ where: { ...pids, status: { notIn: ['SELECTED', 'PUBLISHED', 'SKIPPED'] } }, include: { project: true } }),
-    actionCenter(8), db.babyChef.count({ where: { deletedAt: null } }),
-  ]);
+  const [items, chefs] = await Promise.all([actionCenter(8), db.babyChef.count({ where: { deletedAt: null } })]);
   const recent = live.slice(0, 6);
   const [stats, thumbs] = await Promise.all([
     Promise.all(recent.map(p => projectStats(p.id))),
     Promise.all(recent.map(p => db.plannedImage.findFirst({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: { updatedAt: 'desc' }, include: { approvedAttempt: true } }))),
   ]);
-  const reason = waitingImgs[0]?.waitingReason ?? '';
-  const pubProjects = [...new Set(pubAssets.map(a => a.project.title))];
   const now = new Date();
-  const cards: { label: string; value: number; sub: string; href: string; cls: string; val?: string }[] = [
-    { label: 'Active Projects', value: active.length, sub: `${active.filter(p => p.status === 'IMAGE PRODUCTION').length} in image production`, href: '/projects', cls: 'bg-grad-pink border-pink-mid text-pink-deep' },
-    { label: 'Images Ready', value: ready, sub: 'for ChatGPT', href: '/queue?show=ready', cls: 'bg-grad-blue border-blue-mid text-blue-deep' },
-    { label: 'Waiting', value: waitingImgs.length, sub: reason || 'nothing waiting', href: '/queue?show=waiting', cls: 'bg-surface border-[#E7D3A0] text-[#8A6216]' },
-    { label: 'Needs Review', value: reviewImgs + klingReview, sub: `${reviewImgs} image${reviewImgs === 1 ? '' : 's'} · ${klingReview} clip${klingReview === 1 ? '' : 's'}`, href: '/queue?show=review', cls: 'bg-grad-pink border-pink-mid text-pink-deep' },
-    { label: 'Kling Ready', value: klingReady.length, sub: klingReady.slice(0, 2).map(k => klingCode(k.order)).join(', ') || 'none ready', href: live[0] ? `/projects/${live[0].slug}/kling` : '/projects', cls: 'bg-grad-purple border-purple-mid text-purple-deep' },
-    { label: 'Publishing Tasks', value: pubAssets.length, sub: pubProjects.slice(0, 2).join(', ') || 'all caught up', href: '/projects', cls: 'bg-grad-purple border-purple-mid text-purple-deep' },
-  ];
+  const steps = await Promise.all(active.slice(0, 3).map(p => nextStep(p.id, p.slug)));
   return (
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div><div className="text-[13px] text-ink-secondary">{now.toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: '2-digit' })} · {active.length} active project{active.length === 1 ? '' : 's'}</div><h1 className="mt-1 text-[34px]">Dashboard</h1><p className="text-[14px] text-ink-secondary">Answers “what needs my attention right now?”</p></div>
-        <Link href="/projects/new" className="btn btn-primary min-h-[44px] px-5">+ New Project</Link>
+        <div><div className="text-[13px] text-ink-secondary">{now.toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: '2-digit' })} · {active.length} recipe video{active.length === 1 ? '' : 's'} in progress</div><h1 className="mt-1 text-[34px]">Home</h1></div>
+        <Link href="/projects/new" className="btn btn-primary min-h-[44px] px-5">+ New Recipe Video</Link>
       </div>
       {chefs === 0 && <div className="mb-5"><Empty title="No Baby Chefs yet." hint="Create your first Baby Chef to begin."><Link href="/babychefs/new" className="btn btn-primary">+ ADD BABY CHEF</Link></Empty></div>}
-      <div className="mb-8 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {cards.map(c => (
-          <Link key={c.label} href={c.href} className={`flex items-center gap-4 rounded-lg border p-4 transition hover:-translate-y-px sm:block ${c.cls}`}>
-            <div className="font-mono text-[30px] font-medium leading-none text-ink sm:order-2 sm:my-1 sm:block">{c.value}</div><div className="min-w-0 sm:order-1"><div className="text-[12px] font-semibold">{c.label}</div><div className="truncate text-[12px] text-ink-secondary sm:hidden">{c.sub}</div></div><div className="hidden text-[12px] text-ink-secondary sm:order-3 sm:block">{c.sub}</div>
-          </Link>
-        ))}
-      </div>
+      <section className="mb-8" aria-label="What are you working on?">
+        <h2 className="mb-3">What are you working on?</h2>
+        {active.length === 0 ? <Empty title="No recipe videos yet." hint="Start one and I'll show you what to do next."><Link href="/projects/new" className="btn btn-primary">+ NEW RECIPE VIDEO</Link></Empty> : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {active.slice(0, 3).map((p, i) => (
+              <div key={p.id} className="rounded-xl border-2 border-ink bg-white p-5">
+                <div className="text-[17px] font-semibold">{p.title}</div>
+                <div className="eyebrow mt-3 text-ink-secondary">NEXT</div>
+                <div className="text-[18px] font-semibold leading-snug">{steps[i].next?.title ?? 'Nothing needs you right now'}</div>
+                <Link href={steps[i].next?.href ?? `/projects/${p.slug}`} className="btn btn-primary mt-3 min-h-[44px] w-full">{steps[i].next ? 'CONTINUE' : 'OPEN'}</Link>
+                <div className="mt-3 space-y-0.5 text-[12px] text-ink-secondary">
+                  {steps[i].fixing.length > 0 && <div className="text-[#A8513F]">Needs fixing: {steps[i].fixing.length}</div>}
+                  {steps[i].todo.slice(0, 3).map((t, j) => <div key={j}>Still to do: {t.text}</div>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <section>
-          <div className="mb-3 flex items-baseline gap-2"><h2>Action Center</h2><span className="text-[12px] text-ink-secondary">sorted by what unblocks the most</span></div>
+          <div className="mb-3 flex items-baseline gap-2"><h2>Needs your attention</h2></div>
           {items.length === 0 ? <Empty title="You're all caught up." hint="Nothing needs you right now." /> : (
             <ul className="space-y-2">
               {items.map(i => (
                 <li key={i.kind + i.key}>
                   <Link href={i.href} className="flex items-stretch gap-3 rounded-lg border border-line bg-surface p-3 transition hover:border-ink/30">
                     <span className="w-1 shrink-0 rounded-full" style={{ background: BAR[i.kind] }} aria-hidden />
-                    <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="font-mono text-[12px] font-medium">{i.code}</span><Chip>{i.chip}</Chip></span><span className="mt-0.5 block truncate text-[13px]">{i.title}</span><span className="block truncate text-[12px] text-ink-secondary">{i.desc}</span></span>
+                    <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="font-mono text-[12px] font-medium">{i.code}</span><Chip tone={i.chip}>{i.chip}</Chip></span><span className="mt-0.5 block truncate text-[13px]">{i.title}</span><span className="block truncate text-[12px] text-ink-secondary">{i.desc}</span></span>
                     <span className={`self-center whitespace-nowrap text-[13px] font-semibold ${CTA_COLOR[i.kind]}`}>{i.cta} →</span>
                   </Link>
                 </li>
@@ -67,8 +65,8 @@ export default async function Dashboard() {
           )}
         </section>
         <section>
-          <div className="mb-3 flex items-baseline justify-between"><h2>Recent Projects</h2><Link href="/projects" className="text-[13px] font-medium text-blue-deep">All projects</Link></div>
-          {recent.length === 0 ? <Empty title="No projects yet." hint="Create a project to start a new Baby Chef video."><Link href="/projects/new" className="btn btn-primary">+ NEW PROJECT</Link></Empty> : (
+          <div className="mb-3 flex items-baseline justify-between"><h2>My Recipe Videos</h2><Link href="/projects" className="text-[13px] font-medium text-blue-deep">See all</Link></div>
+          {recent.length === 0 ? <Empty title="No recipe videos yet." hint="Create a project to start a new Baby Chef video."><Link href="/projects/new" className="btn btn-primary">+ NEW RECIPE VIDEO</Link></Empty> : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{recent.map((p, i) => <ProjectCard key={p.id} p={p} s={stats[i]} thumb={thumbs[i]?.approvedAttempt?.assetId} />)}</div>
           )}
         </section>

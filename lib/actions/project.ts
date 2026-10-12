@@ -6,6 +6,8 @@ import { bool, pickText, slugify, str, int, strRaw } from '../util';
 import { logActivity } from '../activity';
 import { ensureChecklist, getSettings } from '../settings';
 import { PROJECT_STATUSES } from '../constants';
+import { parseIngredientLines } from '../ingredient-parse';
+import { uploadReference } from './babychef';
 
 export async function createProject(fd: FormData) {
   const title = str(fd, 'title');
@@ -72,6 +74,30 @@ export async function saveIngredient(fd: FormData) {
     const max = await db.ingredient.aggregate({ where: { projectId }, _max: { order: true } });
     await db.ingredient.create({ data: { ...data, projectId, order: (max._max.order ?? -1) + 1 } });
   }
+  revalidatePath('/', 'layout');
+}
+/** Quick add: one ingredient per line. Each line is parsed into quantity / unit / name / prep note; nothing is lost (original text kept in notes when unsure). */
+export async function quickAddIngredients(fd: FormData) {
+  const projectId = str(fd, 'projectId')!;
+  const lines = parseIngredientLines(strRaw(fd, 'text'));
+  if (!lines.length) return;
+  const max = await db.ingredient.aggregate({ where: { projectId }, _max: { order: true } });
+  let order = (max._max.order ?? -1) + 1;
+  for (const l of lines) await db.ingredient.create({ data: { projectId, order: order++, name: l.name, quantity: l.quantity ?? null, unit: l.unit ?? null, prepNote: l.prepNote ?? null, brand: l.brand ?? null, importance: l.importance ?? 'OPTIONAL', notes: l.uncertain ? `Original text: ${l.original}` : null } });
+  await logActivity(`${lines.length} ingredient${lines.length > 1 ? 's' : ''} added`, null, projectId);
+  revalidatePath('/', 'layout');
+}
+/** Pick one ingredient, give its brand / label details and (optionally) a product photo in one step. */
+export async function addProductPhoto(fd: FormData) {
+  const id = str(fd, 'ingredientId');
+  if (!id) throw new Error('Choose an ingredient');
+  const data: any = {};
+  for (const k of ['brand', 'product', 'packageSize']) if (fd.has(k)) data[k] = str(fd, k);
+  if (str(fd, 'importance')) data.importance = str(fd, 'importance');
+  if (fd.has('_pv')) data.packageVisible = bool(fd, 'packageVisible');
+  if (Object.keys(data).length) await db.ingredient.update({ where: { id }, data });
+  const file = fd.get('file') as File | null;
+  if (file && file.size) await uploadReference(fd);
   revalidatePath('/', 'layout');
 }
 export async function deleteIngredient(fd: FormData) {

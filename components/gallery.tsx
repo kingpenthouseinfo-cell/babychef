@@ -43,7 +43,7 @@ export function Gallery({ tiles, targets }: { tiles: GTile[]; targets: ImgTarget
           <button type="button" className="ml-auto text-white/70 hover:text-white" onClick={() => { setSel([]); setLink(false); }}>Clear</button>
           {link && (
             <div className="flex w-full flex-wrap items-center gap-2 border-t border-white/20 pt-2 text-ink">
-              <select value={img} onChange={e => setImg(e.target.value)} className="input !w-auto min-w-[240px] !py-1.5 text-[13px]" aria-label="Planned image"><option value="">Choose a planned image…</option>{targets.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
+              <select value={img} onChange={e => setImg(e.target.value)} className="input !w-auto min-w-[240px] !py-1.5 text-[13px]" aria-label="Picture"><option value="">Choose a picture…</option>{targets.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
               <select value={role} onChange={e => setRole(e.target.value)} className="input !w-auto !py-1.5 text-[13px]" aria-label="Role">{IMAGE_REF_ROLES.map(r => <option key={r}>{r}</option>)}</select>
               <button type="button" disabled={!img || pending} className="btn btn-sm btn-approve" onClick={() => start(async () => { await linkRefsToImage(img, sel, role); setMsg(`Linked ${sel.length} reference(s)`); setLink(false); setTimeout(() => setMsg(''), 2500); })}>Link</button>
             </div>

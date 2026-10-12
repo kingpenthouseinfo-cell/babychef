@@ -1,32 +1,42 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { actionCenter, getProjectBySlug, projectStats } from '@/lib/queries';
+import { getProjectBySlug, projectStats } from '@/lib/queries';
 import { Chip } from '@/components/ui';
 import { DirtyForm, SubmitBtn, ConfirmForm } from '@/components/client';
 import { Area, Check, ProgressBar, Section, Sel, Stat, Text } from '@/components/ui';
 import { updateProject, archiveProject } from '@/lib/actions/project';
 import { PROJECT_STATUSES } from '@/lib/constants';
+import { nextStep } from '@/lib/next-step';
 
 export default async function Overview({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
-  const [s, chefs, script, next] = await Promise.all([
+  const [s, chefs, script] = await Promise.all([
     projectStats(p.id), db.babyChef.findMany({ where: { deletedAt: null }, orderBy: { displayName: 'asc' } }),
-    db.scriptVersion.findFirst({ where: { projectId: p.id, isCurrent: true } }), actionCenter(6, p.id),
+    db.scriptVersion.findFirst({ where: { projectId: p.id, isCurrent: true } })
   ]);
+  const ns = await nextStep(p.id, p.slug);
+  const toneBtn = { pink: 'btn-accent', blue: 'btn-copy', sage: 'btn-approve', purple: 'btn-primary', amber: 'btn-primary' } as const;
   const b = `/projects/${p.slug}`;
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Production Brain</b> — assemble your rules + Baby Chef + recipe into one copy-ready prompt for ChatGPT / Claude.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">PREPARE PRODUCTION PLAN</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Production overrides</Link></div>
-      <Section title="Next actions">
-        {next.length === 0 ? <p className="text-[13px] text-ink-secondary">Nothing needs you right now in this project.</p> : (
-          <ul className="grid gap-2 md:grid-cols-2">{next.map(i => (
-            <li key={i.kind + i.key}><Link href={i.href} className="flex items-center gap-3 rounded-lg border border-line bg-surface p-3 transition hover:border-ink/30"><span className="font-mono text-[12px] font-medium">{i.code}</span><Chip>{i.chip}</Chip><span className="min-w-0 flex-1 truncate text-[13px]">{i.title}</span><span className="whitespace-nowrap text-[13px] font-semibold text-blue-deep">{i.cta} →</span></Link></li>
-          ))}</ul>
-        )}
-      </Section>
-      <Section title="Production summary">
+      <section className="rounded-xl border-2 border-ink bg-white p-5 md:p-6" aria-label="What do I do next?">
+        <div className="eyebrow text-ink-secondary">WHAT DO I DO NEXT?</div>
+        {ns.next ? (<>
+          <h2 className="mt-1 text-[22px] font-semibold leading-tight md:text-[26px]">{ns.next.title}</h2>
+          {ns.next.body && <p className="mt-1 text-[14px] text-ink-secondary">{ns.next.body}</p>}
+          <div className="mt-4 flex flex-wrap gap-2"><Link href={ns.next.href} className={`btn ${toneBtn[ns.next.tone]} min-h-[48px] px-6 text-[15px]`}>{ns.next.cta}</Link><Link href={ns.next.href} className="btn min-h-[48px] px-5">CONTINUE WHERE I LEFT OFF</Link></div>
+        </>) : (<><h2 className="mt-1 text-[22px] font-semibold">Nothing needs you right now.</h2><p className="mt-1 text-[14px] text-ink-secondary">Everything for this recipe video is done or waiting.</p></>)}
+      </section>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
+        {([['NEEDS FIXING', ns.fixing, 'text-[#A8513F]'], ['WAITING', ns.waiting, 'text-[#8A6216]'], ['STILL TO DO', ns.todo, 'text-blue-deep']] as const).map(([h, list, c]) => list.length > 0 && (
+          <section key={h} className="card"><div className={`eyebrow ${c}`}>{h}</div><ul className="mt-2 space-y-1.5 text-[13px]">{list.slice(0, 6).map((t, i) => <li key={i}><Link href={t.href} className="underline-offset-2 hover:underline">{t.text}</Link></li>)}{list.length > 6 && <li className="text-ink-muted">+ {list.length - 6} more</li>}</ul></section>
+        ))}
+        {ns.done.length > 0 && <section className="card"><div className="eyebrow text-sage-deep">DONE</div><ul className="mt-2 space-y-1.5 text-[13px]">{ns.done.map((t, i) => <li key={i}>✓ {t}</li>)}</ul></section>}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Let ChatGPT plan it</b> — your style rules + Baby Chef + recipe in one copy-ready prompt.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">MAKE THE PLAN PROMPT</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Special rules for this video</Link></div>
+      <Section title="More details">
         <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
           <div><span className="label">Recipe</span>{p.recipeName || '—'}</div><div><span className="label">Cuisine</span>{p.cuisine || '—'}</div>
           <div><span className="label">Aspect</span>{p.aspectRatio}{p.verticalCrop ? ' + vertical crop' : ''}</div><div><span className="label">Targets</span>Long {p.longDuration || '—'} · Short {p.shortDuration || '—'}</div>
@@ -36,20 +46,20 @@ export default async function Overview({ params }: { params: { slug: string } })
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <Stat label="Script" value={script ? `v${script.version}` : '—'} href={`${b}/script`} />
           <Stat label={`Scenes (${s.scenesComplete} done)`} value={s.scenes} href={`${b}/scenes`} />
-          <Stat label="Planned images" value={s.planned} href={`${b}/images?status=PLANNED`} />
+          <Stat label="Pictures" value={s.planned} href={`${b}/images?status=PLANNED`} />
           <Stat label="Ready" value={s.ready} href={`${b}/images?status=READY`} />
           <Stat label="Waiting" value={s.waiting} href={`${b}/images?status=WAITING`} />
-          <Stat label="Review" value={s.review} href={`${b}/images?status=REVIEW`} />
-          <Stat label="Approved" value={s.approved} href={`${b}/images?status=APPROVED`} tone="text-[#3B6448]" />
-          <Stat label="Redo" value={s.redo} href={`${b}/images?status=REDO`} tone="text-[#A8513F]" />
-          <Stat label="Kling clips" value={s.clips} href={`${b}/kling`} />
-          <Stat label="Kling ready" value={s.clipsReady} href={`${b}/kling`} />
-          <Stat label="Kling approved" value={s.clipsApproved} href={`${b}/kling`} />
+          <Stat label="Check this" value={s.review} href={`${b}/images?status=REVIEW`} />
+          <Stat label="Looks good" value={s.approved} href={`${b}/images?status=APPROVED`} tone="text-[#3B6448]" />
+          <Stat label="Needs fixing" value={s.redo} href={`${b}/images?status=REDO`} tone="text-[#A8513F]" />
+          <Stat label="Video clips" value={s.clips} href={`${b}/kling`} />
+          <Stat label="Video ready" value={s.clipsReady} href={`${b}/kling`} />
+          <Stat label="Video looks good" value={s.clipsApproved} href={`${b}/kling`} />
           <Stat label="Short moments" value={s.shortItems} href={`${b}/short`} />
-          <Stat label="Publishing items" value={`${s.publishingSelected}/${s.publishing}`} href={`${b}/publishing`} />
+          <Stat label="Post items" value={`${s.publishingSelected}/${s.publishing}`} href={`${b}/publishing`} />
         </div>
       </Section>
-      <Section title="Project settings">
+      <Section title="Recipe video settings">
         <DirtyForm action={updateProject} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="id" value={p.id} /><input type="hidden" name="_vc" value="1" />
           <Text name="title" label="Project title" v={p.title} required />
@@ -74,12 +84,12 @@ export default async function Overview({ params }: { params: { slug: string } })
       </Section>
       <div className="flex flex-wrap gap-2 text-sm">
         <a className="btn" href={`/api/projects/${p.slug}/export?format=json`}>Export JSON</a>
-        <a className="btn" href={`/api/projects/${p.slug}/export?format=zip`}>EXPORT PROJECT (ZIP)</a>
+        <a className="btn" href={`/api/projects/${p.slug}/export?format=zip`}>SAVE EVERYTHING AS ZIP</a>
         <a className="btn" href={`/api/projects/${p.slug}/export?format=csv&table=ingredients`}>Ingredients CSV</a>
         <a className="btn" href={`/api/projects/${p.slug}/export?format=csv&table=scenes`}>Scenes CSV</a>
         <a className="btn" href={`/api/projects/${p.slug}/export?format=csv&table=images`}>Images CSV</a>
-        <ConfirmForm action={archiveProject} message={`Archive project "${p.title}"? You can find it under the ARCHIVED filter.`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="archive" /><button className="btn">Archive</button></ConfirmForm>
-        <ConfirmForm action={archiveProject} message={`Delete project "${p.title}"? It will be hidden from the app (soft delete — data stays in the database file).`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="delete" /><button className="btn btn-danger">Delete…</button></ConfirmForm>
+        <ConfirmForm action={archiveProject} message={`Put "${p.title}" away? You can find it again under the Archived filter.`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="archive" /><button className="btn">Put away</button></ConfirmForm>
+        <ConfirmForm action={archiveProject} message={`Delete "${p.title}"? It disappears from the app. The pictures and files already saved in its folder on your computer are not touched.`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="delete" /><button className="btn btn-danger">Delete this recipe video</button></ConfirmForm>
       </div>
     </div>
   );

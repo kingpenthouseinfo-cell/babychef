@@ -26,7 +26,7 @@ export default async function Queue({ searchParams }: { searchParams: { project?
   const q = (o: Record<string, string>) => '/queue?' + new URLSearchParams({ ...(pid ? { project: pid } : {}), ...(searchParams.sort ? { sort: searchParams.sort } : {}), show, ...o }).toString();
   return (
     <>
-      <PageHeader title="Prompt Queue" sub="Sit down and work through your images · Copy Next advances the queue">
+      <PageHeader title="Pictures to Make" sub="Work through your pictures one at a time">
         <a href={s.url_ChatGPT} target="_blank" rel="noopener noreferrer" className="btn">OPEN CHATGPT ↗</a>
         <a href={s.url_Claude} target="_blank" rel="noopener noreferrer" className="btn">OPEN CLAUDE ↗</a>
         <a href={s.url_Kling} target="_blank" rel="noopener noreferrer" className="btn">OPEN KLING ↗</a>
@@ -61,12 +61,12 @@ export default async function Queue({ searchParams }: { searchParams: { project?
               {i.status === 'WAITING' && <div className="mt-2 rounded-md border border-[#E7D3A0] bg-[#F8EFD9]/60 px-3 py-2 text-[12px]"><b>Reason:</b> {i.waitingReason || '—'} · <b>Marked:</b> <span className="font-mono">{fmtDate(i.waitingAt)}</span>{i.waitingNote ? <> · <b>Notes:</b> {i.waitingNote}</> : null}</div>}
               <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]"><div><RefThumbs list={cl} max={8} /><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">VIEW REFERENCES (checklist)</summary><div className="mt-2"><ChecklistText list={cl} /></div></details></div></div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <CopyButton text={withFilename(i.fullPrompt, fname(i))} label="COPY FULL PROMPT" /><CopyButton text={withFilename(i.contPrompt, fname(i))} label="COPY CONTINUATION PROMPT" variant="secondary" /><CopyButton text={fname(i)} label="COPY FILENAME" variant="secondary" />
+                <CopyButton text={withFilename(i.fullPrompt, fname(i))} label="COPY IMAGE PROMPT" /><CopyButton text={withFilename(i.contPrompt, fname(i))} label="COPY NEXT IMAGE PROMPT" variant="secondary" /><CopyButton text={fname(i)} label="COPY FILENAME" variant="secondary" />
                 {i.status === 'READY' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="GENERATING" /><SubmitBtn className="" pendingText="…">MARK GENERATING</SubmitBtn></form>}
                 {['READY', 'GENERATING'].includes(i.status) && <form action={setImageStatus} className="flex gap-1"><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="WAITING" /><select name="reason" className="input w-44" aria-label="Waiting reason">{WAITING_REASONS.map(r => <option key={r}>{r}</option>)}</select><SubmitBtn className="" pendingText="…">MARK WAITING</SubmitBtn></form>}
                 {i.status === 'WAITING' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Return to READY</SubmitBtn></form>}
                 {i.status === 'REDO' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Mark READY again</SubmitBtn></form>}
-                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-primary">{i.status === 'REVIEW' ? 'REVIEW' : 'ADD RESULT'}</Link>
+                <Link href={`/projects/${slug}/images/${i.id}#${i.status === 'REVIEW' ? 'review' : 'results'}`} className="btn btn-primary">{i.status === 'REVIEW' ? 'REVIEW' : 'ADD FINISHED PICTURE'}</Link>
               </div>
             </div>
           );

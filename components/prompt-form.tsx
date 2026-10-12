@@ -12,9 +12,9 @@ export function LivePromptForm({ projectId, templateId, category, initial, name,
       <div className="mt-2 flex flex-wrap items-end gap-2">
         <CopyButton text={t} label="COPY PROMPT" />
         <input name="name" defaultValue={name} className="input max-w-xs" aria-label="Name for saved prompt" />
-        <SubmitBtn className="" pendingText="Saving…">SAVE AS PROJECT PROMPT</SubmitBtn>
-        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-full')} className="btn">SAVE AS IMAGE FULL PROMPT</button>}
-        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-cont')} className="btn">SAVE AS IMAGE CONTINUATION PROMPT</button>}
+        <SubmitBtn className="" pendingText="Saving…">SAVE THIS PROMPT</SubmitBtn>
+        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-full')} className="btn">SAVE AS IMAGE PROMPT</button>}
+        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-cont')} className="btn">SAVE AS NEXT IMAGE PROMPT</button>}
         {klingId && !imageId && <button type="submit" formAction={applyPrompt.bind(null, 'kling')} className="btn">SAVE AS KLING PROMPT</button>}
       </div>
       <input type="hidden" name="targetId" value={imageId || klingId || ''} />

@@ -23,7 +23,7 @@ export default async function Continuity({ params }: { params: { slug: string } 
   const b = p.babyChef;
   return (
     <div className="space-y-5">
-      <Section title="Continuity Bible">
+      <Section title="Keep It Consistent">
         <DirtyForm action={saveDoc} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="key" value="continuity" />
           {CONTINUITY_FIELDS.map(f => <Area key={f} name={`f:${f}`} label={f} v={data[f]} rows={2} />)}

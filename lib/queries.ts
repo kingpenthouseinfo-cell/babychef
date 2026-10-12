@@ -27,7 +27,7 @@ export function buildChecklist(img: { refs: any[] }): ChecklistEntry[] {
       const a = r.sourceImage.approvedAttempt;
       return {
         id: r.id, role: r.role, required: r.required, notes: r.notes, kind: 'APPROVED_IMAGE',
-        label: `${imageCode(r.sourceImage.seq)} ${r.role === 'PREVIOUS APPROVED FRAME' ? 'Previous Approved Frame' : r.sourceImage.title}`,
+        label: `${imageCode(r.sourceImage.seq)} ${r.role === 'PREVIOUS APPROVED FRAME' ? 'Previous Picture' : r.sourceImage.title}`,
         assetId: a?.assetId ?? null, packageCritical: false, sourceImageCode: imageCode(r.sourceImage.seq), missing: !a,
       };
     }
@@ -144,10 +144,10 @@ export async function actionCenter(limit = 8, projectId?: string): Promise<Actio
     if (i.status === 'READY' && i.dependsOn && i.dependsOn.status !== 'APPROVED') continue;
     const unblocks = i.dependents.length;
     const base = `/projects/${i.project.slug}/images/${i.id}`;
-    const cfg = { READY: { cta: 'Copy prompt', href: '/queue', w: 1 }, REVIEW: { cta: 'Review', href: `${base}#review`, w: 3 }, REDO: { cta: 'Fix', href: base, w: 2 }, WAITING: { cta: 'Retry', href: '/queue?show=waiting', w: 0 } }[i.status as 'READY' | 'REVIEW' | 'REDO' | 'WAITING'];
+    const cfg = { READY: { cta: 'Make picture', href: '/queue', w: 1 }, REVIEW: { cta: 'Check it', href: `${base}#review`, w: 3 }, REDO: { cta: 'Fix it', href: base, w: 2 }, WAITING: { cta: 'Try again', href: '/queue?show=waiting', w: 0 } }[i.status as 'READY' | 'REVIEW' | 'REDO' | 'WAITING'];
     items.push({ key: i.id, kind: i.status as ActionItem['kind'], code: imageCode(i.seq), chip: i.status, title: i.title, desc: i.status === 'WAITING' ? `${i.waitingReason ?? 'waiting'}` : unblocks ? `${i.scene.title} · unblocks ${unblocks} image${unblocks > 1 ? 's' : ''}` : i.scene.title, cta: cfg.cta, href: cfg.href, score: cfg.w * 2 + unblocks * 3 + (i.priority === 'HIGH' ? 2 : 0), project: i.project.title });
   }
-  for (const k of clips) items.push({ key: k.id, kind: 'KLING', code: klingCode(k.order), chip: k.status, title: k.title, desc: k.project.title, cta: k.status === 'REDO' ? 'Fix' : 'Open clip', href: `/projects/${k.project.slug}/kling/${k.id}`, score: 4, project: k.project.title });
+  for (const k of clips) items.push({ key: k.id, kind: 'KLING', code: klingCode(k.order), chip: k.status, title: k.title, desc: k.project.title, cta: k.status === 'REDO' ? 'Fix it' : 'Open video clip', href: `/projects/${k.project.slug}/kling/${k.id}`, score: 4, project: k.project.title });
   for (const a of pubs) items.push({ key: a.id, kind: 'PUB', code: `${a.platform.split(' ')[0].slice(0, 2).toUpperCase()} ${a.assetType.toLowerCase()}`, chip: 'GENERATED', title: `${a.platform} · ${a.assetType}`, desc: 'result pasted — choose the version to use', cta: 'Select', href: `/projects/${a.project.slug}/publishing`, score: 1, project: a.project.title });
   return items.sort((a, b) => b.score - a.score).slice(0, limit);
 }

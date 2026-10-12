@@ -96,7 +96,7 @@ export function NextPrompt({ items }: { items: { id: string; code: string; title
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div><div className="eyebrow text-blue-deep">NEXT</div><div className="text-lg font-semibold">{it.code} — {it.title}</div><div className="text-xs text-ink-secondary">{it.project}</div></div>
         <div className="flex gap-1" role="group" aria-label="Prompt type">
-          <button type="button" className={`btn btn-sm ${pref === 'FULL' ? 'btn-copy-secondary border-blue-deep' : ''}`} onClick={() => choose('FULL')}>FULL PROMPT</button>
+          <button type="button" className={`btn btn-sm ${pref === 'FULL' ? 'btn-copy-secondary border-blue-deep' : ''}`} onClick={() => choose('FULL')}>IMAGE PROMPT</button>
           <button type="button" className={`btn btn-sm ${pref === 'CONT' ? 'btn-copy-secondary border-blue-deep' : ''}`} onClick={() => choose('CONT')}>CONTINUATION</button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export function AttachImageForm({ action, klingId, options }: { action: (fd: For
       if (o && !o.approved && !window.confirm(`WARNING:\n${o.label} is not approved.\n\nContinue anyway?`)) e.preventDefault();
     }} className="mt-3 flex flex-wrap items-end gap-2">
       <input type="hidden" name="klingId" value={klingId} />
-      <label className="block"><span className="label">Add image</span>
+      <label className="block"><span className="label">Add picture</span>
         <select name="imageId" className="input min-w-[260px]" required value={sel} onChange={e => setSel(e.target.value)}>
           <option value="" disabled>— choose planned image —</option>
           {options.map(o => <option key={o.id} value={o.id}>{o.label} {o.approved ? '✓ approved' : '⚠ NOT approved'}</option>)}

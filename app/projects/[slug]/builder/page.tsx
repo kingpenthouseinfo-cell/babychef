@@ -33,7 +33,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
             </div>
           </Section>
         ))}
-        <p className="text-xs text-ink-secondary">Image and Kling builders can also be opened from an image page or a Kling clip page.</p>
+        <p className="text-xs text-ink-secondary">Image and Kling builders can also be opened from an image page or a Video clip page.</p>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
     const m = parseJson<Record<string, any>>(s.meta, {});
     return (!imageId || m.imageId === imageId) && (!klingId || m.klingId === klingId);
   });
-  const applyTo: [string, string][] = type === 'image-full' ? [['image-full', 'USE RESULT AS FULL PROMPT']] : type === 'image-cont' ? [['image-cont', 'USE RESULT AS CONTINUATION PROMPT']] : type === 'image-redo' ? [['image-full', 'USE RESULT AS FULL PROMPT'], ['image-cont', 'USE RESULT AS CONTINUATION PROMPT']] : type === 'kling-final' || type === 'kling-redo' ? [['kling', 'USE RESULT AS KLING PROMPT']] : type === 'script' || type === 'script-revision' ? [['script', 'SAVE RESULT AS NEW SCRIPT VERSION']] : [];
+  const applyTo: [string, string][] = type === 'image-full' ? [['image-full', 'USE AS IMAGE PROMPT']] : type === 'image-cont' ? [['image-cont', 'USE AS NEXT IMAGE PROMPT']] : type === 'image-redo' ? [['image-full', 'USE AS IMAGE PROMPT'], ['image-cont', 'USE AS NEXT IMAGE PROMPT']] : type === 'kling-final' || type === 'kling-redo' ? [['kling', 'USE RESULT AS KLING PROMPT']] : type === 'script' || type === 'script-revision' ? [['script', 'SAVE RESULT AS NEW SCRIPT VERSION']] : [];
   const metaJson = JSON.stringify(res.meta);
 
   return (
@@ -100,19 +100,19 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
                 ))}
               </ul>
               {def.blocks.includes('bible') && (
-                <details className="mt-3 rounded-lg border border-line p-2"><summary className="cursor-pointer text-xs font-semibold">Production Bible sections ({res.bibleSections.filter(s => s.included).length}/{res.bibleSections.length})</summary>
+                <details className="mt-3 rounded-lg border border-line p-2"><summary className="cursor-pointer text-xs font-semibold">My Video Style sections ({res.bibleSections.filter(s => s.included).length}/{res.bibleSections.length})</summary>
                   <div className="mt-2 space-y-1">{res.bibleSections.map(s => <label key={s.key} className="flex items-center gap-2 text-xs"><input type="checkbox" name="bs" value={s.key} defaultChecked={s.included} className="h-3.5 w-3.5" />{s.title}</label>)}</div></details>
               )}
             </Section>
             <div className="mt-4 space-y-3">
               {(def.needs === 'image' || def.needs === 'attempt') && (
-                <label className="block"><span className="label">Planned image</span><select name="image" defaultValue={imageId || ''} className="input"><option value="">— choose —</option>{images.map(i => <option key={i.id} value={i.id}>{imageCode(i.seq)} {i.title}</option>)}</select></label>
+                <label className="block"><span className="label">Picture</span><select name="image" defaultValue={imageId || ''} className="input"><option value="">— choose —</option>{images.map(i => <option key={i.id} value={i.id}>{imageCode(i.seq)} {i.title}</option>)}</select></label>
               )}
               {def.needs === 'attempt' && sel && (
                 <label className="block"><span className="label">Failed attempt</span><select name="attempt" defaultValue={searchParams.attempt || ''} className="input"><option value="">latest REDO / latest</option>{sel.attempts.map(a => <option key={a.id} value={a.id}>Attempt {a.number} ({a.status})</option>)}</select></label>
               )}
               {(def.needs === 'kling' || def.needs === 'klingAttempt') && (
-                <label className="block"><span className="label">Kling clip</span><select name="kling" defaultValue={klingId || ''} className="input"><option value="">— choose —</option>{clips.map(k => <option key={k.id} value={k.id}>{klingCode(k.order)} {k.title}</option>)}</select></label>
+                <label className="block"><span className="label">Video clip</span><select name="kling" defaultValue={klingId || ''} className="input"><option value="">— choose —</option>{clips.map(k => <option key={k.id} value={k.id}>{klingCode(k.order)} {k.title}</option>)}</select></label>
               )}
               {def.needs === 'klingAttempt' && klLabel && (
                 <label className="block"><span className="label">Failed generation</span><select name="kattempt" defaultValue={searchParams.kattempt || ''} className="input"><option value="">latest REDO / latest</option>{klLabel.attempts.map(a => <option key={a.id} value={a.id}>Generation {a.number} ({a.status})</option>)}</select></label>
@@ -137,7 +137,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
           <Section title="Template & versions">
             <dl className="space-y-1.5 text-xs">
               <div><dt className="label">Task template</dt><dd>{res.templateName ?? '—'} <Link href="/templates" className="underline">edit</Link></dd></div>
-              <div><dt className="label">Production Bible version</dt><dd>v{String(res.meta.bibleVersion)} <Link href="/settings/bible" className="underline">edit rules</Link></dd></div>
+              <div><dt className="label">My Video Style version</dt><dd>v{String(res.meta.bibleVersion)} <Link href="/settings/bible" className="underline">edit rules</Link></dd></div>
               <div><dt className="label">Recipe version</dt><dd>v{String(res.meta.recipeVersion)}</dd></div>
               <div><dt className="label">Baby Chef</dt><dd>{String(res.meta.chefName ?? '—')}{res.meta.chefUpdatedAt ? <span className="text-ink-muted"> · updated {fmtDate(String(res.meta.chefUpdatedAt))}</span> : null}</dd></div>
               <div><dt className="label">Target</dt><dd>{target}</dd></div>

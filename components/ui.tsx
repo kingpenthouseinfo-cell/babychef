@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { Lightbox } from './client';
+import { statusWords } from '@/lib/words';
 
 const statusClass = (k: string) => 'st-' + k.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 /** StatusBadge — the single status component used everywhere (status palette, separate from task colours). */
 export function Chip({ children, tone }: { children: React.ReactNode; tone?: string }) {
   const k = tone ?? String(children);
   const cls = k === 'PACKAGE CRITICAL' || k === 'HIGH' ? 'chip-nodot' : '';
-  return <span className={`chip ${statusClass(k)} ${cls}`}>{children}</span>;
+  return <span className={`chip ${statusClass(k)} ${cls}`}>{typeof children === 'string' ? statusWords(children) : children}</span>;
 }
 /** Gold Standard marker: small “GS” monogram, no star. */
 export const GoldBadge = () => <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-xs border border-gold-border bg-gold-bg px-1.5 py-[3px] text-[10px] font-semibold leading-none tracking-[0.08em] text-gold-text" title="Gold Standard">GS <span className="hidden sm:inline">GOLD STANDARD</span></span>;

@@ -16,12 +16,12 @@ export default async function Projects({ searchParams }: { searchParams: { statu
   const stats = await Promise.all(list.map(p => projectStats(p.id)));
   return (
     <>
-      <PageHeader title="Projects" sub="One project = one cooking video"><Link href="/projects/new" className="btn btn-primary">+ NEW PROJECT</Link></PageHeader>
+      <PageHeader title="My Recipe Videos" sub="One recipe video = one cooking video"><Link href="/projects/new" className="btn btn-primary">+ NEW RECIPE VIDEO</Link></PageHeader>
       <div className="mb-4 flex flex-wrap gap-1.5">
         <Link href="/projects" className={`btn btn-sm ${!searchParams.status ? 'btn-primary' : ''}`}>Active</Link>
         {PROJECT_STATUSES.map(s => <Link key={s} href={`/projects?status=${encodeURIComponent(s)}`} className={`btn btn-sm ${searchParams.status === s ? 'btn-primary' : ''}`}>{s}</Link>)}
       </div>
-      {list.length === 0 ? <Empty title="No projects yet." hint="Create a project with a title and recipe to start a new Baby Chef video."><Link href="/projects/new" className="btn btn-primary">+ NEW PROJECT</Link></Empty> : (
+      {list.length === 0 ? <Empty title="No recipe videos yet." hint="Add a title and recipe to start a new Baby Chef video."><Link href="/projects/new" className="btn btn-primary">+ NEW RECIPE VIDEO</Link></Empty> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{list.map((p, i) => <ProjectCard key={p.id} p={p} s={stats[i]} />)}</div>
       )}
     </>

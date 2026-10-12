@@ -21,7 +21,7 @@ export function KlingRefStrip({ klingId, items }: { klingId: string; items: Stri
           className={`w-[190px] shrink-0 rounded-lg border bg-surface p-2 ${drag === i ? 'border-purple-deep opacity-60' : 'border-purple-mid'}`}>
           <div className="mb-1.5 flex items-center justify-between"><span className="rounded-sm bg-purple-tint px-2 py-1 font-mono text-[12px] font-medium text-purple-deep">@image{i + 1}</span><span className="cursor-grab select-none text-ink-muted" aria-hidden title="Drag to reorder">⋮⋮</span></div>
           {it.assetId ? <img src={`/api/files/${it.assetId}?w=400`} alt={`${it.code} ${it.title}`} className="aspect-video w-full rounded-sm border border-line bg-sunken object-cover" /> : <div className="flex aspect-video items-center justify-center rounded-sm bg-sunken text-xs text-ink-muted">no image</div>}
-          <div className="mt-1.5 flex items-center gap-1.5"><span className="font-mono text-[12px] font-medium">{it.code}</span>{it.approved ? <span className="text-[11px] font-semibold text-[#3B6448]">✓ Approved</span> : <span className="text-[11px] font-semibold text-[#8A6216]">⚠ not approved</span>}</div>
+          <div className="mt-1.5 flex items-center gap-1.5"><span className="font-mono text-[12px] font-medium">{it.code}</span>{it.approved ? <span className="text-[11px] font-semibold text-[#3B6448]">✓ Looks good</span> : <span className="text-[11px] font-semibold text-[#8A6216]">⚠ not approved</span>}</div>
           <div className="truncate text-[12px] text-ink-secondary" title={it.title}>{it.title}</div>
           <div className="text-[11px] text-ink-muted">{it.meta}</div>
           <div className="mt-1.5 flex gap-1">
@@ -60,7 +60,7 @@ export function Collapsible({ index, title, needed = true, children, defaultOpen
   );
 }
 
-/** Pre-flight (protects Kling credits): warnings never block; "Mark fixed" dismisses locally; "Mark ready anyway" sets READY. */
+/** Check before making the video (protects Kling credits): warnings never block; "Mark fixed" dismisses locally; "Mark ready anyway" sets READY. */
 export function PreflightCard({ klingId, warnings, status }: { klingId: string; warnings: string[]; status: string }) {
   const [fixed, setFixed] = useState<Set<string>>(new Set());
   const open = warnings.filter(w => !fixed.has(w));

@@ -48,7 +48,7 @@ export default async function ShortPage({ params }: { params: { slug: string } }
               <details className="relative"><summary className="btn cursor-pointer list-none">+ Add moment</summary>
                 <form action={addShortItem} className="absolute left-0 top-full z-20 mt-2 grid w-[320px] gap-2 rounded-lg border border-line bg-surface p-3 shadow-md"><input type="hidden" name="projectId" value={p.id} />
                   <Sel name="sceneId" label="Scene" options={[['', '— none —'], ...scenes.map(s => [s.id, `${sceneCode(s.order)} ${s.title}`] as [string, string])]} />
-                  <Sel name="klingId" label="Kling clip" options={[['', '— none —'], ...clips.map(c => [c.id, `${klingCode(c.order)} ${c.title}`] as [string, string])]} />
+                  <Sel name="klingId" label="Video clip" options={[['', '— none —'], ...clips.map(c => [c.id, `${klingCode(c.order)} ${c.title}`] as [string, string])]} />
                   <Text name="visual" label="Visual" /><Text name="seconds" label="Seconds" type="number" v={5} /><SubmitBtn className="btn-sm btn-primary">Add</SubmitBtn></form></details>
             </div>
             {items.length === 0 ? <Empty title="No short-form moments yet." hint="Mark scenes SHORT KEEP, then collect them here — or add moments manually." /> : (
@@ -77,7 +77,7 @@ export default async function ShortPage({ params }: { params: { slug: string } }
                       <details className="mt-2"><summary className="cursor-pointer text-[12px] font-semibold text-ink-secondary">Edit moment</summary>
                         <DirtyForm action={saveShortItem} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="id" value={it.id} />
                           <Sel name="sceneId" label="Related scene" v={it.sceneId} options={[['', '— none —'], ...scenes.map(s => [s.id, `${sceneCode(s.order)} ${s.title}`] as [string, string])]} />
-                          <Sel name="klingId" label="Related Kling clip" v={it.klingId} options={[['', '— none —'], ...clips.map(c => [c.id, `${klingCode(c.order)} ${c.title}`] as [string, string])]} />
+                          <Sel name="klingId" label="Related Video clip" v={it.klingId} options={[['', '— none —'], ...clips.map(c => [c.id, `${klingCode(c.order)} ${c.title}`] as [string, string])]} />
                           <Text name="imageIds" label="Related image(s)" v={it.imageIds} placeholder="IMG-001, IMG-002" /><Text name="seconds" label="Estimated duration (s)" type="number" v={it.seconds} />
                           <Area name="visual" label="Visual description" v={it.visual} rows={2} /><Area name="dialogue" label="Dialogue" v={it.dialogue} rows={2} />
                           <Text name="reason" label="Reason to keep" v={it.reason} /><Sel name="vertical" label="Vertical crop" v={it.vertical} options={VERTICAL_OPTIONS} />

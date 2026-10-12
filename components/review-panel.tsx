@@ -35,7 +35,7 @@ export function ReviewPanel(p: ReviewProps) {
   return (
     <section id="review" className="card border-purple-mid space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><div className="eyebrow text-purple-deep">REVIEW</div><h2 className="mt-1">Image review — <span className="font-mono">{p.code}</span> · attempt v{p.number}</h2><p className="text-[13px] text-ink-secondary">Compare, check, then approve (hold) or send back · click Redo to open the correction panel</p></div>
+        <div><div className="eyebrow text-purple-deep">CHECK THIS</div><h2 className="mt-1">Check this picture — <span className="font-mono">{p.code}</span> · attempt v{p.number}</h2><p className="text-[13px] text-ink-secondary">Compare, check, then approve (hold) or send back · click Redo to open the correction panel</p></div>
         <div role="group" aria-label="Compare mode" className="flex gap-1 rounded-md bg-sunken p-1">
           {([['prev', 'vs previous approved', !!p.prevAsset], ['master', 'vs master', !!p.masterAsset], ['single', 'Single', true]] as const).map(([k, l, ok]) => (
             <button key={k} type="button" disabled={!ok} onClick={() => setMode(k)} className={`rounded-sm px-3 py-1.5 text-[12px] font-medium transition disabled:opacity-40 ${mode === k ? 'bg-surface shadow-sm' : 'text-ink-secondary'}`}>{l}</button>
@@ -67,19 +67,19 @@ export function ReviewPanel(p: ReviewProps) {
 
         <div className="space-y-3">
           {p.isApproved ? (
-            <div className="rounded-lg border border-sage-mid bg-sage-tint p-3 text-[13px]"><b className="text-sage-deep">✓ Approved</b>{p.unblocks.length > 0 && <> · {p.unblocks.join(', ')} unblocked</>}
+            <div className="rounded-lg border border-sage-mid bg-sage-tint p-3 text-[13px]"><b className="text-sage-deep">✓ Looks good</b>{p.unblocks.length > 0 && <> · {p.unblocks.join(', ')} unblocked</>}
               <form action={undoApprove} className="mt-2"><input type="hidden" name="attemptId" value={p.attemptId} /><button className="btn btn-sm">Undo</button></form></div>
           ) : (
             <div className="space-y-2">
               <form id={`rv-approve-${p.attemptId}`} action={approveAttempt} className="hidden md:flex"><input type="hidden" name="attemptId" value={p.attemptId} /><HoldApprove formId={`rv-approve-${p.attemptId}`} confirm={p.replaceConfirm} ms={700} /></form>
               <div className="fixed inset-x-0 bottom-14 z-40 flex border-t border-line bg-surface p-2 md:hidden"><HoldApprove formId={`rv-approve-${p.attemptId}`} confirm={p.replaceConfirm} ms={700} /></div>
-              <p className="text-[11px] text-ink-secondary md:hidden">Approve lives in the bar below, away from Redo.</p>
+              <p className="text-[11px] text-ink-secondary md:hidden">“Looks good” is in the bar below.</p>
               <hr className="border-line" />
               <div className="flex gap-2">
-                <button type="button" className="btn btn-danger flex-1" onClick={() => setRedo(!redo)} aria-expanded={redo}>Redo</button>
-                <form action={rejectAttempt} className="flex-1"><input type="hidden" name="attemptId" value={p.attemptId} /><button className="btn btn-danger w-full">Reject</button></form>
+                <button type="button" className="btn btn-danger flex-1" onClick={() => setRedo(!redo)} aria-expanded={redo}>Fix this picture</button>
+                <form action={rejectAttempt} className="flex-1"><input type="hidden" name="attemptId" value={p.attemptId} /><button className="btn btn-danger w-full">Don't use this</button></form>
               </div>
-              <p className="text-[11px] text-ink-secondary">Hold Approve for 0.7s (keyboard: hold Enter/Space). Approve is kept away from Copy and Redo on purpose.</p>
+              <p className="text-[11px] text-ink-secondary">Hold “Looks good” for a moment so it can’t be pressed by accident.</p>
             </div>
           )}
         </div>
@@ -87,15 +87,15 @@ export function ReviewPanel(p: ReviewProps) {
 
       {redo && !p.isApproved && (
         <form action={redoAttempt} className="space-y-3 rounded-lg border border-[#C8705C]/50 bg-[#F6E3DE]/40 p-4"><input type="hidden" name="attemptId" value={p.attemptId} /><input type="hidden" name="corrCategory" value={cat} />
-          <div className="flex items-center justify-between"><div className="eyebrow text-[#A8513F]">REDO · v{p.number} → v{p.number + 1}</div><button type="button" className="text-[12px] underline" onClick={() => setRedo(false)}>← Back to review</button></div>
+          <div className="flex items-center justify-between"><div className="eyebrow text-[#A8513F]">FIX THIS PICTURE · v{p.number} → v{p.number + 1}</div><button type="button" className="text-[12px] underline" onClick={() => setRedo(false)}>← Back to review</button></div>
           <div className="grid gap-3 md:grid-cols-3">
-            <label className="block"><span className="label">What went wrong?</span><textarea name="wrong" rows={4} className="input" /></label>
-            <label className="block"><span className="label">What needs to change?</span><textarea name="change" rows={4} className="input" /></label>
-            <label className="block"><span className="label">What must remain unchanged?</span><textarea name="keep" rows={4} className="input" /></label>
+            <label className="block"><span className="label">WHAT IS WRONG?</span><textarea name="wrong" rows={4} className="input" /></label>
+            <label className="block"><span className="label">WHAT SHOULD CHANGE?</span><textarea name="change" rows={4} className="input" /></label>
+            <label className="block"><span className="label">WHAT SHOULD STAY THE SAME?</span><textarea name="keep" rows={4} className="input" /></label>
           </div>
           <div><span className="label">Category</span><div className="flex flex-wrap gap-1.5">{CATS.map(c => <button key={c} type="button" onClick={() => setCat(cat === c ? '' : c)} aria-pressed={cat === c} className={`rounded-md border px-2.5 py-1 text-[12px] ${cat === c ? 'border-[#C8705C] bg-[#F6E3DE] text-[#A8513F]' : 'border-line bg-surface text-ink-secondary'}`}>{c}</button>)}</div></div>
-          <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="addToLibrary" className="accent-[#4C6B52]" /> Also add to the Corrections / Don&apos;t Do This library</label>
-          <div className="flex flex-wrap items-center gap-3"><button className="btn btn-danger">Save redo · v{p.number} moves to 03 Redos</button><Link href={p.builderRedoHref} className="btn btn-copy-secondary">Build redo prompt →</Link></div>
+          <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="addToLibrary" className="accent-[#4C6B52]" /> Also remember this for future pictures (Don&apos;t Do This list)</label>
+          <div className="flex flex-wrap items-center gap-3"><button className="btn btn-danger">SAVE FIX · v{p.number} is kept in the Fixes folder</button><Link href={p.builderRedoHref} className="btn btn-copy-secondary">Make the fix prompt →</Link></div>
         </form>
       )}
     </section>

@@ -63,7 +63,7 @@ export default async function BabyChefPage({ params, searchParams }: { params: {
           {card('Voice & personality', [b.voiceInstruction, b.dialogueStyle].filter(Boolean).join(' '))}
           {card('Kitchen', b.kitchen)}
           {card('Production rules', [b.safetyRules, b.continuityRules].filter(Boolean).join(' '))}
-          <Link href={`/projects/new?chef=${b.id}`} className="btn btn-primary w-full">+ NEW PROJECT</Link>
+          <Link href={`/projects/new?chef=${b.id}`} className="btn btn-primary w-full">+ NEW RECIPE VIDEO</Link>
         </aside>
 
         {/* right: tabs */}

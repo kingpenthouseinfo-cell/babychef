@@ -9,7 +9,7 @@ export default async function NewProject({ searchParams }: { searchParams: { che
   const [chefs, s] = await Promise.all([db.babyChef.findMany({ where: { deletedAt: null, active: true }, orderBy: { displayName: 'asc' } }), getSettings()]);
   return (
     <>
-      <PageHeader title="New Project" sub="Only the title is required — fill in the rest as you go." />
+      <PageHeader title="New Recipe Video" sub="Only the title is required — fill in the rest as you go." />
       <DirtyForm action={createProject} className="space-y-4">
         <div className="card grid gap-3 sm:grid-cols-2">
           <Text name="title" label="Project title *" required placeholder="Jamaican Beef Patties" className="sm:col-span-2" />
@@ -25,7 +25,7 @@ export default async function NewProject({ searchParams }: { searchParams: { che
           <Text name="recipeSource" label="Recipe source" className="sm:col-span-2" />
           <Area name="recipeOriginal" label="Full recipe text (paste)" rows={8} className="sm:col-span-2" />
         </div>
-        <SubmitBtn pendingText="Creating…">CREATE PROJECT</SubmitBtn>
+        <SubmitBtn pendingText="Creating…">START RECIPE VIDEO</SubmitBtn>
       </DirtyForm>
     </>
   );

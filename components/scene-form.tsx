@@ -3,7 +3,7 @@ import { Area, Check, Sel, Text } from './ui';
 import { saveScene } from '@/lib/actions/script';
 import { ADULT_OPTIONS, CROP_LEVELS, SCENE_STATUSES, SHOT_TYPES } from '@/lib/constants';
 
-export function SceneForm({ projectId, s }: { projectId: string; s?: any }) {
+export function SceneForm({ projectId, s, first }: { projectId: string; s?: any; first?: boolean }) {
   return (
     <DirtyForm action={saveScene} className="space-y-3">
       <input type="hidden" name="projectId" value={projectId} />{s && <input type="hidden" name="id" value={s.id} />}
@@ -27,7 +27,7 @@ export function SceneForm({ projectId, s }: { projectId: string; s?: any }) {
         <Area name="notes" label="Notes" v={s?.notes} rows={2} className="sm:col-span-2" />
       </div>
       <div className="flex flex-wrap gap-5"><Check name="shortKeep" label="SHORT KEEP" v={s?.shortKeep} /><Check name="hook" label="HOOK" v={s?.hook} /><Check name="beauty" label="Beauty shot" v={s?.beauty} /></div>
-      <SubmitBtn>{s ? 'SAVE SCENE' : 'ADD SCENE'}</SubmitBtn>
+      <SubmitBtn>{s ? 'SAVE SCENE' : (first ? 'ADD FIRST SCENE' : 'ADD NEXT SCENE')}</SubmitBtn>
     </DirtyForm>
   );
 }

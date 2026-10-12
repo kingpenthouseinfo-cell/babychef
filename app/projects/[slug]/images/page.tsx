@@ -66,7 +66,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
             <Text name="title" label="Image title *" required placeholder="Medium shot of Baby Chef beside skillet" />
             <Sel name="shotType" label="Shot type" options={SHOT_TYPES} /><Sel name="priority" label="Priority" v="NORMAL" options={PRIORITIES} />
             <Text name="purpose" label="Purpose" className="sm:col-span-2" />
-            <div className="sm:col-span-2"><SubmitBtn pendingText="Creating…">ADD IMAGE (next ID: {imageCode((all[all.length - 1]?.seq ?? 0) + 1)})</SubmitBtn></div>
+            <div className="sm:col-span-2"><SubmitBtn pendingText="Creating…">ADD PICTURE (next: {imageCode((all[all.length - 1]?.seq ?? 0) + 1)})</SubmitBtn></div>
           </form>
         )}
       </section>

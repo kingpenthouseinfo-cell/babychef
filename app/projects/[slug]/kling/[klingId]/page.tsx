@@ -36,7 +36,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
   const statusBtn = (s: string, cls = '') => <form action={setKlingStatus} key={s}><input type="hidden" name="id" value={k.id} /><input type="hidden" name="status" value={s} /><SubmitBtn className={`btn-sm ${cls}`} pendingText="…">{s === 'READY' ? 'MARK READY' : s}</SubmitBtn></form>;
   return (
     <div className="space-y-5">
-      <Link href={`/projects/${p.slug}/kling`} className="text-sm underline">← All Kling clips</Link>
+      <Link href={`/projects/${p.slug}/kling`} className="text-sm underline">← All Video clips</Link>
       <div className="flex flex-wrap items-center gap-3"><span className="font-mono text-2xl font-bold">{code}</span><h1 className="text-xl">{k.title}</h1><Chip>{k.status}</Chip></div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-ink-secondary">
@@ -113,7 +113,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
         {versions.length === 0 ? <p className="text-sm text-ink-secondary">Versions appear when the prompt is saved/revised.</p> : versions.map(v => <details key={v.id} className="border-b border-line py-2 last:border-0"><summary className="cursor-pointer text-sm"><b>v{v.version}</b> {v.active && <Chip tone="APPROVED">ACTIVE</Chip>} · {fmtDate(v.createdAt)} · {v.reason}</summary><pre className="mono mt-2 whitespace-pre-wrap rounded bg-sunken p-2">{v.text}</pre><div className="mt-1 flex gap-2"><CopyButton text={v.text} label="COPY" className="btn-sm" />{!v.active && <form action={restoreKlingPrompt}><input type="hidden" name="id" value={v.id} /><SubmitBtn className="btn-sm" pendingText="…">Restore</SubmitBtn></form>}</div></details>)}
       </Section>
 
-      <Section title="Generation record (external Kling attempts)">
+      <Section title="Video attempts made in Kling">
         <form action={recordKlingAttempt} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="klingId" value={k.id} />
           <Text name="externalName" label="External filename / ID" /><Field label="Optional video upload"><input type="file" name="file" accept="video/*" className="input" /></Field>
           <Text name="notes" label="Notes" className="sm:col-span-2" /><div className="sm:col-span-2"><SubmitBtn pendingText="Saving…">RECORD GENERATION #{(k.attempts[0]?.number ?? 0) + 1}</SubmitBtn></div></form>
@@ -127,10 +127,10 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
             {a.status === 'REVIEW' && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <form action={reviewKlingAttempt}><input type="hidden" name="id" value={a.id} /><input type="hidden" name="result" value="APPROVED" /><SubmitBtn className="btn-approve" pendingText="…">APPROVE</SubmitBtn></form>
-                <details className="w-full rounded-lg border border-[#C8705C] bg-[#F6E3DE] p-2"><summary className="cursor-pointer font-semibold">REDO — what went wrong</summary>
+                <details className="w-full rounded-lg border border-[#C8705C] bg-[#F6E3DE] p-2"><summary className="cursor-pointer font-semibold">FIX THIS VIDEO — what is wrong</summary>
                   <form action={reviewKlingAttempt} className="mt-2 grid gap-2 sm:grid-cols-2"><input type="hidden" name="id" value={a.id} /><input type="hidden" name="result" value="REDO" />
                     <Area name="wrong" label="What went wrong" rows={2} /><Area name="change" label="What must change" rows={2} /><Area name="keep" label="What must remain unchanged" rows={2} /><Area name="promptNotes" label="Prompt revision notes" rows={2} />
-                    <div className="sm:col-span-2"><SubmitBtn className="btn-accent" pendingText="…">SAVE REDO</SubmitBtn></div></form></details>
+                    <div className="sm:col-span-2"><SubmitBtn className="btn-accent" pendingText="…">SAVE FIX</SubmitBtn></div></form></details>
               </div>)}
           </div>))}</div>
       </Section>

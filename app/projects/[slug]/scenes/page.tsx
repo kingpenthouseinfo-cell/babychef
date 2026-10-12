@@ -37,7 +37,7 @@ export default async function Scenes({ params, searchParams }: { params: { slug:
       </div>
       {Object.keys(summary).length > 0 && <div className="rounded-lg border border-line bg-surface p-3 text-[13px]"><b>Shot variety (informational):</b> {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}{!summary['BEAUTY SHOT'] ? ' · 0 beauty shots' : ''}</div>}
 
-      {view === 'new' && <Section title="Add scene"><SceneForm projectId={p.id} /></Section>}
+      {view === 'new' && <Section title={scenes.length ? "Add next scene" : "Add first scene"}><SceneForm projectId={p.id} first={scenes.length === 0} /></Section>}
 
       {view === 'progression' ? (
         <Section title="Food progression by ingredient">

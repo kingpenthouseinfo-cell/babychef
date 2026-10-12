@@ -62,7 +62,7 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
           ))}
         </div>
         <span className="font-mono text-[11px] text-ink-secondary">{ver ? `v${ver}` : 'no version yet'} · {words(cur)} words · {pending ? 'saving…' : label ? `saved ${label}` : 'saved'}</span>
-        <div className="ml-auto"><CopyButton text={withFilename(cur, filename)} label={tab === 'full' ? 'COPY FULL PROMPT' : 'COPY CONTINUATION'} className="min-w-[190px]" /></div>
+        <div className="ml-auto"><CopyButton text={withFilename(cur, filename)} label={tab === 'full' ? 'COPY IMAGE PROMPT' : 'COPY NEXT IMAGE PROMPT'} className="min-w-[190px]" /></div>
       </div>
       <textarea value={cur} onChange={e => change(e.target.value)} onBlur={flush} aria-label={tab === 'full' ? 'Full prompt' : 'Continuation prompt'}
         placeholder={tab === 'full' ? 'Full prompt — complete visual context for ChatGPT…' : 'Continuation prompt — only what changes from the previous frame…'}
@@ -89,7 +89,7 @@ export function HoldApprove({ formId, confirm, ms = 700 }: { formId: string; con
       onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); t0.current = performance.now(); raf.current = requestAnimationFrame(step); } }}
       onKeyUp={e => { if (e.key === 'Enter' || e.key === ' ') stop(); }} onBlur={stop}>
       <span className="absolute inset-y-0 left-0 bg-white/30" style={{ width: `${p * 100}%` }} aria-hidden />
-      <span className="relative">APPROVE</span>
+      <span className="relative">LOOKS GOOD</span>
     </button>
   );
 }
@@ -107,7 +107,7 @@ export function RevealButton({ assetId, projectFolder, label = 'Show in Finder',
 export type DlItem = { name: string; size: number; mtime: number };
 export type ImgOpt = { id: string; code: string; title: string; scene: string; slug: string; next: number; seq: number; sceneOrder: number };
 
-export function AddResultButton({ label = 'Add result', className = 'btn' }: { label?: string; className?: string }) {
+export function AddResultButton({ label = 'Add finished picture', className = 'btn' }: { label?: string; className?: string }) {
   return <button type="button" className={className} onClick={() => window.dispatchEvent(new CustomEvent('bcs:add-result'))}>{label}</button>;
 }
 

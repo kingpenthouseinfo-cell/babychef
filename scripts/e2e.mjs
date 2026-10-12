@@ -83,14 +83,14 @@ await page.fill('input[name=title]', PROJ);
 await page.selectOption('select[name=babyChefId]', { label: CHEF });
 await page.fill('input[name=recipeName]', 'Lentil Soup');
 await page.fill('textarea[name=recipeOriginal]', '1 cup lentils, 2 tbsp oil, 1/2 tsp cumin seeds, 1 cup coconut milk.');
-await page.click('text=CREATE PROJECT');
+await page.click('text=START RECIPE VIDEO');
 await page.waitForURL(/\/projects\/e2e-soup/);
 const slug = new URL(page.url()).pathname.split('/')[2];
 ok('Create project with auto slug', slug.startsWith('e2e-soup'), slug);
 
 // ---- Ingredient + PACKAGE CRITICAL product refs
 await go(`/projects/${slug}/ingredients`);
-const addForm = page.locator('section:has(h2:has-text("Add ingredient")) form');
+const addForm = page.locator('section:has(h2:has-text("Add one ingredient")) form');
 await addForm.locator('input[name=name]').fill('Coconut Milk');
 await addForm.locator('input[name=quantity]').fill('1'); await addForm.locator('input[name=unit]').fill('cup');
 await addForm.locator('input[name=brand]').fill('Example Brand');
@@ -98,6 +98,13 @@ await addForm.locator('select[name=importance]').selectOption('PACKAGE_CRITICAL'
 await addForm.locator('button:has-text("ADD INGREDIENT")').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);
 ok('Ingredient shows PACKAGE CRITICAL', (await page.locator('text=PACKAGE CRITICAL').count()) > 0);
+await page.fill('textarea[name=text]', '2 cups flour, sifted\n1 tsp salt | Brand: Morton\n3 cloves garlic (minced)');
+await page.click('button:has-text("ADD THESE INGREDIENTS")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+ok('Quick add: lines split into separate ingredients', (await page.locator('h2:has-text("2 cups flour")').count()) === 1 && (await page.locator('h2:has-text("1 tsp salt")').count()) === 1 && (await page.locator('h2:has-text("3 cloves garlic")').count()) === 1);
+const opts = await page.locator('select[aria-label="Which ingredient?"] option').allTextContents();
+ok('Photo panel lists every recipe ingredient', opts.some(o => o.includes('flour')) && opts.some(o => o.includes('salt')) && opts.some(o => o.includes('Coconut Milk')) && opts.some(o => o.includes('garlic')), opts.join('|'));
+await page.selectOption('select[aria-label="Which ingredient?"]', { label: opts.find(o => o.includes('salt')) });
+ok('Picking an ingredient pre-fills its brand', (await page.inputValue('input[name=brand] >> nth=0')) === 'Morton');
 async function addProd(file, type) {
   const sum = page.locator('summary:has-text("Add product reference photo")').first();
   await sum.click();
@@ -134,14 +141,14 @@ ok('Script v1 still accessible with content', (await page.inputValue('textarea[n
 await go(`/projects/${slug}/scenes?view=new`);
 await page.fill('input[name=title]', 'Temper the cumin');
 await page.fill('textarea[name=foodBefore]', 'Oil cold in pan'); await page.fill('textarea[name=foodAfter]', 'Seeds sizzling in oil');
-await page.click('button:has-text("ADD SCENE")');
+await page.click('button:text-matches("ADD (FIRST|NEXT) SCENE")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);
 ok('Create scene SC01', (await page.locator('text=SC01').count()) > 0);
 
 async function newImage(title) {
   await go(`/projects/${slug}/images`);
   await page.fill('#add input[name=title]', title);
-  await page.click('#add button:has-text("ADD IMAGE")');
+  await page.click('#add button:has-text("ADD PICTURE")');
   await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
   return page.url();
 }
@@ -195,32 +202,32 @@ ok('Image appears under Generating', (await page.locator('text=IMG-001').count()
 // ---- Import result -> redo -> import -> approve
 await page.goto(img1Url + '#results', { waitUntil: 'networkidle' });
 async function importResult(file) {
-  await page.locator('button:has-text("Add result")').first().click();
+  await page.locator('button:has-text("Add finished picture")').first().click();
   const dlg = page.locator('[role=dialog]');
   await dlg.locator('input[name=file]').setInputFiles(file);
   await dlg.locator('button:has-text("Import")').click();
   await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
 }
 await importResult(r1);
-ok('Attempt 1 in REVIEW (review panel visible)', (await page.locator('text=Image review').count()) > 0);
+ok('Attempt 1 in REVIEW (review panel visible)', (await page.locator('text=Check this picture').count()) > 0);
 // 3-state checklist: click cycles ✓ -> ? and persists after reload
 const chip = page.locator('#review button:has-text("Same Baby Chef")');
 await chip.click(); await chip.click(); await page.waitForTimeout(700);
 await page.reload({ waitUntil: 'networkidle' });
 ok('Review checklist cycles ✓→? and persists', (await page.locator('#review button[aria-label^="Same Baby Chef: unsure"]').count()) === 1);
 ok('Compare modes available', (await page.locator('#review button:has-text("Single")').count()) === 1);
-await page.locator('aside details:has(> summary:text-is("Redo")) > summary').click();
-await page.fill('aside details:has(> summary:text-is("Redo")) textarea[name=wrong]', 'Too much oil');
-await page.fill('aside details:has(> summary:text-is("Redo")) textarea[name=change]', 'Only 2 tbsp small pool');
-await page.locator('aside details:has(> summary:text-is("Redo")) button:has-text("REDO — save correction")').click();
+await page.locator('aside details:has(> summary:text-is("Fix this picture")) > summary').click();
+await page.fill('aside details:has(> summary:text-is("Fix this picture")) textarea[name=wrong]', 'Too much oil');
+await page.fill('aside details:has(> summary:text-is("Fix this picture")) textarea[name=change]', 'Only 2 tbsp small pool');
+await page.locator('aside details:has(> summary:text-is("Fix this picture")) button:has-text("SAVE FIX")').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 ok('Redo saved: correction history shows', (await page.locator('text=Too much oil').count()) > 0);
-ok('Attempt chip shows v1 Redo', (await page.locator('a:has-text("v1"):has-text("Redo")').count()) > 0);
+ok('Attempt chip shows v1 Redo', (await page.locator('a:has-text("v1"):has-text("Needs fixing")').count()) > 0);
 await importResult(r2);
-ok('Attempt 2 uploaded; attempt 1 preserved', (await page.locator('text=Attempt 1').count()) > 0 && (await page.locator('text=Attempt 2').count()) > 0);
+ok('Version 2 uploaded; attempt 1 preserved', (await page.locator('text=Version 1').count()) > 0 && (await page.locator('text=Version 2').count()) > 0);
 await page.locator('#approve-form button').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-ok('Approve works: APPROVED RESULT badge', (await page.locator('text=APPROVED RESULT').count()) > 0);
+ok('Approve works: THE ONE TO USE badge', (await page.locator('text=THE ONE TO USE').count()) > 0);
 const genFiles = walk(path.join(STORE, PROJ));
 ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
 
@@ -228,9 +235,9 @@ ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.
 const img2Url = await newImage('Cumin in oil');
 await page.waitForLoadState('networkidle');
 ok('Suggests previous approved IMG-001', (await page.locator('text=Suggested previous:').count()) > 0);
-await page.click('button:has-text("USE PREVIOUS APPROVED IMAGE")');
+await page.click('button:has-text("USE PREVIOUS PICTURE")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
-ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Approved Frame').count()) > 0 && (await page.locator('aside img[src*="/api/files/"]').count()) > 0);
+ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Picture').count()) > 0 && (await page.locator('aside img[src*="/api/files/"]').count()) > 0);
 await page.click('summary:has-text("Edit & attach references")').catch(() => {});
 ok('Attach same Front Label to a 2nd image', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
 ok('Reference is linked, not copied (linked in 2 images, still 2 files on disk)', (await page.locator('text=linked in 2').count()) > 0 && walk(path.join(STORE, PROJ, '01 References', 'Products')).length === 2);
@@ -247,19 +254,19 @@ const img4Url = await newImage('Portrait reaction');
 await page.goto(img4Url + '#results', { waitUntil: 'networkidle' }); await importResult(portrait);
 const ab = page.locator('#approve-form button'); await ab.focus();
 await page.keyboard.down('Enter'); await page.waitForTimeout(250); await page.keyboard.up('Enter'); await page.waitForTimeout(600);
-ok('Keyboard: short press does NOT approve (hold required)', (await page.locator('text=APPROVED RESULT').count()) === 0);
+ok('Keyboard: short press does NOT approve (hold required)', (await page.locator('text=THE ONE TO USE').count()) === 0);
 await ab.focus(); await page.keyboard.down('Enter'); await page.waitForTimeout(1100); await page.keyboard.up('Enter');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(900);
-ok('Keyboard: holding Enter 0.7s approves', (await page.locator('text=APPROVED RESULT').count()) > 0);
+ok('Keyboard: holding Enter 0.7s approves', (await page.locator('text=THE ONE TO USE').count()) > 0);
 await page.click('#review button:has-text("Undo")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-ok('Undo approval returns attempt to REVIEW', (await page.locator('text=APPROVED RESULT').count()) === 0 && (await page.locator('#review button:has-text("Redo")').count()) > 0);
+ok('Undo approval returns attempt to REVIEW', (await page.locator('text=THE ONE TO USE').count()) === 0 && (await page.locator('#review button:has-text("Fix this picture")').count()) > 0);
 await page.locator('#approve-form button').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-ok('Re-approve by click', (await page.locator('text=APPROVED RESULT').count()) > 0);
+ok('Re-approve by click', (await page.locator('text=THE ONE TO USE').count()) > 0);
 
 // ---- Kling
 await go(`/projects/${slug}/kling`);
 await page.fill('input[name=title]', 'Tempering clip'); await page.fill('input[name=durationTarget]', '12');
-await page.click('button:has-text("CREATE CLIP")'); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+await page.click('button:has-text("ADD VIDEO CLIP")'); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 for (const code of ['IMG-001', 'IMG-002', 'IMG-003', 'IMG-004']) {
   const sel = page.locator('select[name=imageId]');
   const opts = await sel.locator('option').allTextContents();
@@ -323,7 +330,7 @@ await go(`/projects/${slug}/builder?type=image-full&image=${imgId1}`);
 ta = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
 ok('Relevant correction appears in image prompt context', ta.includes('KNOWN CORRECTIONS TO RESPECT') && ta.includes('Exactly 2 tablespoons'));
 ok('Context preview lists the correction', (await page.locator('text=Known corrections').count()) > 0 && (await page.locator('text=Too much oil in pan').count()) > 0);
-ok('Approved previous-frame context is included for IMG-002', await (async () => { const id2 = img2Url.split('/').pop(); await go(`/projects/${slug}/builder?type=image-full&image=${id2}`); const t2 = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]'); return t2.includes('IMG-001 Previous Approved Frame') && t2.includes('CURRENT VISUAL STATE') && t2.includes('Do not reset the cookware'); })());
+ok('Approved previous-frame context is included for IMG-002', await (async () => { const id2 = img2Url.split('/').pop(); await go(`/projects/${slug}/builder?type=image-full&image=${id2}`); const t2 = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]'); return t2.includes('IMG-001 Previous Picture') && t2.includes('CURRENT VISUAL STATE') && t2.includes('Do not reset the cookware'); })());
 
 // ---- every remaining builder produces a real, context-rich prompt
 async function builder(type, extra = '') { await go(`/projects/${slug}/builder?type=${type}${extra}`); return (await page.inputValue('textarea[aria-label="Final copy-ready prompt"]')).toUpperCase(); }
@@ -342,9 +349,9 @@ ok('Kling grouping prompt: approved images + grouping principle', b.includes('AP
 // record a failed Kling generation, then build the Kling redo prompt
 await page.goto(klingUrl, { waitUntil: 'networkidle' });
 await page.fill('input[name=externalName]', 'kling_try1.mp4'); await page.click('button:has-text("RECORD GENERATION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-await page.click('summary:has-text("REDO — what went wrong")');
+await page.click('summary:has-text("FIX THIS VIDEO — what is wrong")');
 await page.fill('textarea[name=wrong]', 'Hands morphed between images'); await page.fill('textarea[name=change]', 'Use a natural cut between image 2 and 3'); await page.fill('textarea[name=keep]', 'Same kitchen and voice');
-await page.click('button:has-text("SAVE REDO")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.click('button:has-text("SAVE FIX")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 b = await builder('kling-redo', `&kling=${klingUrl.split('/').pop()}`);
 ok('Kling redo prompt: failure, correction, keep list, original prompt, reference order', ['FAILED KLING GENERATION', 'HANDS MORPHED BETWEEN IMAGES', 'NATURAL CUT BETWEEN IMAGE 2 AND 3', 'SAME KITCHEN AND VOICE', 'ORIGINAL KLING PROMPT', 'KEEP THE REFERENCE ORDER'].every(x => b.includes(x)));
 
@@ -363,11 +370,11 @@ ok('Keep my edits preserves the text', (await page.inputValue('textarea[aria-lab
 
 // ---- Mark waiting from the Prompt Queue NEXT card
 await go(`/projects/${slug}/images`);
-await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD IMAGE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 await page.click('button[role=tab]:has-text("Continuation")'); await page.fill('textarea[aria-label="Continuation prompt"]', 'CONT: waiting test'); await page.locator('textarea[aria-label="Continuation prompt"]').blur(); await page.waitForTimeout(900);
 await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 await go('/queue');
-await page.click('button:has-text("Mark waiting")'); await page.selectOption('select[aria-label="Waiting reason"]', 'ChatGPT generation limit'); await page.locator('button.btn-primary:has-text("MARK WAITING")').click(); await page.waitForTimeout(1200);
+await page.click('button:has-text("Waiting on something")'); await page.selectOption('select[aria-label="Waiting reason"]', 'ChatGPT generation limit'); await page.locator('button.btn-primary:has-text("MARK WAITING")').click(); await page.waitForTimeout(1200);
 await page.goto(`${BASE}/queue?show=waiting`, { waitUntil: 'networkidle' });
 ok('Mark waiting from Queue stores reason + time', (await page.locator('text=Waiting test image').count()) > 0 && (await page.locator('text=ChatGPT generation limit').count()) > 0);
 

@@ -13,8 +13,8 @@ export default async function BiblePage({ searchParams }: { searchParams: { s?: 
   const sel = secs.find(s => s.key === searchParams.s) ?? secs[0];
   return (
     <>
-      <PageHeader title="Production Bible" sub={<>Your permanent production rules (Level 1). Current version <b>v{v}</b>. <Link href="/settings" className="underline">← Settings</Link></>} />
-      <SettingsNav active="Production Bible" />
+      <PageHeader title="My Video Style" sub={<>Your permanent rules for how every video should look and sound. Current version <b>v{v}</b>. <Link href="/settings" className="underline">← Settings</Link></>} />
+      <SettingsNav active="My Video Style" />
       <div className="mb-5 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface p-3 text-[13px]"><span className="eyebrow mr-1">Rule hierarchy</span><span className="rounded-md bg-sunken px-2.5 py-1">Project overrides</span>→<span className="rounded-md bg-sunken px-2.5 py-1">Baby Chef profile</span>→<span className="rounded-md bg-blue-light px-2.5 py-1 font-semibold text-blue-deep">Global Production Bible · editing</span><span className="text-ink-secondary">More specific rules win. Approved reference images remain the visual source of truth.</span></div>
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
         <nav className="card max-h-[75vh] space-y-0.5 overflow-y-auto p-2" aria-label="Rule sections">

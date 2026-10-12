@@ -75,8 +75,8 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
           <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy hidden min-h-[48px] min-w-[240px] px-6 text-[15px] md:inline-flex" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
           <CopyButton text={withFilename(pref === 'CONT' ? cur.full : cur.cont, cur.filename)} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
           <a href={chatgpt} target="_blank" rel="noopener noreferrer" className="btn">Open ChatGPT ↗</a>
-          <button type="button" className="btn" onClick={() => setWaitOpen(!waitOpen)} aria-expanded={waitOpen}>Mark waiting</button>
-          <Link href={`/projects/${cur.slug}/images/${cur.id}#results`} className="btn">Add result</Link>
+          <button type="button" className="btn" onClick={() => setWaitOpen(!waitOpen)} aria-expanded={waitOpen}>Waiting on something</button>
+          <Link href={`/projects/${cur.slug}/images/${cur.id}#results`} className="btn">Add finished picture</Link>
           <button type="button" className="btn btn-ghost ml-auto" onClick={() => setSkipped([...skipped, cur.id])}>Skip → next</button>
         </div>
         {waitOpen && (
