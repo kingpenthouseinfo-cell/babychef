@@ -31,7 +31,7 @@ export default async function Corrections({ searchParams }: { searchParams: { ch
           <Text name="ingredient" label="Applicable ingredient" placeholder="e.g. sunflower oil" />
           <Text name="action" label="Applicable cooking action" placeholder="e.g. tempering" />
           <Sel name="severity" label="Severity" v="MEDIUM" options={SEVERITIES} />
-          <Field label="Bad image (optional)"><input type="file" name="file" accept="image/*" className="input" /></Field>
+          <Field label="Bad image (optional)"><input type="file" name="file" accept="image/png,image/jpeg,image/webp,image/gif" className="input" /></Field>
           <div className="sm:col-span-2"><SubmitBtn>Add correction</SubmitBtn></div>
         </form></details>
       {rows.length === 0 ? <Empty title="No corrections yet." hint="When an image fails, record what went wrong and what it should look like." /> : (

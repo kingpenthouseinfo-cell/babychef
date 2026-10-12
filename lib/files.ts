@@ -53,6 +53,16 @@ export function imageSize(buf: Buffer): { width: number; height: number } | null
   return null;
 }
 
+/** Pixel size as DISPLAYED (honours EXIF rotation, e.g. iPhone portrait photos), falling back to a header parse. */
+async function exifAwareSize(buf: Buffer): Promise<{ width: number; height: number } | null> {
+  try {
+    const sharp = (await import('sharp')).default;
+    const m = await sharp(buf).metadata();
+    if (m.width && m.height) return m.orientation && m.orientation >= 5 ? { width: m.height, height: m.width } : { width: m.width, height: m.height };
+  } catch { /* fall back */ }
+  return imageSize(buf);
+}
+
 export type ImportOpts = {
   rootFolder: string;          // e.g. "Jamaican Beef Patties" or "00 Baby Chefs/Jamaican Baby Chef"
   folder: string;              // e.g. "01 References/Products" ('' for none)
@@ -78,7 +88,7 @@ export async function importFile(file: File, o: ImportOpts) {
   while (await storage.exists(`${dir}/${name}`) || await db.asset.findFirst({ where: { relPath: `${dir}/${name}` } })) name = `${base}_dup${++n}${ext}`;
   const relPath = `${dir}/${name}`;
   await storage.put(relPath, buf);
-  const dim = file.type.startsWith('image/') ? imageSize(buf) : null;
+  const dim = file.type.startsWith('image/') ? await exifAwareSize(buf) : null;
   return db.asset.create({
     data: {
       displayName: name, originalName: (file.name || 'file').slice(0, 200), internalName: name, relPath,

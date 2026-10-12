@@ -124,6 +124,7 @@ export function AddResultDialog({ currentId, images, downloads, folderLabel }: {
   const saveAs = `${cur.slug}_${cur.scene}_${cur.code}_attempt-v${cur.next}.${ext === 'jpeg' ? 'jpg' : ext}`;
 
   const openWith = useCallback((f?: File) => {
+    if (f && /\.(heic|heif)$/i.test(f.name)) { window.alert('HEIC/HEIF images are not supported yet. Export it as JPG or PNG first (Preview → File → Export…).'); return; }
     setOpen(true);
     if (f && fileRef.current) { const dt = new DataTransfer(); dt.items.add(f); fileRef.current.files = dt.files; setFileName(f.name); setSource('file'); }
   }, []);
@@ -173,7 +174,7 @@ export function AddResultDialog({ currentId, images, downloads, folderLabel }: {
               )}
               <div className={source === 'file' || !downloads.length ? '' : 'hidden'}>
                 <label className="label" htmlFor="ar-file">Image file</label>
-                <input id="ar-file" ref={fileRef} type="file" name="file" accept="image/*" className="input" onChange={e => setFileName(e.target.files?.[0]?.name ?? '')} />
+                <input id="ar-file" ref={fileRef} type="file" name="file" accept="image/png,image/jpeg,image/webp,image/gif" className="input" onChange={e => setFileName(e.target.files?.[0]?.name ?? '')} />
                 <p className="mt-1 text-[11px] text-ink-secondary">Tip: you can also drag a file anywhere on this page.</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">

@@ -66,7 +66,7 @@ Back up **two things**: the storage root folder (`~/Documents/Baby Chef Studio/`
 
 ## Version 1 limitations
 
-Baby Chef Studio does **not**: generate images or videos; call the ChatGPT, Claude, Gemini or Kling APIs; control browser tabs; post to social media; edit video; or analyze images automatically. "Open ChatGPT / Claude / Kling" only opens a link in a new tab. It stores no passwords. It is single-user with no login — run it only on your own computer. Changing the storage root does not move existing files. Scene import from pasted text uses a conservative parser and previews before it saves.
+Baby Chef Studio does **not**: generate images or videos; call the ChatGPT, Claude, Gemini or Kling APIs; control browser tabs; post to social media; edit video; or analyze images automatically. "Open ChatGPT / Claude / Kling" only opens a link in a new tab. It stores no passwords. It is single-user with no login — run it only on your own computer. Changing the storage root does not move existing files. Scene import from pasted text uses a conservative parser and previews before it saves. Image pickers accept JPG, PNG, WebP and GIF; **HEIC/HEIF iPhone photos are not supported directly** — pick them from Photos (Safari converts them) or export as JPG first.
 
 ## Architecture notes (for future versions)
 

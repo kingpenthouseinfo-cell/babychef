@@ -29,6 +29,7 @@ export default async function Publishing({ params, searchParams }: { params: { s
   const preview = await contextBlock(p.id);
   const vars = await buildVars(p.id);
   const thumbPrompt = thumbTpl ? render(thumbTpl.text, vars).out : '';
+  const pubVersions = await db.promptVersion.findMany({ where: { ownerId: { in: assets.map(a => a.id) }, type: 'PUBLISHING' }, orderBy: { version: 'desc' } });
   const platforms = [...new Set(assets.map(a => a.platform))];
   const pl = platforms.includes(searchParams.pl ?? '') ? searchParams.pl! : platforms[0];
   const plAssets = assets.filter(a => a.platform === pl);
@@ -102,6 +103,11 @@ export default async function Publishing({ params, searchParams }: { params: { s
                           <Text name="notes" label="Notes" v={a.notes} />
                           <div className="flex flex-wrap gap-2"><SubmitBtn>SAVE</SubmitBtn>{a.selected && <CopyButton text={a.selected} label="COPY SELECTED" />}</div>
                         </DirtyForm>
+                        {pubVersions.filter(v => v.ownerId === a.id).length > 0 && (
+                          <details className="rounded-md border border-line p-2"><summary className="cursor-pointer text-[12px] font-semibold">Prompt history ({pubVersions.filter(v => v.ownerId === a.id).length})</summary>
+                            {pubVersions.filter(v => v.ownerId === a.id).map(v => <div key={v.id} className="mt-2 border-t border-line pt-2"><div className="text-[12px]"><b>v{v.version}</b> {v.active && <Chip tone="CURRENT">ACTIVE</Chip>} · {fmtDate(v.createdAt)} · {v.reason}</div><pre className="mono mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-sunken p-2">{v.text}</pre><CopyButton text={v.text} label="COPY" className="btn-sm mt-1" /></div>)}
+                          </details>
+                        )}
                         <div className="text-[11px] text-ink-muted">Updated {fmtDate(a.updatedAt)}</div>
                         <ConfirmForm action={deletePublishingAsset} message="Delete this publishing item?"><input type="hidden" name="id" value={a.id} /><button className="btn btn-sm btn-danger">Delete item</button></ConfirmForm>
                       </div>
