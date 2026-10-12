@@ -13,7 +13,7 @@ const SHOT_SHORT: Record<string, string> = { 'MAIN NARRATIVE SHOT': 'Medium', 'C
 export default async function Scenes({ params, searchParams }: { params: { slug: string }; searchParams: { view?: string; scene?: string; edit?: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
-  const scenes = await db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { images: { orderBy: { seq: 'asc' }, include: { approvedAttempt: true } } } });
+  const scenes = await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: true } } } });
   const base = `/projects/${p.slug}/scenes`;
   const view = searchParams.view;
   const sel = scenes.find(s => s.id === (searchParams.edit || searchParams.scene)) ?? scenes[0];

@@ -117,7 +117,7 @@ export async function refPool(project: { id: string; babyChefId: string | null }
   const [masters, own, imgs] = await Promise.all([
     project.babyChefId ? db.reference.findMany({ where: { babyChefId: project.babyChefId, kind: 'MASTER', deletedAt: null, active: true }, include: { ingredient: true }, orderBy: [{ isGold: 'desc' }, { createdAt: 'asc' }] }) : [],
     db.reference.findMany({ where: { projectId: project.id, deletedAt: null, active: true }, include: { ingredient: true }, orderBy: { createdAt: 'asc' } }),
-    db.plannedImage.findMany({ where: { projectId: project.id, approvedAttemptId: { not: null }, ...(excludeImageId ? { id: { not: excludeImageId } } : {}) }, orderBy: { seq: 'asc' } }),
+    db.plannedImage.findMany({ where: { projectId: project.id, approvedAttemptId: { not: null }, ...(excludeImageId ? { id: { not: excludeImageId } } : {}) }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }] }),
   ]);
   const refLabel = (r: any) => `${r.isGold ? '★ ' : ''}${r.ingredient ? r.ingredient.name + ' — ' : ''}${r.title} (${r.category})`;
   return {

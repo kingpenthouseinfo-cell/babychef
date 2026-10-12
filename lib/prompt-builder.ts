@@ -66,7 +66,7 @@ async function loadCtx(projectId: string, link: LinkParams) {
       ingredients: { orderBy: { order: 'asc' }, include: { references: { where: { deletedAt: null, active: true } } } },
       notes: { orderBy: { createdAt: 'asc' } }, docs: true,
       scripts: { where: { isCurrent: true }, take: 1 },
-      scenes: { orderBy: { order: 'asc' }, include: { images: { orderBy: { seq: 'asc' }, include: { approvedAttempt: { include: { asset: true } } } } } },
+      scenes: { orderBy: [{ pos: 'asc' }, { order: 'asc' }], include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: { include: { asset: true } } } } } },
       clips: { orderBy: { order: 'asc' }, include: { refs: { orderBy: { order: 'asc' }, include: { image: true } } } },
     },
   });

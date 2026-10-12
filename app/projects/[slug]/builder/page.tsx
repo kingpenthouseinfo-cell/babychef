@@ -41,9 +41,9 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
   const def = BUILDERS[type];
   const [settings, images, clips, scenes] = await Promise.all([
     getSettings(),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' }, include: { attempts: { orderBy: { number: 'asc' } }, scene: true } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], include: { attempts: { orderBy: { number: 'asc' } }, scene: true } }),
     db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { attempts: { orderBy: { number: 'desc' } } } }),
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }),
   ]);
   const submitted = searchParams.go === '1';
   const inc = arr(searchParams.inc);

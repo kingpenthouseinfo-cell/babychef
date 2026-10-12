@@ -29,13 +29,20 @@ export default async function Overview({ params }: { params: { slug: string } })
           <div className="mt-4 flex flex-wrap gap-2"><Link href={ns.next.href} className={`btn ${toneBtn[ns.next.tone]} min-h-[48px] px-6 text-[15px]`}>{ns.next.cta}</Link><Link href={ns.next.href} className="btn min-h-[48px] px-5">CONTINUE WHERE I LEFT OFF</Link></div>
         </>) : (<><h2 className="mt-1 text-[22px] font-semibold">Nothing needs you right now.</h2><p className="mt-1 text-[14px] text-ink-secondary">Everything for this recipe video is done or waiting.</p></>)}
       </section>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
+        <section className="card" aria-label="Progress"><div className="eyebrow">PROGRESS</div>
+          <ul className="mt-2 space-y-0.5 text-[14px]"><li>Recipe {ns.done.includes('Recipe added') ? '✓' : '○'}</li><li>Scenes {s.scenesComplete} of {s.scenes}</li><li>Pictures {s.approved} of {s.images}</li><li>Videos {s.clipsApproved} of {s.clips}</li><li>Post Video {s.publishingSelected > 0 ? `${s.publishingSelected} of ${s.publishing}` : 'not started'}</li></ul>
+          <Link href={`${b}/start`} className="mt-2 inline-block text-[13px] font-semibold text-blue-deep">See start to finish →</Link></section>
+        <section className="card" aria-label="Missing info"><div className="eyebrow">MISSING INFO</div>
+          {ns.questions.soon + ns.questions.later === 0 ? <p className="mt-2 text-[14px] text-sage-deep">✓ Nothing needed right now</p> : (<><p className="mt-2 text-[14px]"><b>{ns.questions.soon + ns.questions.later}</b> question{ns.questions.soon + ns.questions.later > 1 ? 's' : ''} need answers{ns.questions.soon > 0 ? ` (${ns.questions.soon} soon)` : ''}</p><Link href={`${b}/questions`} className="btn btn-sm btn-primary mt-2">ANSWER QUESTIONS</Link></>)}</section>
+      </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
         {([['NEEDS FIXING', ns.fixing, 'text-[#A8513F]'], ['WAITING', ns.waiting, 'text-[#8A6216]'], ['STILL TO DO', ns.todo, 'text-blue-deep']] as const).map(([h, list, c]) => list.length > 0 && (
           <section key={h} className="card"><div className={`eyebrow ${c}`}>{h}</div><ul className="mt-2 space-y-1.5 text-[13px]">{list.slice(0, 6).map((t, i) => <li key={i}><Link href={t.href} className="underline-offset-2 hover:underline">{t.text}</Link></li>)}{list.length > 6 && <li className="text-ink-muted">+ {list.length - 6} more</li>}</ul></section>
         ))}
         {ns.done.length > 0 && <section className="card"><div className="eyebrow text-sage-deep">DONE</div><ul className="mt-2 space-y-1.5 text-[13px]">{ns.done.map((t, i) => <li key={i}>✓ {t}</li>)}</ul></section>}
       </div>
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Let ChatGPT plan it</b> — your style rules + Baby Chef + recipe in one copy-ready prompt.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">MAKE THE PLAN PROMPT</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Special rules for this video</Link></div>
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-ink bg-white p-3"><div className="min-w-0 flex-1 text-sm"><b>Let ChatGPT plan it</b> — your style rules + Baby Chef + recipe in one copy-ready prompt.</div><Link href={`/projects/${p.slug}/builder?type=plan`} className="btn btn-primary">MAKE THE PLAN PROMPT</Link><Link href={`/projects/${p.slug}/overrides`} className="btn">Special rules for this video</Link><Link href={`${b}/fill`} className="btn btn-copy-secondary">FILL FROM TEXT</Link></div>
       <Section title="More details">
         <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
           <div><span className="label">Recipe</span>{p.recipeName || '—'}</div><div><span className="label">Cuisine</span>{p.cuisine || '—'}</div>

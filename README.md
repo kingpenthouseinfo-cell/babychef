@@ -14,6 +14,14 @@ It organizes everything around the tools you already use — ChatGPT, Claude, Kl
 - **Kling clips**: ordered `@image` references (drag to reorder), collapsible prompt sections, credit-protecting pre-flight, generation records.
 - **Short Version** (timeline + CapCut notes), **Publishing** (YouTube / Shorts / Facebook / Instagram / TikTok prompts, pasted results, selected copy, checklist), **Files**, **Settings**, search, JSON / CSV / ZIP export.
 
+## Everyday workflow (plain wording)
+
+Open a **Recipe Video** and the first thing you see is **What do I do next?** with one big button. Tabs: Overview · **Start to Finish** (the whole project in order, with Done / In progress / Not started / Needs fixing / Waiting) · **Missing Info** (plain questions you answer in place; blanks like `[temperature]` and conflicting times become questions automatically) · Recipe · Ingredients (quick add, plus one panel to give any ingredient its brand, label details and photo) · **Scenes & Pictures** (a checklist/storyboard where you can **+ ADD PICTURE HERE**, **+ QUICK ADD**, **+ ADD SCENE HERE**, move up/down, duplicate, split a scene) · Video Clips · Post Video · More.
+
+* Visible numbers ("Picture 5") update when you insert or move things; the stable IDs (`SC02`, `IMG-021`, used in file names) never change.
+* **Fill from text** (New Recipe Video, Overview, Recipe, Ingredients, Scenes & Pictures): paste labelled text, check it, then fill in. Nothing is saved until you confirm; existing answers are kept unless you choose Replace/Merge.
+* Technical names (Planned Image, Prompt Queue, Production Brain…) remain in code and the database only.
+
 ## Technology
 
 Next.js 14 (App Router) · TypeScript · React · Tailwind CSS · Prisma · SQLite · local file storage (behind a small `StorageProvider` interface). No auth, no billing, no cloud, no AI SDKs.

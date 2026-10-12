@@ -14,10 +14,10 @@ export default async function Continuity({ params }: { params: { slug: string } 
   const [doc, masters, scenes, ings, corr, approved] = await Promise.all([
     db.projectDoc.findUnique({ where: { projectId_key: { projectId: p.id, key: 'continuity' } } }),
     p.babyChefId ? db.reference.findMany({ where: { babyChefId: p.babyChefId, kind: 'MASTER', deletedAt: null, active: true }, include: { asset: true }, orderBy: [{ isGold: 'desc' }] }) : [],
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }),
     db.ingredient.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { references: { where: { deletedAt: null }, include: { asset: true } } } }),
     db.correction.findMany({ where: { OR: [{ projectId: p.id }, { babyChefId: p.babyChefId ?? '__' }] }, orderBy: { createdAt: 'desc' } }),
-    db.plannedImage.findMany({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: { seq: 'asc' }, include: { approvedAttempt: true, scene: true } }),
+    db.plannedImage.findMany({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: true, scene: true } }),
   ]);
   const data = parseJson<Record<string, string>>(doc?.data, {});
   const b = p.babyChef;

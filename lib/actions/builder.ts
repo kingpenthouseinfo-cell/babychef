@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
+import { backfillPositions } from '../order';
 import { str, strRaw, parseJson } from '../util';
 import { versionPrompt } from '../prompt-versions';
 import { parseScenes, toSceneData, ParsedScene } from '../import';
@@ -70,9 +71,11 @@ export async function importScenes(fd: FormData) {
   const picked = fd.getAll('pick').map(Number);
   const max = await db.scene.aggregate({ where: { projectId }, _max: { order: true } });
   let order = max._max.order ?? 0;
+  await backfillPositions();
+  let pos = (await db.scene.aggregate({ where: { projectId }, _max: { pos: true } }))._max.pos ?? 0;
   for (const i of picked) {
     const s = all[i]; if (!s) continue;
-    await db.scene.create({ data: { ...toSceneData(s), projectId, order: ++order } as any });
+    await db.scene.create({ data: { ...toSceneData(s), projectId, order: ++order, pos: ++pos } as any });
   }
   const p = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await logActivity(`${picked.length} scene(s) imported from text`, `/projects/${p.slug}/scenes`, projectId);

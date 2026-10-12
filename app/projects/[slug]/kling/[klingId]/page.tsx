@@ -17,8 +17,8 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
   if (!k) notFound();
   const settings = await (await import('@/lib/settings')).getSettings();
   const [scenes, imgs, versions] = await Promise.all([
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' }, include: { approvedAttempt: true } }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: true } }),
     db.promptVersion.findMany({ where: { ownerId: k.id, type: 'KLING' }, orderBy: { version: 'desc' } }),
   ]);
   const code = klingCode(k.order);

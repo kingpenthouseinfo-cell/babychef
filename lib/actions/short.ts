@@ -19,7 +19,7 @@ export async function saveShort(fd: FormData) {
 export async function collectShortKeep(fd: FormData) {
   const projectId = str(fd, 'projectId')!;
   const s = await getShort(projectId);
-  const scenes = await db.scene.findMany({ where: { projectId, shortKeep: true }, orderBy: { order: 'asc' } });
+  const scenes = await db.scene.findMany({ where: { projectId, shortKeep: true }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] });
   const existing = await db.shortItem.findMany({ where: { shortId: s.id } });
   let order = existing.length;
   for (const sc of scenes) {

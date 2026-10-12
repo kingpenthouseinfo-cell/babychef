@@ -3,5 +3,6 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { startProjectWatcher } = await import('./lib/watcher');
     startProjectWatcher();
+    try { const { backfillPositions } = await import('./lib/order'); await backfillPositions(); } catch { /* database not ready yet */ }
   }
 }

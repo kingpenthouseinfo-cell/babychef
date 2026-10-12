@@ -15,9 +15,9 @@ const NOTES: [string, string][] = [['mustKeepLines', 'Must-keep dialogue'], ['ju
 export default async function ShortPage({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
-  const sv = await db.shortVersion.findUnique({ where: { projectId: p.id }, include: { items: { orderBy: { order: 'asc' }, include: { scene: { include: { images: { orderBy: { seq: 'asc' }, include: { approvedAttempt: true } } } }, kling: true } } } });
+  const sv = await db.shortVersion.findUnique({ where: { projectId: p.id }, include: { items: { orderBy: { order: 'asc' }, include: { scene: { include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: true } } } }, kling: true } } } });
   const [scenes, clips, tpl] = await Promise.all([
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }), db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }), db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
     db.promptTemplate.findUnique({ where: { code: 'TPL-CAPCUT' } }),
   ]);
   const items = sv?.items ?? [];

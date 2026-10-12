@@ -1,6 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { db } from '../db';
+import { openScenePos, moveScenePos, closeGaps } from '../order';
 import { bool, pickText, str, strRaw, sceneCode } from '../util';
 import { logActivity } from '../activity';
 
@@ -42,21 +43,13 @@ export async function saveScene(fd: FormData) {
   for (const k of ['adultAssist', 'shotPriority', 'cropImportance', 'status']) if (!data[k]) delete data[k];
   if (id) { await db.scene.update({ where: { id }, data }); revalidatePath('/', 'layout'); return; }
   const max = await db.scene.aggregate({ where: { projectId }, _max: { order: true } });
-  const sc = await db.scene.create({ data: { ...data, projectId, order: (max._max.order ?? 0) + 1 } });
+  const pos = await openScenePos(projectId, { afterId: str(fd, 'afterSceneId'), beforeId: str(fd, 'beforeSceneId') });
+  const sc = await db.scene.create({ data: { ...data, projectId, order: (max._max.order ?? 0) + 1, pos } });
   await logActivity(`${sceneCode(sc.order)} "${sc.title}" added`, null, projectId);
   revalidatePath('/', 'layout');
 }
-async function renumber(projectId: string, ids: string[]) {
-  await db.$transaction(ids.map((id, i) => db.scene.update({ where: { id }, data: { order: i + 1 } })));
-}
 export async function moveScene(fd: FormData) {
-  const id = str(fd, 'id')!, dir = str(fd, 'dir') === 'up' ? -1 : 1;
-  const sc = await db.scene.findUniqueOrThrow({ where: { id } });
-  const all = await db.scene.findMany({ where: { projectId: sc.projectId }, orderBy: { order: 'asc' } });
-  const i = all.findIndex(s => s.id === id), j = i + dir;
-  if (j < 0 || j >= all.length) return;
-  const ids = all.map(s => s.id); [ids[i], ids[j]] = [ids[j], ids[i]];
-  await renumber(sc.projectId, ids);
+  await moveScenePos(str(fd, 'id')!, str(fd, 'dir') === 'up' ? -1 : 1);
   revalidatePath('/', 'layout');
 }
 export async function deleteScene(fd: FormData) {
@@ -64,8 +57,7 @@ export async function deleteScene(fd: FormData) {
   const n = await db.plannedImage.count({ where: { sceneId: sc.id } });
   if (n > 0 && str(fd, 'force') !== '1') throw new Error('Scene has planned images. Move or delete them first.');
   await db.scene.delete({ where: { id: sc.id } });
-  const rest = await db.scene.findMany({ where: { projectId: sc.projectId }, orderBy: { order: 'asc' } });
-  await renumber(sc.projectId, rest.map(s => s.id));
+  await closeGaps(sc.projectId);
   revalidatePath('/', 'layout');
 }
 void pickText;

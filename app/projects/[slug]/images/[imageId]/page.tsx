@@ -22,11 +22,11 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const [pool, prev, corrs, versions, siblings, ingredients, others, masters, dependents, downloads, folder] = await Promise.all([
     refPool(p, img.id), suggestPrevious(p.id, img.seq), relevantCorrections(img, p.babyChefId),
     db.promptVersion.findMany({ where: { ownerId: img.id }, orderBy: [{ type: 'asc' }, { version: 'desc' }] }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' }, select: { id: true, seq: true, title: true, status: true, attemptCount: true, scene: { select: { order: true } } } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], select: { id: true, seq: true, title: true, status: true, attemptCount: true, scene: { select: { order: true } } } }),
     db.ingredient.findMany({ where: { projectId: p.id } }),
-    db.plannedImage.findMany({ where: { projectId: p.id, id: { not: params.imageId } }, orderBy: { seq: 'asc' }, select: { id: true, seq: true, title: true } }),
+    db.plannedImage.findMany({ where: { projectId: p.id, id: { not: params.imageId } }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], select: { id: true, seq: true, title: true } }),
     p.babyChefId ? db.reference.findMany({ where: { babyChefId: p.babyChefId, kind: 'MASTER', deletedAt: null, active: true }, include: { asset: true }, orderBy: [{ isGold: 'desc' }] }) : [],
-    db.plannedImage.findMany({ where: { dependsOnId: params.imageId }, select: { seq: true }, orderBy: { seq: 'asc' } }),
+    db.plannedImage.findMany({ where: { dependsOnId: params.imageId }, select: { seq: true }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }] }),
     listRecentDownloads(),
     projectFolder(p.id),
   ]);

@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 
 // Tab dots carry the task colour: sage = references/ingredients, pink = images, blue = script/scenes/prompts, purple = video/publishing.
 const C = { sage: '#4C6B52', pink: '#9A4A60', blue: '#3E6290', purple: '#6A55A2', none: '#8C8792' };
-const PRIMARY: [string, string, keyof typeof C][] = [['', 'Start', 'none'], ['/recipe', 'Recipe', 'none'], ['/ingredients', 'Ingredients', 'sage'], ['/script', 'Script', 'blue'], ['/scenes', 'Scenes', 'blue'], ['/images', 'Pictures', 'pink'], ['/kling', 'Video Clips', 'purple'], ['/short', 'Short/Reel', 'purple'], ['/publishing', 'Post Video', 'purple'], ['/files', 'Files', 'none']];
-const MORE: [string, string, keyof typeof C][] = [['/references', 'Example Pictures', 'sage'], ['/continuity', 'Keep It Consistent', 'none'], ['/builder', 'Write a Prompt', 'blue'], ['/overrides', 'Special Rules', 'blue'], ['/prompts', 'Templates', 'blue'], ['/notes', 'Notes', 'none']];
+const PRIMARY: [string, string, keyof typeof C][] = [['', 'Overview', 'none'], ['/start', 'Start to Finish', 'blue'], ['/questions', 'Missing Info', 'blue'], ['/recipe', 'Recipe', 'none'], ['/ingredients', 'Ingredients', 'sage'], ['/story', 'Scenes & Pictures', 'pink'], ['/kling', 'Video Clips', 'purple'], ['/publishing', 'Post Video', 'purple']];
+const MORE: [string, string, keyof typeof C][] = [['/script', 'Script', 'blue'], ['/short', 'Short/Reel', 'purple'], ['/references', 'Example Pictures', 'sage'], ['/continuity', 'Keep It Consistent', 'none'], ['/builder', 'Write a Prompt', 'blue'], ['/overrides', 'Special Rules', 'blue'], ['/scenes', 'Scene details', 'blue'], ['/images', 'Picture list', 'pink'], ['/prompts', 'Prompt templates', 'blue'], ['/files', 'Files', 'purple'], ['/notes', 'Notes', 'none']];
 
 export function ProjectTabs({ slug, title, progress }: { slug: string; title: string; progress: number }) {
   const path = usePathname();

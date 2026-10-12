@@ -13,8 +13,8 @@ export default async function Images({ params, searchParams }: { params: { slug:
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   const [all, scenes, pool] = await Promise.all([
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' }, include: imageInclude }),
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], include: imageInclude }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }),
     refPool(p),
   ]);
   const st = searchParams.status;

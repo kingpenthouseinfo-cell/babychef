@@ -5,10 +5,9 @@ import { useEffect, useRef, useState } from 'react';
 
 type Item = { href: string; label: string; dot?: string };
 const MAIN: Item[] = [
-  { href: '/', label: 'Home' }, { href: '/projects', label: 'My Recipe Videos' }, { href: '/babychefs', label: 'Baby Chefs', dot: '#4C6B52' },
-  { href: '/queue', label: 'Pictures to Make', dot: '#3E6290' }, { href: '/references', label: 'Example Pictures', dot: '#4C6B52' },
+  { href: '/', label: 'Home' }, { href: '/projects', label: 'Recipe Videos' }, { href: '/babychefs', label: 'Baby Chefs', dot: '#4C6B52' }, { href: '/settings', label: 'Settings' },
 ];
-const MORE: Item[] = [{ href: '/corrections', label: "Don't Do This" }, { href: '/templates', label: 'Prompt Templates' }, { href: '/settings/bible', label: 'My Video Style' }, { href: '/settings', label: 'Settings' }, { href: '/search', label: 'Search' }];
+const MORE: Item[] = [{ href: '/queue', label: 'Pictures to Make' }, { href: '/references', label: 'Example Pictures' }, { href: '/corrections', label: "Don't Do This" }, { href: '/templates', label: 'Prompt Templates' }, { href: '/settings/bible', label: 'My Video Style' }, { href: '/search', label: 'Search' }];
 
 const isActive = (path: string, href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
 
@@ -20,9 +19,14 @@ export function TopNavLinks({ queueCount, unmatchedCount }: { queueCount: number
         <Link key={i.href} href={i.href} className={`flex items-center gap-1.5 text-[14px] transition ${isActive(path, i.href) ? 'font-semibold text-ink' : 'text-ink-secondary hover:text-ink'}`} aria-current={isActive(path, i.href) ? 'page' : undefined}>
           {i.dot && <span className="h-1.5 w-1.5 rounded-full" style={{ background: i.dot }} aria-hidden />}
           {i.label}
-          {i.href === '/queue' && queueCount > 0 && <span className="font-mono text-[12px] font-medium text-blue-deep">{queueCount}</span>}
         </Link>
       ))}
+      <details className="relative">
+        <summary className="cursor-pointer list-none text-[14px] text-ink-secondary hover:text-ink">More ▾{queueCount > 0 && <span className="ml-1 font-mono text-[12px] text-blue-deep">{queueCount}</span>}</summary>
+        <div className="absolute right-0 top-full z-50 mt-2 min-w-[200px] rounded-lg border border-line bg-surface p-1.5 shadow-md">
+          {MORE.filter(m => m.href !== '/search').map(m => <Link key={m.href} href={m.href} className="flex min-h-[36px] items-center justify-between rounded-md px-3 text-[13px] hover:bg-sunken">{m.label}{m.href === '/queue' && queueCount > 0 && <span className="font-mono text-[12px] text-blue-deep">{queueCount}</span>}</Link>)}
+        </div>
+      </details>
       {unmatchedCount > 0 && <Link href="/unmatched" className="rounded-full bg-[#F8EFD9] px-3 py-1 text-[12px] font-semibold text-[#8A6216] ring-1 ring-[#E7D3A0]">Unmatched {unmatchedCount}</Link>}
     </nav>
   );
@@ -54,7 +58,7 @@ export function BottomNav({ queueCount, unmatchedCount }: { queueCount: number; 
       {more && (
         <div className="fixed inset-x-0 bottom-14 z-40 border-t border-line bg-surface p-3 shadow-md" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <form action="/search" className="mb-2"><input name="q" placeholder="Search" aria-label="Search" className="input" /></form>
-          {[{ href: '/babychefs', label: 'Baby Chefs' }, { href: '/unmatched', label: `Unmatched files${unmatchedCount ? ` (${unmatchedCount})` : ''}` }, ...MORE.filter(m => m.href !== '/search')].map(m => <Link key={m.href} href={m.href} className="flex min-h-[44px] items-center px-2 text-[15px]">{m.label}</Link>)}
+          {[{ href: '/babychefs', label: 'Baby Chefs' }, { href: '/settings', label: 'Settings' }, { href: '/unmatched', label: `Unmatched files${unmatchedCount ? ` (${unmatchedCount})` : ''}` }, ...MORE.filter(m => m.href !== '/search')].map(m => <Link key={m.href} href={m.href} className="flex min-h-[44px] items-center px-2 text-[15px]">{m.label}</Link>)}
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-surface" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Primary mobile">

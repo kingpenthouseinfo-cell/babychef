@@ -12,7 +12,7 @@ export async function collectTextFiles(projectId: string): Promise<TextFile[]> {
     where: { id: projectId },
     include: {
       babyChef: true, ingredients: { orderBy: { order: 'asc' } }, scripts: { orderBy: { version: 'asc' } },
-      scenes: { orderBy: { order: 'asc' }, include: { images: { orderBy: { seq: 'asc' } } } }, clips: { orderBy: { order: 'asc' } },
+      scenes: { orderBy: [{ pos: 'asc' }, { order: 'asc' }], include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }] } } }, clips: { orderBy: { order: 'asc' } },
       publishing: true, docs: true, short: { include: { items: { orderBy: { order: 'asc' } } } }, prompts: { orderBy: { createdAt: 'asc' } },
     },
   });

@@ -18,8 +18,8 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     const table = u.searchParams.get('table');
     let rows: Record<string, unknown>[] = [];
     if (table === 'ingredients') rows = (await db.ingredient.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } })).map(({ id, projectId, ...r }) => r);
-    else if (table === 'scenes') rows = (await db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } })).map(({ id, projectId, order, ...r }) => ({ code: sceneCode(order), ...r }));
-    else if (table === 'images') rows = (await db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' }, include: { scene: true } })).map(({ id, projectId, seq, sceneId, scene, approvedAttemptId, dependsOnId, ...r }) => ({ code: imageCode(seq), scene: sceneCode(scene.order), ...r }));
+    else if (table === 'scenes') rows = (await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] })).map(({ id, projectId, order, ...r }) => ({ code: sceneCode(order), ...r }));
+    else if (table === 'images') rows = (await db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }], include: { scene: true } })).map(({ id, projectId, seq, sceneId, scene, approvedAttemptId, dependsOnId, ...r }) => ({ code: imageCode(seq), scene: sceneCode(scene.order), ...r }));
     else return new NextResponse('Unknown table', { status: 400 });
     return new NextResponse(toCsv(rows), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${p.slug}_${table}.csv"` } });
   }

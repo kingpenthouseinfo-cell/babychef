@@ -19,7 +19,7 @@ export default async function Publishing({ params, searchParams }: { params: { s
     db.publishingAsset.findMany({ where: { projectId: p.id }, orderBy: { code: 'asc' } }),
     db.projectDoc.findMany({ where: { projectId: p.id, key: { in: ['pubctx', 'thumbnail'] } } }),
     db.checklistItem.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }),
-    db.plannedImage.findMany({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: { seq: 'asc' } }),
+    db.plannedImage.findMany({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }] }),
     db.promptTemplate.findUnique({ where: { code: 'TPL-YT-THUMB' } }),
     import('@/lib/settings').then(m => m.getSettings()),
   ]);

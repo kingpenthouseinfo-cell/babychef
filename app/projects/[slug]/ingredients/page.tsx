@@ -33,7 +33,7 @@ export default async function Ingredients({ params, searchParams }: { params: { 
   const opts = ings.map(i => ({ id: i.id, label: [i.quantity, i.unit, i.name].filter(Boolean).join(' '), brand: i.brand ?? '', product: i.product ?? '', packageSize: i.packageSize ?? '', importance: i.importance, packageVisible: i.packageVisible, photos: i.references.length }));
   return (
     <div className="space-y-4">
-      <Section title="Quick add ingredients"><form action={quickAddIngredients} className="space-y-2"><input type="hidden" name="projectId" value={p.id} />
+      <Section title="Quick add ingredients" right={<a href={`/projects/${p.slug}/fill`} className="btn btn-sm btn-copy-secondary">FILL FROM TEXT</a>}><form action={quickAddIngredients} className="space-y-2"><input type="hidden" name="projectId" value={p.id} />
         <label className="block"><span className="label">Paste or type your ingredients — one per line</span><textarea name="text" rows={5} className="input font-mono text-[13px]" placeholder={'2 cups flour, sifted\n1 can coconut milk | Brand: Grace\n1 tsp salt'} /></label>
         <p className="text-[12px] text-ink-secondary">I’ll split each line into amount, unit, ingredient and note. Add “| Brand: Grace” to a line to save the brand too. You can fix anything afterwards.</p>
         <SubmitBtn pendingText="Adding…">ADD THESE INGREDIENTS</SubmitBtn></form></Section>

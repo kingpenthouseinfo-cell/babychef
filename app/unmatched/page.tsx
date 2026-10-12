@@ -15,7 +15,7 @@ export default async function Unmatched() {
   const [open, ignored, projects, s, root] = await Promise.all([
     db.unmatchedFile.findMany({ where: { status: 'OPEN' }, orderBy: { foundAt: 'desc' } }),
     db.unmatchedFile.count({ where: { status: 'IGNORED' } }),
-    db.project.findMany({ where: { deletedAt: null }, orderBy: { title: 'asc' }, include: { scenes: { orderBy: { order: 'asc' }, include: { images: { orderBy: { seq: 'asc' }, include: { attempts: { select: { number: true } } } } } } } }),
+    db.project.findMany({ where: { deletedAt: null }, orderBy: { title: 'asc' }, include: { scenes: { orderBy: [{ pos: 'asc' }, { order: 'asc' }], include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }], include: { attempts: { select: { number: true } } } } } } } }),
     getSettings(), getStorageRoot(),
   ]);
   const assets = await db.asset.findMany({ where: { id: { in: open.map(o => o.assetId).filter(Boolean) as string[] } } });

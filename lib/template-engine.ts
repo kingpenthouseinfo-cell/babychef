@@ -35,7 +35,7 @@ export async function buildVars(projectId: string, opts: { sceneId?: string | nu
       include: {
         babyChef: true,
         ingredients: { orderBy: { order: 'asc' }, include: { references: { where: { deletedAt: null, active: true } } } },
-        scenes: { orderBy: { order: 'asc' }, include: { images: { orderBy: { seq: 'asc' }, include: { approvedAttempt: true } } } },
+        scenes: { orderBy: [{ pos: 'asc' }, { order: 'asc' }], include: { images: { orderBy: [{ pos: 'asc' }, { seq: 'asc' }], include: { approvedAttempt: true } } } },
         scripts: { where: { isCurrent: true }, take: 1 },
         docs: true, short: { include: { items: { orderBy: { order: 'asc' }, include: { scene: true, kling: true } } } },
       },

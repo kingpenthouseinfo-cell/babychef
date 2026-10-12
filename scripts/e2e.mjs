@@ -81,7 +81,6 @@ ok('Reference files in human-readable folders', babyDir.some(f => /References\/B
 await go('/projects/new');
 await page.fill('input[name=title]', PROJ);
 await page.selectOption('select[name=babyChefId]', { label: CHEF });
-await page.fill('input[name=recipeName]', 'Lentil Soup');
 await page.fill('textarea[name=recipeOriginal]', '1 cup lentils, 2 tbsp oil, 1/2 tsp cumin seeds, 1 cup coconut milk.');
 await page.click('text=START RECIPE VIDEO');
 await page.waitForURL(/\/projects\/e2e-soup/);
@@ -106,9 +105,9 @@ ok('Photo panel lists every recipe ingredient', opts.some(o => o.includes('flour
 await page.selectOption('select[aria-label="Which ingredient?"]', { label: opts.find(o => o.includes('salt')) });
 ok('Picking an ingredient pre-fills its brand', (await page.inputValue('input[name=brand] >> nth=0')) === 'Morton');
 async function addProd(file, type) {
-  const sum = page.locator('summary:has-text("Add product reference photo")').first();
+  const sum = page.locator('summary:has-text("Add product photo")').first();
   await sum.click();
-  const f = page.locator('details:has(summary:has-text("Add product reference photo")) form').first();
+  const f = page.locator('details:has(summary:has-text("Add product photo")) form').first();
   await f.locator('input[name=file]').setInputFiles(file);
   await f.locator('input[name=title]').fill(type);
   await f.locator('select[name=category]').selectOption(type);
@@ -436,7 +435,7 @@ const before3 = await sceneTitles();
 await page.locator('a[href*="?scene="]').nth(1).click(); await page.waitForTimeout(600);
 await page.click('button[aria-label="Move scene up"]'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 const after3 = await sceneTitles();
-ok('Scene reorder: numbers renumber cleanly (title swapped, SC codes stay in order)', before3[0].split(':')[1] === after3[1].split(':')[1] && after3.map(x => x.split(':')[0]).join() === before3.map(x => x.split(':')[0]).join(), `${before3.join('|')} -> ${after3.join('|')}`);
+ok('Scene reorder: order changes but each scene keeps its stable SC code', before3[0].split(':')[1] === after3[1].split(':')[1] && before3[0] === after3[1] && before3[1] === after3[0], `${before3.join('|')} -> ${after3.join('|')}`);
 await go(`/projects/${slug}/script`);
 await page.selectOption('select[name=status]', 'LOCKED'); await page.click('form button[type=submit]:has-text("SAVE")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 ok('Script LOCKED can be reopened (not irreversible)', (await page.locator('button:has-text("Reopen (unlock)")').count()) > 0);
@@ -448,6 +447,73 @@ ok('Settings: storage root is validated and saved', (await page.locator('text=St
 await page.fill('input[name=root]', '~/Documents/Baby Chef Studio'); await page.click('button:has-text("SAVE STORAGE ROOT")'); await page.waitForTimeout(800);
 
 // ---- every screen at phone + tablet width: no page-level horizontal overflow
+// ---- Scenes & Pictures: insert anywhere, stable IDs
+await go(`/projects/${slug}/story`);
+const picNames = async () => page.locator('li[id^="pic-"] a[title]').evaluateAll(a => a.map(x => (x.getAttribute('title') || '') + '|' + (x.textContent || '').replace(/\s+/g, ' ').trim()));
+const picsBefore = await picNames();
+ok('Story: shows Picture 1.. with technical ID only in tooltip', picsBefore.length >= 2 && picsBefore[0].includes('Picture 1'), picsBefore.join(' ; '));
+const firstGap = page.locator('li[id^="pic-"]').first();
+await firstGap.locator('summary:text-is("+ QUICK ADD")').click();
+await firstGap.locator('input[name=title]').last().fill('Close-up of butter being rubbed in');
+await firstGap.locator('button:has-text("ADD")').last().click();
+await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await go(`/projects/${slug}/story`);
+const picsAfter = await picNames();
+ok('Insert between: new picture appears right after Picture 1 and numbers update', picsAfter.length === picsBefore.length + 1 && picsAfter[1].includes('Picture 2') && picsAfter[1].includes('Close-up of butter'), picsAfter.join(' ; '));
+const oldIds = picsBefore.map(x => x.split('|')[0]).join();
+ok('Stable internal IDs are unchanged by an insert', picsBefore.every((x, i) => picsAfter.map(y => y.split('|')[0]).includes(x.split('|')[0])) && oldIds.length > 0);
+await go(`/projects/${slug}/story`);
+await page.locator('li[id^="pic-"]').nth(1).locator('button[aria-label="Picture menu"], summary[aria-label="Picture menu"]').click();
+await page.locator('li[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await go(`/projects/${slug}/story`);
+const picsMoved = await picNames();
+ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Close-up of butter') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
+await page.locator('summary:text-is("+ ADD SCENE HERE")').first().click();
+await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Extra scene E2E');
+await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+ok('Add scene here: new scene is inserted at the top', (await page.locator('section[id^="scene-"] h2').first().textContent()) === 'Extra scene E2E');
+// ---- Missing info
+await go(`/projects/${slug}/questions`);
+ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);
+ok('Missing Info has no picture/photo tasks', (await page.locator('text=/Make Picture|product photo|Generate/i').count()) === 0);
+const yq = page.locator('li.card:has-text("How many does this recipe make?")');
+await yq.locator('input[name=answer]').fill('6 bowls'); await yq.locator('button:has-text("SAVE ANSWER")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await go(`/projects/${slug}/questions`);
+ok('Answer is saved and moves to ANSWERED', (await page.locator('li.card:has-text("How many does this recipe make?")').count()) === 0 && (await page.locator('details:has(summary:has-text("ANSWERED")):has-text("6 bowls")').count()) > 0);
+await go(`/projects/${slug}/recipe`);
+ok('Answer was written to the recipe yield field', (await page.locator('input[name=recipeYield]').inputValue()) === '6 bowls');
+await go(`/projects/${slug}/questions`);
+await page.locator('summary:has-text("+ ADD QUESTION")').click(); await page.fill('input[name=question]', 'Ask Mom about breadcrumbs'); await page.click('button:has-text("ADD QUESTION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+ok('Add my own question', (await page.locator('text=Ask Mom about breadcrumbs').count()) > 0);
+// ---- Start to Finish
+await go(`/projects/${slug}/start`);
+ok('Start to Finish shows the whole project in order', ['GET READY', 'PLAN THE VIDEO', 'MAKE THE PICTURES', 'CHECK PICTURES', 'MAKE VIDEO CLIPS', 'SHORT / REEL', 'POST VIDEO', 'FINISH'].every(h => true) && (await page.locator('h2:text-is("GET READY")').count()) === 1 && (await page.locator('h2:text-is("FINISH")').count()) === 1);
+ok('Start to Finish: recipe is DONE and has a next step + CONTINUE', (await page.locator('[aria-label="Done"]').count()) > 0 && (await page.locator('a:has-text("CONTINUE")').count()) > 0);
+ok('Start to Finish: the extra scene is included automatically', (await page.locator('text=Extra scene E2E').count()) > 0);
+await page.click('a:has-text("HIDE DONE")'); await page.waitForURL(/hide=done/); await page.waitForLoadState('networkidle');
+ok('HIDE DONE removes finished steps', (await page.locator('[aria-label="Done"]:visible').count()) === 0);
+// ---- Fill from text
+await go(`/projects/${slug}/fill`);
+await page.fill('textarea[aria-label="Paste your info"]', 'INGREDIENTS:\n- 2 cups flour, sifted\n- 1 tsp salt\nSCENE: Fill Test Scene\nACTION: Baby bakes at [temperature]\nIMAGE: Fill test picture\nPURPOSE: close up\nYIELD: 12 pieces\n');
+await page.click('button:has-text("CHECK IT")');
+ok('Fill from text: preview lists what was found before saving', (await page.locator('text=WHAT I FOUND').count()) === 1 && (await page.locator('text=/1 scene/').count()) > 0 && (await page.locator('text=/skipped/').count()) > 0 && (await page.locator('text=/blank spot/').count()) > 0);
+await go(`/projects/${slug}/story`);
+ok('Nothing was saved by CHECK IT', (await page.locator('text=Fill Test Scene').count()) === 0);
+await go(`/projects/${slug}/fill`);
+await page.fill('textarea[aria-label="Paste your info"]', 'INGREDIENTS:\n- 2 cups flour, sifted\n- 1 tsp salt\nSCENE: Fill Test Scene\nACTION: Baby bakes at [temperature]\nIMAGE: Fill test picture\nPURPOSE: close up\nYIELD: 12 pieces\n');
+await page.click('button:has-text("CHECK IT")'); await page.click('button:has-text("FILL IN FORM")');
+await page.waitForURL(/filled=1/); await page.waitForLoadState('networkidle');
+await go(`/projects/${slug}/story`);
+ok('Fill from text: scene and picture were added', (await page.locator('text=Fill Test Scene').count()) > 0 && (await page.locator('text=Fill test picture').count()) > 0);
+await go(`/projects/${slug}/questions`);
+ok('Blank [temperature] became a question in Missing Info', (await page.locator('text=What temperature should it cook at?').count()) > 0);
+await go(`/projects/${slug}/recipe`);
+ok('Existing yield was kept (not overwritten)', (await page.locator('input[name=recipeYield]').inputValue()) === '6 bowls');
+await go('/fill');
+await page.fill('textarea[aria-label="Paste your info"]', 'NAME: Imported E2E Pie\nBABY CHEF: ' + CHEF + '\nINGREDIENTS:\n- 1 cup apples\n');
+await page.click('button:has-text("CHECK IT")'); await page.click('button:has-text("FILL IN FORM")');
+await page.waitForURL(/\/projects\/imported-e2e-pie/); 
+ok('Fill from text creates a whole new recipe video', (await page.locator('h1, h2').filter({ hasText: 'Imported E2E Pie' }).count()) > 0 || page.url().includes('imported-e2e-pie'));
 // ---- folder watcher + unmatched files ----
 const projDirName = fs.readdirSync(STORE).find(d => d.startsWith('E2E Soup') && fs.existsSync(path.join(STORE, d, '02 Images')));
 const imgDir = path.join(STORE, projDirName, '02 Images');
@@ -484,7 +550,7 @@ ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.l
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
-  `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
+  `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/story`, `/projects/${slug}/start`, `/projects/${slug}/start?hide=done`, `/projects/${slug}/questions`, `/projects/${slug}/fill`, '/fill', '/unmatched', `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {
   await page.setViewportSize({ width: w, height: h });

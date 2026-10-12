@@ -17,7 +17,8 @@ export async function createProject(fd: FormData) {
   while (await db.project.findUnique({ where: { slug } })) slug = `${slugify(str(fd, 'slug') || title)}-${++n}`;
   const p = await db.project.create({
     data: {
-      title, slug, ...pickText(fd, ['recipeName', 'cuisine', 'description', 'babyChefId', 'longDuration', 'shortDuration', 'recipeSource', 'recipeNotes', 'recipeOriginal']),
+      title, slug, recipeName: str(fd, 'recipeName') || title, ...pickText(fd, ['cuisine', 'description', 'babyChefId', 'longDuration', 'shortDuration', 'recipeSource', 'recipeNotes', 'recipeOriginal']),
+      ...(str(fd, 'kitchen') ? { recipeNotes: `Kitchen: ${str(fd, 'kitchen')}` } : {}),
       aspectRatio: str(fd, 'aspectRatio') || s.defaultAspect, verticalCrop: fd.has('verticalCrop') ? bool(fd, 'verticalCrop') : s.defaultVerticalCrop === 'true',
       status: str(fd, 'status') || s.defaultProjectStatus,
     } as any,

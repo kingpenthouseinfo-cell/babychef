@@ -185,6 +185,7 @@ model Project {
   prompts     ProjectPrompt[]
   publishing  PublishingAsset[]
   checklist   ChecklistItem[]
+  questions   ProjectQuestion[]
 }
 
 model RecipeVersion {
@@ -259,7 +260,8 @@ model ScriptVersion {
 model Scene {
   id             String   @id @default(cuid())
   projectId      String
-  order          Int
+  order          Int      // stable scene number (SC code) — never renumbered
+  pos            Int      @default(0) // visible position; inserts/moves change this, not the stable number
   title          String
   recipeStep     String?
   purpose        String?
@@ -302,7 +304,8 @@ model PlannedImage {
   id              String   @id @default(cuid())
   projectId       String
   sceneId         String
-  seq             Int
+  seq             Int      // stable global picture number (IMG code) — never renumbered
+  pos             Int      @default(0) // visible position inside its scene
   title           String
   shotType        String   @default("MAIN NARRATIVE SHOT")
   purpose         String?
@@ -638,4 +641,27 @@ model UnmatchedFile {
   size       Int       @default(0)
   foundAt    DateTime  @default(now())
   assignedAt DateTime?
+}
+
+// Missing-info questions: information the project still needs from the user (never image/video tasks).
+model ProjectQuestion {
+  id         String   @id @default(cuid())
+  projectId  String
+  key        String   // stable key for auto questions, e.g. "recipeYield"; "manual:<id>" for user questions
+  group      String   @default("OTHER") // RECIPE | BABY CHEF | VIDEO STYLE | SCENES | OTHER
+  question   String
+  hint       String?
+  answerType String   @default("text") // text | number | long | choice
+  choices    String?  // JSON string[]
+  target     String?  // where a saved answer is written, e.g. "project.recipeYield"
+  priority   String   @default("LATER") // SOON | LATER
+  blocksText String?  // e.g. "Needed before the baking scene"
+  status     String   @default("OPEN") // OPEN | ANSWERED | UNKNOWN | NOT_NEEDED
+  answer     String?
+  source     String   @default("AUTO") // AUTO | MANUAL | IMPORT
+  createdAt  DateTime @default(now())
+  answeredAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([projectId, key])
 }

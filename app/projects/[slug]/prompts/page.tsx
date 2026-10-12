@@ -15,7 +15,7 @@ export default async function Prompts({ params, searchParams }: { params: { slug
   if (!p) notFound();
   const [templates, scenes, images, clips, saved] = await Promise.all([
     db.promptTemplate.findMany({ where: { active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }] }),
-    db.scene.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }), db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' } }),
+    db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }), db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: { seq: 'asc' } }),
     db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' } }), db.projectPrompt.findMany({ where: { projectId: p.id }, orderBy: { createdAt: 'desc' } }),
   ]);
   const cat = searchParams.cat || 'SCRIPT';
