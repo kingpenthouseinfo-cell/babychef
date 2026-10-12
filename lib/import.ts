@@ -1,7 +1,7 @@
 export type ParsedScene = { title: string; fields: Record<string, string> };
 
 const LABELS: [string, string][] = [
-  ['SCENE TITLE', 'title'], ['PURPOSE', 'purpose'], ['RECIPE STEP', 'recipeStep'], ['DIALOGUE', 'dialogue'], ['BABY ACTION', 'mainAction'], ['ADULT ASSISTANCE', 'adult'],
+  ['SCENE TITLE', 'title'], ['TITLE', 'title'], ['ADULT ACTION', 'adult'], ['FOOD BEFORE', 'foodBefore'], ['FOOD DURING', 'foodDuring'], ['FOOD AFTER', 'foodAfter'], ['PURPOSE', 'purpose'], ['RECIPE STEP', 'recipeStep'], ['DIALOGUE', 'dialogue'], ['BABY ACTION', 'mainAction'], ['ADULT ASSISTANCE', 'adult'],
   ['FOOD STATE BEFORE', 'foodBefore'], ['FOOD STATE DURING', 'foodDuring'], ['FOOD STATE AFTER', 'foodAfter'], ['MAIN SHOT', 'mainShot'], ['INSERT SHOTS', 'inserts'],
   ['ASMR', 'asmr'], ['CAMERA', 'cameraAngle'], ['SHORT KEEP', 'shortKeep'], ['ESTIMATED DURATION', 'duration'], ['PLANNED IMAGE ANCHORS', 'anchors'], ['KLING GROUPING NOTE', 'klingNote'],
 ];
@@ -13,7 +13,7 @@ const LABELS: [string, string][] = [
  */
 export function parseScenes(text: string): ParsedScene[] {
   const out: ParsedScene[] = [];
-  const headRe = /^\s*#{1,6}\s*\**\s*SCENE\s*(\d+)?\s*[—–:\-.]*\s*(.*?)\**\s*$/i;
+  const headRe = /^\s*(?:#{1,6}\s*\**\s*SCENE|SCENE(?=\s*(?:\d|[—–:\-.]|$)))\s*(\d+)?\s*[—–:\-.]*\s*(.*?)\**\s*$/i;
   let cur: ParsedScene | null = null;
   let key: string | null = null;
   for (const raw of text.split(/\r?\n/)) {
@@ -24,7 +24,7 @@ export function parseScenes(text: string): ParsedScene[] {
     }
     if (!cur) continue;
     if (/^\s*#{1,6}\s*\S/.test(raw) && !h) { cur = null; key = null; continue; } // next top-level section
-    const m = /^\s*[-*]?\s*([A-Z][A-Z \/]+?)\s*:\s*(.*)$/.exec(line);
+    const m = /^\s*[-*]?\s*([A-Za-z][A-Za-z \/]+?)\s*:\s*(.*)$/.exec(line);
     const hit = m && LABELS.find(([l]) => l === m[1].trim().toUpperCase());
     if (hit && m) { key = hit[1]; cur.fields[key] = m[2].trim(); if (key === 'title' && m[2].trim()) cur.title = m[2].trim(); continue; }
     if (key && line.trim()) cur.fields[key] = `${cur.fields[key] ? cur.fields[key] + '\n' : ''}${line.trim()}`;
@@ -39,7 +39,7 @@ export function toSceneData(s: ParsedScene) {
   return {
     title: (s.title || f.title || 'Untitled scene').slice(0, 120),
     purpose: f.purpose || null, recipeStep: f.recipeStep || null, dialogue: f.dialogue || null, mainAction: f.mainAction || null,
-    adultAssist: adult.startsWith('YES') ? 'YES' : adult.startsWith('OPTIONAL') ? 'OPTIONAL' : 'NO', adultNotes: f.adult || null,
+    adultAssist: adult.startsWith('YES') ? 'YES' : adult.startsWith('OPTIONAL') ? 'OPTIONAL' : adult && !/^(NO|NONE|N\/A)\b/.test(adult) ? 'YES' : 'NO', adultNotes: f.adult || null,
     foodBefore: f.foodBefore || null, foodDuring: f.foodDuring || null, foodAfter: f.foodAfter || null,
     mainShot: f.mainShot || null, insertShots: f.inserts || null, duration: f.duration || null, anchors: f.anchors || null, klingNote: f.klingNote || null,
     asmr: f.asmr || null, cameraAngle: f.cameraAngle || null, shortKeep: yes(f.shortKeep),

@@ -3,19 +3,24 @@ import { useMemo, useState, useTransition } from 'react';
 import { CopyButton } from './client';
 import { parseImport, IMPORT_TEMPLATE, IMPORT_PROMPT } from '@/lib/quick-import';
 import { applyImport, type Choice } from '@/lib/actions/quick-import';
+import { FormatHelp } from './format-help';
+import type { HelpKind } from '@/lib/format-help';
 
 const NAMES: Record<string, string> = { title: 'Name', recipeName: 'Recipe name', cuisine: 'Cuisine', description: 'Description', mainHook: 'Hook', finishedFood: 'Finished food', recipeYield: 'Yield', prepTime: 'Prep time', cookTime: 'Cook time', longDuration: 'Long video length', shortDuration: 'Short/Reel length', recipeSource: 'Recipe source', ctaCustom: 'Ending line' };
 
-export type FillProps = { slug: string | null; current: Record<string, string>; ingredientNames: string[]; sceneTitles: string[]; chefs: { id: string; name: string }[]; history: { at: string; created: string[]; skipped: string[]; warnings: string[] }[] };
+export type FillProps = { kind?: HelpKind; slug: string | null; current: Record<string, string>; ingredientNames: string[]; sceneTitles: string[]; chefs: { id: string; name: string }[]; history: { at: string; created: string[]; skipped: string[]; warnings: string[] }[] };
 
 /** FILL FROM TEXT — paste, check it, then fill in the form. Nothing is saved until FILL IN FORM. */
-export function FillFromText({ slug, current, ingredientNames, sceneTitles, chefs, history, onCancel }: FillProps & { onCancel?: () => void }) {
+export function FillFromText({ kind: kind0, slug, current, ingredientNames, sceneTitles, chefs, history, onCancel }: FillProps & { onCancel?: () => void }) {
   const [text, setText] = useState('');
   const [checked, setChecked] = useState(false);
   const [choices, setChoices] = useState<Record<string, Choice>>({});
   const [chef, setChef] = useState<string | null>(null);
   const [showLast, setShowLast] = useState(false);
   const [pending, start] = useTransition();
+  const [kind, setKind] = useState<HelpKind>(kind0 ?? (slug ? 'recipe' : 'newVideo'));
+  const [helpOpen, setHelpOpen] = useState(0);
+  const [override, setOverride] = useState(false);
   const [error, setError] = useState('');
   const parsed = useMemo(() => (checked ? parseImport(text) : null), [checked, text]);
   const chefMatch = parsed?.babyChef ? chefs.find(c => c.name.toLowerCase() === parsed.babyChef!.toLowerCase()) ?? chefs.find(c => c.name.toLowerCase().includes(parsed.babyChef!.toLowerCase()) || parsed.babyChef!.toLowerCase().includes(c.name.toLowerCase())) : undefined;
@@ -31,6 +36,9 @@ export function FillFromText({ slug, current, ingredientNames, sceneTitles, chef
   const nImg = parsed ? parsed.scenes.reduce((a, s) => a + s.images.length, 0) + parsed.strayImages.length : 0;
   return (
     <div className="space-y-4">
+      <div className="space-y-2"><div className="flex flex-wrap items-center gap-2 text-[13px]"><label className="text-ink-secondary" htmlFor="help-kind">Help for</label>
+        <select id="help-kind" className="input max-w-[220px]" value={kind} onChange={e => setKind(e.target.value as HelpKind)}>{([['recipe', 'Recipe'], ['newVideo', 'New recipe video'], ['ingredients', 'Ingredients'], ['scenes', 'Scenes'], ['pictures', 'Pictures'], ['master', 'Everything at once']] as [HelpKind, string][]).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+        <FormatHelp key={`${kind}-${helpOpen}`} kind={kind} open={helpOpen > 0} /></div>
       <div className="flex flex-wrap items-center gap-2">
         <CopyButton text={IMPORT_TEMPLATE} label="Copy import template" variant="secondary" />
         <CopyButton text={IMPORT_PROMPT} label="Copy prompt for ChatGPT" variant="secondary" />
@@ -41,12 +49,25 @@ export function FillFromText({ slug, current, ingredientNames, sceneTitles, chef
           <ul className="mt-1 list-disc pl-5">{history[0].created.map((c, i) => <li key={i}>{c}</li>)}</ul>
           {history[0].skipped.length > 0 && <><div className="eyebrow mt-2">LEFT ALONE</div><ul className="list-disc pl-5 text-ink-secondary">{history[0].skipped.map((c, i) => <li key={i}>{c}</li>)}</ul></>}</div>
       )}
+      <p className="text-[13px] text-ink-secondary">Not sure how to format it? <button type="button" className="font-semibold text-blue-deep underline" onClick={() => setHelpOpen(n => n + 1)}>HOW SHOULD I FORMAT THIS?</button></p>
       <label className="block"><span className="label">Paste your info</span>
         <textarea value={text} onChange={e => { setText(e.target.value); setChecked(false); }} rows={14} className="input font-mono text-[13px]" placeholder={'Paste the recipe or Baby Chef Studio text here and I’ll fill in the form for you.\n\nNAME: …\nRECIPE: …\nINGREDIENTS: …\nSCENE 1: …'} aria-label="Paste your info" /></label>
       {!checked && <div className="flex gap-2"><button type="button" className="btn btn-primary" disabled={!text.trim()} onClick={() => setChecked(true)}>Check it</button></div>}
       {parsed && (
         <section className="card space-y-3" aria-label="What I found">
           <div className="eyebrow">We found</div>
+          {parsed.recipeStructured && (
+            <dl className="grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-3" data-testid="import-found">
+              <div><dt className="text-ink-secondary">Title</dt><dd className="font-semibold">{parsed.fields.title || '—'}</dd></div>
+              <div><dt className="text-ink-secondary">Yield</dt><dd className="font-semibold">{parsed.fields.recipeYield || '—'}</dd></div>
+              <div><dt className="text-ink-secondary">Ingredient groups</dt><dd className="font-semibold">{parsed.recipeStructured.counts.groups}</dd></div>
+              <div><dt className="text-ink-secondary">Ingredients</dt><dd className="font-semibold">{parsed.recipeStructured.counts.ingredients}</dd></div>
+              <div><dt className="text-ink-secondary">Method sections</dt><dd className="font-semibold">{parsed.recipeStructured.counts.sections}</dd></div>
+              <div><dt className="text-ink-secondary">Method instructions</dt><dd className="font-semibold">{parsed.recipeStructured.counts.steps}</dd></div>
+            </dl>)}
+          {parsed.suspicious && <div className="rounded-lg border border-[#E7D3A0] bg-[#F8EFD9] p-3 text-[13px] text-[#6F4E10]" role="alert">⚠ This recipe may not have been formatted correctly.
+            <div className="mt-2 flex flex-wrap gap-2"><button type="button" className="btn btn-sm" onClick={() => setHelpOpen(n => n + 1)}>VIEW FORMAT HELP</button><button type="button" className="btn btn-sm" onClick={() => setChecked(false)}>EDIT TEXT</button><button type="button" className="btn btn-sm btn-ghost" onClick={() => setOverride(true)}>Import anyway</button></div></div>}
+          {parsed.found.length > 0 && !parsed.recipeStructured && /recipe|ingredient|method|yield/i.test(text) && !parsed.ingredients.length && <p className="text-[13px] text-[#8A6216]">⚠ Some sections could not be recognized. Expected: Recipe Title, Yield, Ingredient Groups, Method Sections. <button type="button" className="underline" onClick={() => setHelpOpen(n => n + 1)}>VIEW FORMAT HELP</button></p>}
           {parsed.found.length === 0 ? <p className="text-[13px] text-[#8A6216]">⚠ {parsed.warnings[0]}</p> : <p className="text-[14px]">✓ {parsed.found.join(' · ')}</p>}
           {parsed.warnings.filter(w => parsed.found.length > 0 || false).map((w, i) => <p key={i} className="text-[13px] text-[#8A6216]">⚠ {w}</p>)}
           {parsed.babyChef && (
@@ -67,7 +88,7 @@ export function FillFromText({ slug, current, ingredientNames, sceneTitles, chef
             {nImg > 0 && <li>✓ {nImg} picture{nImg > 1 ? 's' : ''}</li>}
           </ul>
           {error && <p className="text-[13px] text-[#A8513F]">{error}</p>}
-          <div className="flex flex-wrap gap-2"><button type="button" className="btn btn-approve" disabled={pending || parsed.found.length === 0} onClick={() => start(async () => { try { await applyImport({ text, slug, choices, chef: chefValue }); } catch (e: any) { if (!String(e?.message || '').includes('NEXT_REDIRECT')) setError('Something went wrong — nothing was changed.'); } })}>{pending ? 'Filling in…' : 'Fill in form'}</button><button type="button" className="btn" onClick={() => (onCancel ? onCancel() : setChecked(false))}>{onCancel ? 'Cancel' : 'Back'}</button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" className="btn btn-approve" disabled={pending || parsed.found.length === 0 || (!!parsed.suspicious && !override)} onClick={() => start(async () => { try { await applyImport({ text, slug, choices, chef: chefValue }); } catch (e: any) { if (!String(e?.message || '').includes('NEXT_REDIRECT')) setError('Something went wrong — nothing was changed.'); } })}>{pending ? 'Filling in…' : 'Fill in form'}</button><button type="button" className="btn" onClick={() => (onCancel ? onCancel() : setChecked(false))}>{onCancel ? 'Cancel' : 'Back'}</button></div>
           <p className="text-[12px] text-ink-secondary">Nothing is saved until you press FILL IN FORM. Blank spots like [temperature] become questions in Missing Info.</p>
         </section>
       )}

@@ -9,6 +9,7 @@ import { parseImport } from '../quick-import';
 import { openImagePos, openScenePos, backfillPositions } from '../order';
 import { syncQuestions } from '../questions';
 import { autoAttachReferences } from '../auto-refs';
+import { saveMethod } from '../recipe-store';
 
 export type Choice = 'KEEP' | 'REPLACE' | 'MERGE';
 export type ApplyInput = { text: string; slug: string | null; choices: Record<string, Choice>; chef: string }; // chef: existing id | 'NEW' | ''
@@ -67,7 +68,7 @@ export async function applyImport(input: ApplyInput) {
     let order = ((await db.ingredient.aggregate({ where: { projectId: pid }, _max: { order: true } }))._max.order ?? -1) + 1, added = 0;
     for (const i of parsed.ingredients) {
       if (have.has(i.name.toLowerCase())) { skipped.push(`Ingredient “${i.name}” (already there)`); continue; }
-      await db.ingredient.create({ data: { projectId: pid, order: order++, name: i.name, quantity: i.quantity ?? null, unit: i.unit ?? null, prepNote: i.prepNote ?? null, brand: i.brand ?? null, importance: i.importance ?? 'OPTIONAL', notes: i.uncertain ? `Original text: ${i.original}` : null } });
+      await db.ingredient.create({ data: { projectId: pid, order: order++, name: i.name, quantity: i.quantity ?? null, unit: i.unit ?? null, prepNote: i.prepNote ?? null, brand: i.brand ?? null, packageSize: i.package ?? null, group: i.group ?? null, original: i.original, importance: i.importance ?? 'OPTIONAL', notes: i.uncertain ? `Original text: ${i.original}` : null } as any });
       have.add(i.name.toLowerCase()); added++;
     }
     if (added) created.push(`${added} ingredient${added > 1 ? 's' : ''}`);
@@ -83,18 +84,19 @@ export async function applyImport(input: ApplyInput) {
       const order = ((await db.scene.aggregate({ where: { projectId: pid }, _max: { order: true } }))._max.order ?? 0) + 1;
       const pos = await openScenePos(pid);
       const { images, title, ...rest } = s;
-      sc = await db.scene.create({ data: { projectId: pid, order, pos, title, ...rest } });
+      sc = await db.scene.create({ data: { projectId: pid, order, pos, title, ...rest } as any });
       created.push(`Scene “${title}”`);
     }
     for (const im of s.images) {
       if (await db.plannedImage.findFirst({ where: { sceneId: sc.id, title: im.title } })) { skipped.push(`Picture “${im.title}” (already there)`); continue; }
       const seq = ((await db.plannedImage.aggregate({ where: { projectId: pid }, _max: { seq: true } }))._max.seq ?? 0) + 1;
       const pos = await openImagePos(sc.id);
-      const made = await db.plannedImage.create({ data: { projectId: pid, sceneId: sc.id, seq, pos, title: im.title.slice(0, 140), purpose: im.purpose ?? null, fullPrompt: im.fullPrompt ?? '' } as any });
+      const made = await db.plannedImage.create({ data: { projectId: pid, sceneId: sc.id, seq, pos, title: im.title.slice(0, 140), purpose: im.purpose ?? null, fullPrompt: im.fullPrompt ?? '', contPrompt: im.contPrompt ?? '', ...(im.shotType ? { shotType: im.shotType.toUpperCase() } : {}), foodState: im.foodState ?? null, cameraAngle: im.cameraAngle ?? null, mustBeVisible: im.mustBeVisible ?? null, mustNotAppear: im.mustNotAppear ?? null } as any });
       await autoAttachReferences(made.id);
       created.push(`Picture “${im.title}”`);
     }
   }
+  if (parsed.recipeStructured?.sections.length) { await saveMethod(pid, parsed.recipeStructured.sections); created.push(`Method (${parsed.recipeStructured.counts.sections} sections)`); }
   if (parsed.publishing) { await db.projectNote.create({ data: { projectId: pid, category: 'Publishing', content: parsed.publishing } }); created.push('Publishing notes'); }
   // ---- history + follow-up questions for blanks
   const doc = await db.projectDoc.findUnique({ where: { projectId_key: { projectId: pid, key: 'importHistory' } } });

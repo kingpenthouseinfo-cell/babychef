@@ -10,6 +10,7 @@ import { fileUrl } from '@/components/ui';
 import { quickAddIngredients, deleteIngredient } from '@/lib/actions/project';
 import { ConfirmForm } from '@/components/client';
 import { ProductPhotoPanel } from '@/components/product-photo-panel';
+import { loadMethod } from '@/lib/recipe-store';
 
 export default async function Recipe({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -18,7 +19,8 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
   const ings = await db.ingredient.findMany({ where: { projectId: p.id }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { references: { where: { deletedAt: null }, include: { asset: true }, orderBy: { createdAt: 'asc' } } } });
   const opts = ings.map(i => ({ id: i.id, label: [i.quantity, i.unit, i.name].filter(Boolean).join(' '), brand: i.brand ?? '', product: i.product ?? '', packageSize: i.packageSize ?? '', importance: i.importance, packageVisible: i.packageVisible, photos: i.references.length }));
   const withPhotos = ings.filter(i => i.references.length > 0);
-  const method = (p.recipeAdapted || p.recipeOriginal || '').split(/\n+/).map(l => l.trim()).filter(Boolean);
+  const sections = await loadMethod(p.id);
+  const hasText = !!(p.recipeAdapted || p.recipeOriginal || '').trim();
   const fact = (label: string, value: string | null | undefined, ask?: string) => <div><div className="text-[13px] text-ink-secondary">{label}</div>{value ? <div className="mt-1 font-medium">{value}</div> : <Link href={`/projects/${p.slug}/questions`} className="mt-1 block font-semibold text-[#8E6720]">{ask ?? 'Answer in Missing Info'}</Link>}</div>;
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -34,6 +36,7 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
           {ings.length === 0 && <li className="py-4 text-[14px] text-ink-secondary">No ingredients yet — add one above, or use Fill from text.</li>}
           {ings.map((i, n) => (
             <li key={i.id} className="py-2.5">
+              {i.group && (n === 0 || ings[n - 1].group !== i.group) && <div className="eyebrow pb-2 pt-1" data-testid="ing-group">{i.group}</div>}
               <details>
                 <summary className="flex cursor-pointer list-none items-center gap-4 text-[14.5px]">
                   <span className="w-20 shrink-0 text-ink-secondary">{[i.quantity, i.unit].filter(Boolean).join(' ')}</span>
@@ -48,7 +51,19 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
         </ul>
         <div className="mt-3"><Link href={`/projects/${p.slug}/ingredients`} className="text-[13px] font-semibold text-blue-deep">Open the full ingredients list →</Link></div>
       </section>
-      {method.length > 0 && <section className="card"><h2 className="text-[24px]">Method</h2><ol className="mt-3 divide-y divide-line">{method.slice(0, 40).map((l, i) => <li key={i} className="flex gap-4 py-3 text-[14.5px]"><span className="w-6 shrink-0 font-serif text-[20px] leading-none text-blue-deep">{i + 1}</span><span>{l.replace(/^\d+[.)]\s*/, '')}</span></li>)}</ol></section>}
+      {sections && sections.length > 0 ? (
+        <section className="card" aria-label="Method"><h2 className="text-[24px]">Method</h2>
+          {sections.map((sec, si) => (
+            <div key={si} className="mt-4" data-testid="method-section"><h3 className="eyebrow">{sec.title}</h3>
+              <ol className="mt-1 divide-y divide-line">{sec.steps.map((l, i) => <li key={i} className="flex gap-4 py-3 text-[14.5px]"><span className="w-6 shrink-0 font-serif text-[20px] leading-none text-blue-deep">{i + 1}</span><span>{l}</span></li>)}</ol></div>
+          ))}
+        </section>
+      ) : hasText ? (
+        <section className="card" aria-label="Method"><h2 className="text-[24px]">Method</h2>
+          <p className="mt-2 text-[14px] text-ink-secondary">Method could not be separated from the pasted recipe.</p>
+          <Link href={`/projects/${p.slug}/recipe/reparse`} className="btn btn-approve mt-3 inline-flex">RE-PARSE RECIPE</Link>
+        </section>
+      ) : null}
       <details className="card"><summary className="cursor-pointer text-[15px] font-semibold">Edit the recipe</summary><div className="mt-4">
       <Section title={`Recipe (version ${p.recipeVersion})`} right={<span className="flex items-center gap-3"><a href={`/projects/${p.slug}/fill`} className="btn btn-sm btn-copy-secondary">FILL FROM TEXT</a><span className="text-xs text-ink-secondary">Last modified {fmtDate(p.updatedAt)}</span></span>}>
         <DirtyForm action={saveRecipe} className="grid gap-3 sm:grid-cols-2">

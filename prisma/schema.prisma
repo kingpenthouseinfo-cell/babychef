@@ -208,6 +208,8 @@ model Ingredient {
   unit           String?
   prepNote       String?
   stage          String?
+  group          String?  // ingredient group, e.g. Pastry Ingredients
+  original       String?  // the line exactly as pasted
   brand          String?
   product        String?
   packageSize    String?

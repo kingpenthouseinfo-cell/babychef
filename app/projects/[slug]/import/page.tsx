@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { getProjectBySlug } from '@/lib/queries';
 import { ImportScenes } from '@/components/builder-client';
 import { Section } from '@/components/ui';
+import { FormatHelp } from '@/components/format-help';
 
 export default async function ImportPage({ params, searchParams }: { params: { slug: string }; searchParams: { from?: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -14,6 +15,7 @@ export default async function ImportPage({ params, searchParams }: { params: { s
       <Link href={`/projects/${p.slug}/builder`} className="text-sm underline">← Prompt builders</Link>
       <Section title="Import scenes from pasted AI text">
         <p className="mb-3 text-sm text-ink-secondary">Paste the structured scene list from ChatGPT/Claude (headings like <code>### SCENE 01 — Title</code> with lines such as <code>FOOD STATE BEFORE:</code>). You get a preview first; nothing is saved or changed until you press import. If parsing does not fit your text, create scenes manually on the Scenes tab.</p>
+        <div className="mb-3"><FormatHelp kind="scenes" /></div>
         <ImportScenes projectId={p.id} initialText={from?.result ?? ''} />
       </Section>
     </div>

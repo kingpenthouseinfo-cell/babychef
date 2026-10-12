@@ -1,4 +1,6 @@
 'use server';
+import { applyRecipeText } from '../recipe-store';
+import { parseRecipeText, titleCase } from '../recipe-parse';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -25,6 +27,7 @@ export async function createProject(fd: FormData) {
   });
   await ensureChecklist(p.id);
   await db.projectDoc.create({ data: { projectId: p.id, key: 'continuity', data: '{}' } });
+  if ((p.recipeOriginal ?? '').trim()) await applyRecipeText(p.id, p.recipeOriginal!);
   await logActivity(`Project "${p.title}" created`, `/projects/${p.slug}`, p.id);
   redirect(`/projects/${p.slug}`);
 }
@@ -32,9 +35,11 @@ export async function createProject(fd: FormData) {
 /** Home screen shortcut: paste a recipe, pick a Baby Chef, create. The name comes from the first line of the recipe. */
 export async function createFromHome(fd: FormData) {
   const text = strRaw(fd, 'recipe').trim();
-  const first = text.split('\n').map(l => l.replace(/^(recipe|title|name)\s*:\s*/i, '').trim()).find(Boolean);
+  const rp = parseRecipeText(text);
+  const first = text.split('\n').map(l => l.replace(/^(recipe( title)?|title|name)\s*:?\s*/i, '').trim()).find(Boolean);
+  const nice = (t: string) => (t === t.toUpperCase() ? titleCase(t) : t);
   const nf = new FormData();
-  nf.set('title', (first || 'New recipe video').slice(0, 60));
+  nf.set('title', nice(rp.title || first || 'New recipe video').slice(0, 60));
   if (text) nf.set('recipeOriginal', text);
   const chef = str(fd, 'babyChefId'); if (chef) nf.set('babyChefId', chef);
   return createProject(nf);
@@ -93,6 +98,7 @@ export async function saveRecipe(fd: FormData) {
   const version = changed ? old.recipeVersion + 1 : old.recipeVersion;
   if (changed && (old.recipeOriginal || old.recipeAdapted)) await db.recipeVersion.create({ data: { projectId: id, version: old.recipeVersion, original: old.recipeOriginal, adapted: old.recipeAdapted, notes: old.recipeNotes } });
   await db.project.update({ where: { id }, data: { ...pickText(fd, ['recipeName', 'cuisine', 'recipeSource', 'recipeYield', 'prepTime', 'cookTime', 'recipeNotes']), recipeOriginal: orig || null, recipeAdapted: adapted || null, recipeVersion: version } as any });
+  if (changed && (orig ?? '').trim()) await applyRecipeText(id, orig!);
   await logActivity('Recipe saved', null, id);
   revalidatePath('/', 'layout');
 }

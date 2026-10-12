@@ -598,6 +598,42 @@ await go(`/projects/${slug}/images`);
 await page.fill('#add textarea[name=what]', '');
 await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 ok('Add picture: blank description still works (Picture N title)', /Picture \d+/.test(await page.locator('body').textContent()));
+// ---- Fill From Text: real UI path for a pasted recipe (title, yield, ingredient groups, method sections)
+{
+  const pattiesText = fs.readFileSync(new URL('./fixtures/jamaican-beef-patties.txt', import.meta.url), 'utf8');
+  await go('/fill');
+  ok('Fill from text: format help is collapsed by default', (await page.locator('[data-testid=format-help] [data-testid=format-example]').count()) === 0 && (await page.locator('button:has-text("COPY CHATGPT INSTRUCTIONS")').count()) === 0);
+  await page.click('[data-testid=format-help] button[aria-expanded]');
+  ok('Fill from text: help offers copy instructions, blank template, example', (await page.locator('button:has-text("COPY CHATGPT INSTRUCTIONS")').count()) === 1 && (await page.locator('button:has-text("COPY BLANK TEMPLATE")').count()) === 1 && (await page.locator('button:has-text("COPY EVERYTHING FOR CHATGPT")').count()) === 1);
+  await page.click('button:has-text("SHOW EXAMPLE")');
+  ok('Fill from text: example shows a real recipe', (await page.locator('[data-testid=format-example]').textContent()).includes('Jamaican Beef Patties'));
+  await page.fill('textarea', pattiesText);
+  await page.click('button:has-text("Check it")');
+  await page.waitForSelector('[data-testid=import-found]');
+  const found = await page.locator('[data-testid=import-found]').textContent();
+  ok('Import preview: finds title, yield, 3 groups, 17 ingredients, 12 method sections', found.includes('Jamaican Beef Patties') && found.includes('8 patties') && /Ingredient groups3/.test(found) && /Ingredients17/.test(found) && /Method sections12/.test(found), found);
+  await page.click('button:has-text("Fill in form")'); await page.waitForURL(/\/projects\/[^/]+\?filled=1/); await page.waitForLoadState('networkidle');
+  const projUrl = page.url().split('?')[0];
+  await go(projUrl.replace(BASE, '') + '/recipe');
+  const body = await page.locator('main').textContent();
+  const methodTxt = await page.locator('section[aria-label=Method]').textContent();
+  ok('Recipe page: yield shows 8 patties', body.includes('8 patties'));
+  ok('Recipe page: ingredients are NOT empty', !body.includes('No ingredients yet') && body.includes('all-purpose flour') && body.includes('ground beef'));
+  ok('Recipe page: ingredient groups shown', (await page.locator('[data-testid=ing-group]').allTextContents()).join('|') === 'Pastry Ingredients|Beef Filling Ingredients|Optional Egg Wash');
+  ok('Method has no pasted headings or ingredient lines', !/PASTRY INGREDIENTS|BEEF FILLING INGREDIENTS|YIELD:|JAMAICAN BEEF PATTIES|all-purpose flour|1 lb ground beef/i.test(methodTxt), methodTxt.slice(0, 200));
+  const secs = await page.locator('[data-testid=method-section] h3').allTextContents();
+  ok('Method sections are headings and the first is Make the Dough', secs.length === 12 && secs[0] === 'Make the Dough' && secs[2] === 'Cook the Beef Filling', secs.join('|'));
+  ok('Method steps are numbered per section starting at 1', (await page.locator('[data-testid=method-section]').first().locator('li').first().textContent()).startsWith('1'));
+  // recipe typed into New video: split automatically too
+  await go('/projects/new');
+  await page.fill('input[name=title]', 'Raw paste test');
+  await page.fill('textarea[name=recipeOriginal]', pattiesText);
+  await page.click('button:has-text("Create video")'); await page.waitForURL(/\/projects\/raw-paste-test/); await page.waitForLoadState('networkidle');
+  await go('/projects/raw-paste-test/recipe');
+  ok('Recipe typed into New video is split into ingredients automatically', (await page.locator('[data-testid=ing-group]').count()) === 3 && !(await page.locator('main').textContent()).includes('No ingredients yet'));
+  // an old project that only has raw text (no structure) shows the fix button instead of numbering the raw text
+  await page.evaluate(() => fetch('/api/health').catch(() => null));
+}
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
