@@ -13,7 +13,7 @@ import { fileUrl } from '@/components/ui';
 import { IMAGE_ORDER, orderedPictures } from '@/lib/order';
 import { projectFolder } from '@/lib/files';
 
-export default async function Overview({ params }: { params: { slug: string } }) {
+export default async function Overview({ params, searchParams }: { params: { slug: string }; searchParams: { filled?: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   const [s, chefs, script] = await Promise.all([
@@ -33,6 +33,8 @@ export default async function Overview({ params }: { params: { slug: string } })
     db.attempt.findMany({ where: { image: { projectId: p.id }, notes: { startsWith: 'Detected automatically' } }, orderBy: { createdAt: 'desc' }, take: 3, include: { image: { include: { scene: true } } } }),
     db.unmatchedFile.findFirst({ where: { status: 'OPEN', relPath: { startsWith: `${folder}/` } }, orderBy: { foundAt: 'desc' } }),
   ]);
+  const hist = searchParams.filled ? await db.projectDoc.findUnique({ where: { projectId_key: { projectId: p.id, key: 'importHistory' } } }) : null;
+  let lastImport: { created: string[]; warnings: string[] } | null = null; try { lastImport = JSON.parse(hist?.data || '{}').items?.[0] ?? null; } catch { /* none */ }
   const order = await orderedPictures(p.id);
   const numOf = (id: string) => order.find(x => x.id === id)?.n;
   const sceneNo = (sceneId: string) => 1 + order.map(x => x.sceneId).filter((v, i, a) => a.indexOf(v) === i).indexOf(sceneId);
@@ -44,6 +46,7 @@ export default async function Overview({ params }: { params: { slug: string } })
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-5">
+        {lastImport && <div className="rounded-2xl border px-5 py-4 text-[14px]" style={{ background: '#EEF6EE', borderColor: '#CFE3D3' }} role="status"><b className="text-[#46704F]">✓ Filled in from your text.</b> {lastImport.created.slice(0, 6).join(' · ')}{lastImport.created.length > 6 ? ` · and ${lastImport.created.length - 6} more` : ''}{lastImport.warnings.length > 0 && <span className="mt-1 block text-[#8E6720]">{lastImport.warnings[0]}</span>}</div>}
         <section className="overflow-hidden rounded-[22px] border" style={{ background: Z?.bg ?? 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', borderColor: Z?.bd ?? '#CFE3D3', boxShadow: '0 20px 40px -30px rgba(40,36,60,.5)' }} aria-label="What to do next">
           <div className={`grid ${usingRefs.length ? 'md:grid-cols-[1.15fr_1fr]' : ''}`}>
             <div className="p-6 md:p-8">
@@ -68,7 +71,7 @@ export default async function Overview({ params }: { params: { slug: string } })
           {tile('Recipe', ns.done.includes('Recipe added') ? '✓' : '○', '#EAF4EC', '#CFE3D3')}
           {tile('Scenes', `${s.scenesComplete} / ${s.scenes}`, '#FDECF1', '#F0CDDA')}
           {tile('Pictures', `${s.approved} / ${s.images}`, '#FDECF1', '#F0CDDA', s.images ? Math.round(s.approved / s.images * 100) : 0)}
-          {tile('Video Clips', `${s.clipsApproved} / ${s.clips}`, '#F0EAFB', '#DDD0F2', s.clips ? Math.round(s.clipsApproved / s.clips * 100) : 0)}
+          {tile('Video Clips', `${s.clipsApproved} / ${s.clips}`, '#F1EAFB', '#DCCDEF', s.clips ? Math.round(s.clipsApproved / s.clips * 100) : 0)}
         </div>
         {(fixImgs.length > 0 || nQ > 0) && (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">

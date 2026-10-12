@@ -154,3 +154,26 @@ export async function linkRefsToImage(imageId: string, refIds: string[], role: s
   }
   revalidatePath('/', 'layout');
 }
+
+/** Home screen: add a Baby Chef (with optional example pictures) or set a kitchen on a Baby Chef. */
+export async function addChefOrKitchen(fd: FormData) {
+  const kind = str(fd, 'kind') === 'kitchen' ? 'kitchen' : 'chef';
+  const name = str(fd, 'name');
+  if (!name) throw new Error('Type a name first');
+  if (kind === 'kitchen') {
+    const chefId = str(fd, 'babyChefId');
+    if (!chefId) throw new Error('Choose which Baby Chef cooks in this kitchen');
+    await db.babyChef.update({ where: { id: chefId }, data: { kitchen: name } });
+    revalidatePath('/', 'layout');
+    redirect(`/babychefs?chef=${chefId}`);
+  }
+  const b = await db.babyChef.create({ data: { displayName: name, slug: await uniqueSlug(name), active: true } });
+  for (const f of fd.getAll('files')) {
+    if (!(f instanceof File) || !f.size) continue;
+    const one = new FormData(); one.set('file', f); one.set('babyChefId', b.id); one.set('category', 'Character Face'); one.set('title', f.name.replace(/\.[^.]+$/, ''));
+    await uploadReference(one);
+  }
+  await logActivity(`Baby Chef "${b.displayName}" created`, `/babychefs?chef=${b.id}`);
+  revalidatePath('/', 'layout');
+  redirect(`/babychefs?chef=${b.id}`);
+}

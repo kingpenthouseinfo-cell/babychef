@@ -497,7 +497,7 @@ ok('HIDE DONE removes finished steps', (await page.locator('[aria-label="Done"]:
 await go(`/projects/${slug}/fill`);
 await page.fill('textarea[aria-label="Paste your info"]', 'INGREDIENTS:\n- 2 cups flour, sifted\n- 1 tsp salt\nSCENE: Fill Test Scene\nACTION: Baby bakes at [temperature]\nIMAGE: Fill test picture\nPURPOSE: close up\nYIELD: 12 pieces\n');
 await page.click('button:has-text("CHECK IT")');
-ok('Fill from text: preview lists what was found before saving', (await page.locator('text=WHAT I FOUND').count()) === 1 && (await page.locator('text=/1 scene/').count()) > 0 && (await page.locator('text=/skipped/').count()) > 0 && (await page.locator('text=/blank spot/').count()) > 0);
+ok('Fill from text: preview lists what was found before saving', (await page.locator('text=We found').count()) === 1 && (await page.locator('text=/1 scene/').count()) > 0 && (await page.locator('text=/skipped/').count()) > 0 && (await page.locator('text=/blank spot/').count()) > 0);
 await go(`/projects/${slug}/story`);
 ok('Nothing was saved by CHECK IT', (await page.locator('text=Fill Test Scene').count()) === 0);
 await go(`/projects/${slug}/fill`);

@@ -7,10 +7,10 @@ const BAND: Record<string, { bg: string; ink: string; bd: string }> = {
   'PLAN THE VIDEO': { bg: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', ink: '#4C6B52', bd: '#CFE3D3' },
   'MAKE THE PICTURES': { bg: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', ink: '#9A4A64', bd: '#F0CDDA' },
   'CHECK PICTURES': { bg: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', ink: '#9A4A64', bd: '#F0CDDA' },
-  'MAKE VIDEO CLIPS': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
-  'SHORT / REEL': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
-  'POST VIDEO': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
-  FINISH: { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
+  'MAKE VIDEO CLIPS': { bg: 'linear-gradient(135deg,#F1EAFB,#F6ECF8)', ink: '#6A4E98', bd: '#DCCDEF' },
+  'SHORT / REEL': { bg: 'linear-gradient(135deg,#F1EAFB,#F6ECF8)', ink: '#6A4E98', bd: '#DCCDEF' },
+  'POST VIDEO': { bg: 'linear-gradient(135deg,#F1EAFB,#F6ECF8)', ink: '#6A4E98', bd: '#DCCDEF' },
+  FINISH: { bg: 'linear-gradient(135deg,#F1EAFB,#F6ECF8)', ink: '#6A4E98', bd: '#DCCDEF' },
 };
 
 function Icon({ state }: { state: JState }) {

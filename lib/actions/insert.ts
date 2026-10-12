@@ -123,3 +123,28 @@ export async function resolveNotice(fd: FormData) {
   touch();
 }
 void strRaw; void backfillPositions;
+
+/** Drag-and-drop: save the new visible order of scenes (stable scene numbers never change). */
+export async function reorderScenes(projectId: string, ids: string[]) {
+  await backfillPositions();
+  const have = new Set((await db.scene.findMany({ where: { projectId }, select: { id: true } })).map(s => s.id));
+  const wanted = ids.filter(i => have.has(i));
+  const rest = [...have].filter(i => !wanted.includes(i));
+  await db.$transaction([...wanted, ...rest].map((id, k) => db.scene.update({ where: { id }, data: { pos: k + 1 } })));
+  touch();
+}
+/** Drag-and-drop: save the new visible order of pictures inside one scene. */
+export async function reorderPictures(sceneId: string, ids: string[]) {
+  await backfillPositions();
+  const have = new Set((await db.plannedImage.findMany({ where: { sceneId }, select: { id: true } })).map(s => s.id));
+  const wanted = ids.filter(i => have.has(i));
+  const rest = [...have].filter(i => !wanted.includes(i));
+  await db.$transaction([...wanted, ...rest].map((id, k) => db.plannedImage.update({ where: { id }, data: { pos: k + 1 } })));
+  touch();
+}
+export async function deletePictureHere(fd: FormData) {
+  const img = await db.plannedImage.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
+  await db.plannedImage.delete({ where: { id: img.id } });
+  await closeGaps(img.projectId, img.sceneId);
+  touch(); redirect(await storyUrl(img.projectId));
+}

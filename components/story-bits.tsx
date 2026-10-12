@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { addPictureHere, addSceneHere, movePictureUpDown, moveSceneUpDown, duplicatePicture, duplicateScene, deleteSceneHere, splitScene, resolveNotice } from '@/lib/actions/insert';
+import { addPictureHere, addSceneHere, movePictureUpDown, moveSceneUpDown, duplicatePicture, duplicateScene, deleteSceneHere, deletePictureHere, splitScene, resolveNotice } from '@/lib/actions/insert';
 import { SubmitBtn, ConfirmForm } from './client';
 
 const hid = (name: string, value: string) => <input type="hidden" name={name} value={value} />;
@@ -66,17 +66,23 @@ export function SceneMenu({ projectId, scene, images, first, last }: { projectId
   );
 }
 
-export function PictureMenu({ id, first, last, href, code, projectId, sceneId }: { id: string; first: boolean; last: boolean; href: string; code?: string; projectId?: string; sceneId?: string }) {
+export function PictureMenu({ id, first, last, href, code, projectId, sceneId, prevId }: { id: string; first: boolean; last: boolean; href: string; code?: string; projectId?: string; sceneId?: string; prevId?: string | null }) {
   return (
     <details className="relative">
-      <summary className="btn btn-sm btn-ghost list-none" aria-label="Picture menu">…</summary>
-      <div className="absolute right-0 z-30 mt-1 w-48 rounded-lg border border-line bg-surface p-1.5 shadow-md">
+      <summary className="btn btn-sm btn-ghost list-none" aria-label="Picture menu">⋯</summary>
+      <div className="absolute right-0 z-30 mt-1 w-56 rounded-[14px] border border-line bg-white p-1.5 shadow-md">
         {code && <div className="px-3 py-1 font-mono text-[11px] text-ink-muted">{code}</div>}
         <Link className={menuBtn} href={href}>Open details</Link>
-        {projectId && sceneId && <><div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Add picture after" /></div><div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Quick add after" quick /></div></>}
         {!first && <form action={movePictureUpDown}>{hid('id', id)}{hid('dir', 'up')}<button className={menuBtn}>Move up</button></form>}
         {!last && <form action={movePictureUpDown}>{hid('id', id)}{hid('dir', 'down')}<button className={menuBtn}>Move down</button></form>}
         <form action={duplicatePicture}>{hid('id', id)}<button className={menuBtn}>Duplicate</button></form>
+        {projectId && sceneId && <>
+          <div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={prevId ?? 'START'} label="Add picture before" /></div>
+          <div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Add picture after" /></div>
+          <div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Quick add after" quick /></div>
+        </>}
+        <Link className={menuBtn} href={`${href}#results`}>Replace picture</Link>
+        <ConfirmForm action={deletePictureHere} message="Delete this picture from the plan? Files already saved in the folder stay there.">{hid('id', id)}<button className={`${menuBtn} text-[#A5473A]`}>Delete</button></ConfirmForm>
       </div>
     </details>
   );
@@ -102,7 +108,7 @@ export function InsertTile({ projectId, sceneId, afterImageId }: { projectId: st
         {hid('projectId', projectId)}{hid('sceneId', sceneId)}{hid('afterImageId', afterImageId)}
         <label className="block"><span className="label">What picture do you need?</span><input name="title" required className="input" placeholder="e.g. Close-up of the butter being rubbed into the flour" /></label>
         <label className="block"><span className="label">What should happen in the picture? (optional)</span><textarea name="what" rows={2} className="input" /></label>
-        <SubmitBtn className="btn-primary btn-sm" pendingText="Adding…">Add picture</SubmitBtn>
+        <div className="flex flex-wrap items-center gap-3"><SubmitBtn className="btn-primary btn-sm" pendingText="Adding…">Add picture</SubmitBtn><span className="text-[12px] text-ink-secondary">Numbered and named automatically</span></div>
       </form>
     </details>
   );

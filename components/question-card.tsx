@@ -1,7 +1,8 @@
 import { answerQuestion, setQuestionStatus, deleteQuestion } from '@/lib/actions/questions';
 import { SubmitBtn } from './client';
+import { AnswerField } from './answer-field';
 
-export type QRow = { id: string; question: string; hint: string | null; answerType: string; choices: string | null; priority: string; blocksText: string | null; status: string; answer: string | null; source: string };
+export type QRow = { id: string; key?: string; question: string; hint: string | null; answerType: string; choices: string | null; priority: string; blocksText: string | null; status: string; answer: string | null; source: string };
 
 export function QuestionCard({ q, soon = false }: { q: QRow; soon?: boolean }) {
   const choices: string[] = q.choices ? JSON.parse(q.choices) : [];
@@ -15,8 +16,7 @@ export function QuestionCard({ q, soon = false }: { q: QRow; soon?: boolean }) {
         {q.answerType === 'choice' ? (
           <div className="space-y-1.5">{choices.map(c => <label key={c} className="flex min-h-[40px] items-center gap-2 rounded-md border border-line px-3 text-[14px]"><input type="radio" name="answer" value={c} className="accent-[#4C6B52]" />{c}</label>)}
             <input name="other" className="input" placeholder="If other, type it here" aria-label="Other answer" /></div>
-        ) : q.answerType === 'long' ? <textarea name="answer" rows={3} className="input" aria-label="Your answer" />
-          : <input name="answer" className="input" aria-label="Your answer" inputMode={q.answerType === 'number' ? 'decimal' : undefined} />}
+        ) : <AnswerField long={q.answerType === 'long'} numeric={q.answerType === 'number'} suggestion={q.key === 'ovenTemp' ? '375°F' : undefined} />}
         <div className="flex flex-wrap gap-2"><SubmitBtn className={soon ? 'btn-approve' : ''} pendingText="Saving…">Save answer</SubmitBtn></div>
       </form>
       <div className="mt-2 flex flex-wrap gap-2">

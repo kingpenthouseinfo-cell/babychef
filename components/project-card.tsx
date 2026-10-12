@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ProgressBar, fileUrl } from './ui';
 import { ConfirmForm } from './client';
-import { archiveProject } from '@/lib/actions/project';
+import { archiveProject, duplicateProject } from '@/lib/actions/project';
 import type { projectStats } from '@/lib/queries';
 
 const GRADS = ['#E9C9A2,#A8774C', '#EBD2B4,#9E6E45', '#F1E3A8,#C9A64A', '#EBD3B8,#B08A5E', '#F0D6C0,#C98F6A'];
@@ -16,9 +16,14 @@ export function ProjectCard({ p, s, thumb, next }: { p: any; s: Awaited<ReturnTy
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-2">
           <Link href={`/projects/${p.slug}`} className="min-w-0"><div className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em]">{p.title}</div><div className="text-[13px] text-ink-secondary">{p.babyChef?.displayName ?? 'No Baby Chef yet'}</div></Link>
-          <details className="relative"><summary className="btn btn-sm btn-ghost list-none" aria-label={`Menu for ${p.title}`}>···</summary>
-            <div className="absolute right-0 z-20 mt-1 w-44 rounded-[14px] border border-line bg-white p-1.5 shadow-md">
-              <ConfirmForm action={archiveProject} message={`Delete "${p.title}"? It disappears from the app. The pictures and files already saved in its folder on your computer are not touched.`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="delete" /><button className="flex min-h-[36px] w-full items-center rounded-md px-3 text-left text-[13px] text-[#A8513F] hover:bg-sunken" aria-label={`Delete ${p.title}`}>Delete</button></ConfirmForm>
+          <details className="relative"><summary className="btn btn-sm btn-ghost list-none" aria-label={`Menu for ${p.title}`}>⋯</summary>
+            <div className="absolute right-0 z-20 mt-1 w-60 rounded-[14px] border border-line bg-white p-1.5 shadow-md">
+              <Link href={`/projects/${p.slug}`} className="flex min-h-[36px] items-center rounded-md px-3 text-[13.5px] hover:bg-sunken">Edit</Link>
+              <form action={duplicateProject}><input type="hidden" name="id" value={p.id} /><button className="flex min-h-[36px] w-full items-center rounded-md px-3 text-left text-[13.5px] hover:bg-sunken">Duplicate</button></form>
+              <form action={archiveProject}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="archive" /><button className="flex min-h-[36px] w-full items-center rounded-md px-3 text-left text-[13.5px] hover:bg-sunken">Archive</button></form>
+              <div className="my-1 border-t border-line" />
+              <ConfirmForm action={archiveProject} message={`Delete "${p.title}" from the app? Your pictures and files stay in the folder on this Mac.`}><input type="hidden" name="id" value={p.id} /><input type="hidden" name="mode" value="delete" /><button className="flex min-h-[36px] w-full items-center rounded-md px-3 text-left text-[13.5px] font-medium text-[#A5473A] hover:bg-sunken" aria-label={`Delete ${p.title}`}>Delete from app</button></ConfirmForm>
+              <p className="px-3 pb-1.5 pt-0.5 text-[11.5px] text-ink-secondary">Your pictures and files stay in the folder on this Mac.</p>
             </div></details>
         </div>
         <div>

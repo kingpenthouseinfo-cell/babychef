@@ -20,5 +20,5 @@ export const ZONE: Record<'pink' | 'sage' | 'blue' | 'purple', { bg: string; bd:
   pink: { bg: 'linear-gradient(135deg,#FDECF1 0%,#F9EEF7 100%)', bd: '#F0CDDA', ink: '#9A4A64', btn: 'btn-accent' },
   sage: { bg: 'linear-gradient(135deg,#EAF4EC 0%,#F1F7E8 100%)', bd: '#CFE3D3', ink: '#4C6B52', btn: 'btn-approve' },
   blue: { bg: 'linear-gradient(135deg,#E9F1FC 0%,#EEEDFC 100%)', bd: '#C9D9EF', ink: '#3E6290', btn: 'btn-copy' },
-  purple: { bg: 'linear-gradient(135deg,#F0EAFB 0%,#F7ECF4 100%)', bd: '#DDD0F2', ink: '#6A55A2', btn: 'btn-purple' },
+  purple: { bg: 'linear-gradient(135deg,#F1EAFB 0%,#F6ECF8 100%)', bd: '#DCCDEF', ink: '#6A4E98', btn: 'btn-purple' },
 };

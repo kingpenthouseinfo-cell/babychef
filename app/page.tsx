@@ -1,62 +1,66 @@
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { projectStats } from '@/lib/queries';
 import { Empty, fileUrl } from '@/components/ui';
 import { nextStep } from '@/lib/next-step';
+import { buildJourney } from '@/lib/journey';
 import { ZONE, zoneOf } from '@/lib/words';
+import { StartNewVideo, AddChefOrKitchen } from '@/components/home-boxes';
 
 const GRADS = ['#E9C9A2,#A8774C', '#EBD2B4,#9E6E45', '#F1E3A8,#C9A64A', '#EBD3B8,#B08A5E', '#F0D6C0,#C98F6A'];
 const grad = (id: string) => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `linear-gradient(150deg,${GRADS[h % GRADS.length].replace(',', ' 0%,')} 100%)`; };
 
 export default async function Home() {
-  const projects = await db.project.findMany({ where: { deletedAt: null, status: { not: 'ARCHIVED' } }, orderBy: { updatedAt: 'desc' }, include: { babyChef: true } });
-  const chefs = await db.babyChef.count({ where: { deletedAt: null } });
-  const list = projects.slice(0, 8);
-  const [stats, nexts, thumbs] = await Promise.all([
-    Promise.all(list.map(p => projectStats(p.id))),
-    Promise.all(list.map(p => nextStep(p.id, p.slug))),
-    Promise.all(list.map(p => db.plannedImage.findFirst({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: { updatedAt: 'desc' }, include: { approvedAttempt: true } }))),
-  ]);
-  const thumb = (i: number, size: number, r: number) => thumbs[i]?.approvedAttempt?.assetId
-    ? <img src={fileUrl(thumbs[i]!.approvedAttempt!.assetId, 160)} alt="" className="shrink-0 object-cover" style={{ width: size, height: size, borderRadius: r }} />
-    : <span className="shrink-0" style={{ width: size, height: size, borderRadius: r, background: grad(list[i].id) }} />;
-  const cards = list.map((p, i) => ({ p, i })).filter(({ i }) => nexts[i].next).slice(0, 3);
+  const projects = await db.project.findMany({ where: { deletedAt: null, status: { notIn: ['ARCHIVED', 'COMPLETE'] } }, orderBy: { updatedAt: 'desc' }, include: { babyChef: true } });
+  const chefs = await db.babyChef.findMany({ where: { deletedAt: null, active: true }, orderBy: { displayName: 'asc' }, select: { id: true, displayName: true } });
+  const info = await Promise.all(projects.map(async p => {
+    const [ns, j, thumb] = await Promise.all([nextStep(p.id, p.slug), buildJourney(p.id, p.slug), db.plannedImage.findFirst({ where: { projectId: p.id, approvedAttemptId: { not: null } }, orderBy: { updatedAt: 'desc' }, include: { approvedAttempt: true } })]);
+    const all = j.sections.flatMap(s => s.steps);
+    return { p, ns, pct: all.length ? Math.round(all.filter(x => x.state === 'DONE').length / all.length * 100) : 0, thumb: thumb?.approvedAttempt?.assetId ?? null };
+  }));
+  const active = info.slice(0, 2), others = info.slice(2);
+  const th = (x: (typeof info)[number], w: number, h: number, r: number) => x.thumb ? <img src={fileUrl(x.thumb, 200)} alt="" className="shrink-0 object-cover" style={{ width: w, height: h, borderRadius: r }} /> : <span className="shrink-0" style={{ width: w, height: h, borderRadius: r, background: grad(x.p.id) }} />;
+  const chefOpts = chefs.map(c => ({ id: c.id, name: c.displayName }));
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex flex-wrap items-end justify-between gap-3"><h1>Home</h1><Link href="/projects/new" className="btn btn-primary min-h-[44px] px-5">+ New recipe video</Link></div>
-      {chefs === 0 && <Empty title="No Baby Chefs yet." hint="Create your first Baby Chef to begin."><Link href="/babychefs/new" className="btn btn-primary">+ Add Baby Chef</Link></Empty>}
-      {list.length === 0 ? <Empty title="No recipe videos yet." hint="Start one and I'll show you what to do next."><Link href="/projects/new" className="btn btn-primary">+ New recipe video</Link></Empty> : (<>
-        {cards.length > 0 && (
-          <section className="flex flex-col gap-3.5" aria-label="Next step in each video">
-            <span className="eyebrow">NEXT STEP IN EACH VIDEO</span>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {cards.map(({ p, i }) => { const n = nexts[i].next!; const z = zoneOf(n.href); const Z = ZONE[z.zone]; return (
-                <div key={p.id} className="flex flex-col overflow-hidden border border-line bg-white" style={{ borderRadius: 18, boxShadow: '0 14px 30px -26px rgba(40,36,60,.5)' }}>
-                  <Link href={`/projects/${p.slug}`} className="flex items-center gap-3.5 px-[18px] py-4">{thumb(i, 56, 12)}<span className="min-w-0"><span className="block font-serif text-[22px] font-medium leading-[1.15] tracking-[-0.01em]">{p.title}</span><span className="block text-[13px] text-ink-secondary">{p.babyChef?.displayName ?? 'No Baby Chef yet'}</span></span></Link>
-                  <div className="mx-2.5 mb-2.5 flex flex-1 flex-col gap-2.5 rounded-[14px] border p-4" style={{ background: Z.bg, borderColor: Z.bd }}>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: Z.ink }}>Next · {z.label}</span>
-                    <div><div className="text-[17px] font-semibold">{n.title}</div>{n.body && <div className="text-[13px] text-[#47434F]">{n.body}</div>}</div>
-                    <div className="flex flex-wrap items-center gap-2.5"><Link href={n.href} className={`btn btn-primary`}>{n.cta.charAt(0) + n.cta.slice(1).toLowerCase()}</Link>{nexts[i].fixing.length > 0 && <Link href={nexts[i].fixing[0].href} className="rounded-full bg-[#F5E1DB] px-2.5 py-1 text-[12px] font-semibold text-[#A5473A]">! {nexts[i].fixing.length} {nexts[i].fixing.length > 1 ? 'pictures need' : 'picture needs'} fixing</Link>}</div>
-                  </div>
-                </div>); })}
-            </div>
-          </section>
-        )}
-        <section className="flex flex-col gap-3.5">
-          <div className="flex items-baseline justify-between"><span className="eyebrow">RECIPE VIDEOS</span><Link href="/projects" className="text-[13px] font-semibold text-blue-deep">All recipe videos →</Link></div>
-          <div className="overflow-hidden rounded-[18px] border border-line bg-white">
-            {list.map((p, i) => { const s = stats[i]; const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0); return (
-              <div key={p.id} className="flex flex-wrap items-center gap-4 border-b border-line px-5 py-4 last:border-0">
-                <Link href={`/projects/${p.slug}`} className="flex min-w-[220px] flex-1 items-center gap-3.5">{thumb(i, 46, 10)}<span className="min-w-0"><span className="block font-serif text-[20px] font-medium leading-tight">{p.title}</span><span className="block text-[13px] text-ink-secondary">{p.babyChef?.displayName ?? 'No Baby Chef yet'}</span></span></Link>
-                <div className="hidden flex-[2] grid-cols-4 gap-4 lg:grid">
-                  {([['Recipe', p.recipeOriginal || p.recipeAdapted ? 100 : 0, '#9CCBA5'], ['Pictures', pct(s.approved, s.images), '#F2AFC4'], ['Clips', pct(s.clipsApproved, s.clips), '#B9A3E6'], ['Posted', pct(s.publishingSelected, s.publishing), '#B6CBEA']] as const).map(([l, v, c]) => (
-                    <div key={l}><div className="mb-1 text-[12px] text-ink-secondary">{l}</div><div className="h-[5px] overflow-hidden rounded-full bg-[#F0EEF3]"><div className="h-full rounded-full" style={{ width: `${v}%`, background: c }} /></div></div>))}
+    <div className="flex flex-wrap items-start gap-9">
+      <div className="min-w-0 flex-[1_1_560px]">
+        <h1>My Recipe Videos</h1>
+        <div className="mt-6 border-t border-line">
+          {info.length === 0 && <div className="py-8"><Empty title="No recipe videos yet." hint="Paste a recipe on the right and press Create video." /></div>}
+          {active.map((x, idx) => (
+            <div key={x.p.id} className="border-b border-line py-5">
+              <div className="flex items-center gap-5">
+                <Link href={`/projects/${x.p.slug}`}>{th(x, 96, 72, 14)}</Link>
+                <div className="min-w-0 flex-1">
+                  {idx === 0 && <span className="mb-1 inline-block rounded-md bg-[#FBE9F0] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#9A4A64]">Working on now</span>}
+                  <Link href={`/projects/${x.p.slug}`}><h2 className="text-[26px]">{x.p.title}</h2></Link>
+                  <div className="mt-1 text-[14px] text-ink-secondary">{x.p.babyChef?.displayName ?? 'No Baby Chef yet'} · Next: <b className="font-semibold text-ink">{x.ns.next?.title ?? 'nothing needs you'}</b></div>
                 </div>
-                <div className="flex items-center gap-3"><span className="hidden text-[13.5px] text-ink-secondary sm:inline">{nexts[i].next?.title ?? 'Nothing needs you'}</span><Link href={nexts[i].next?.href ?? `/projects/${p.slug}`} className="btn">Continue</Link></div>
-              </div>); })}
-          </div>
-        </section>
-      </>)}
+                <div className="text-center"><div className="font-serif text-[30px] leading-none">{x.pct}%</div><div className="text-[12px] text-ink-secondary">done</div></div>
+                <Link href={x.ns.next?.href ?? `/projects/${x.p.slug}`} className={`btn ${idx === 0 ? 'btn-primary' : ''} min-h-[48px] px-6`}>{idx === 0 ? 'Continue' : 'Open'}</Link>
+              </div>
+              <details className="group mt-2 pl-[116px]">
+                <summary className="cursor-pointer list-none text-[13px] font-semibold text-blue-deep"><span className="group-open:hidden">▸ Show next steps</span><span className="hidden group-open:inline">▾ Hide next steps</span></summary>
+                <div className="eyebrow mt-3">NEXT STEPS IN THIS VIDEO</div>
+                <ol className="mt-3 space-y-2.5">{x.ns.steps.slice(0, 6).map((st, i) => { const z = zoneOf(st.href); const Z = z.label === 'Pictures' && /^Fix/.test(st.title) ? { bg: 'linear-gradient(135deg,#FDEEEA,#FBF0EC)', bd: '#F0CFC6', ink: '#A5473A' } : ZONE[z.zone]; const lab = z.label === 'Pictures' && /^Fix/.test(st.title) ? 'Needs fixing' : z.label; return (
+                  <li key={i}><Link href={st.href} className="flex items-center gap-4 rounded-xl border px-4 py-3.5" style={{ background: Z.bg, borderColor: Z.bd }}>
+                    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-white text-[13px] font-semibold shadow-sm">{i + 1}</span>
+                    <span className="min-w-0 flex-1"><b className="block text-[15px] font-semibold">{st.title}</b>{st.body && <span className="block truncate text-[13px] text-ink-secondary">{st.body}</span>}</span>
+                    <span className="text-[11.5px] font-bold uppercase tracking-[0.12em]" style={{ color: Z.ink }}>{lab}</span></Link></li>); })}</ol>
+              </details>
+            </div>
+          ))}
+        </div>
+        {others.length > 0 && (
+          <details className="mt-5"><summary className="cursor-pointer list-none text-[14px] font-semibold text-ink-secondary">▸ Other recipe videos ({others.length})</summary>
+            <div className="mt-3 divide-y divide-line rounded-2xl border border-line">{others.map(x => (
+              <Link key={x.p.id} href={`/projects/${x.p.slug}`} className="flex items-center gap-4 px-4 py-3">{th(x, 46, 36, 8)}<span className="min-w-0 flex-1"><b className="block text-[15px] font-semibold">{x.p.title}</b><span className="text-[13px] text-ink-secondary">{x.p.babyChef?.displayName ?? 'No Baby Chef yet'}</span></span><span className="font-serif text-[18px]">{x.pct}%</span><span className="text-ink-muted">›</span></Link>))}</div></details>
+        )}
+        <div className="mt-6"><Link href="/projects" className="text-[13px] font-semibold text-blue-deep">All recipe videos →</Link></div>
+      </div>
+      <aside className="flex min-w-0 flex-[0_1_340px] flex-col gap-5">
+        <StartNewVideo chefs={chefOpts} />
+        <AddChefOrKitchen chefs={chefOpts} />
+      </aside>
     </div>
   );
 }

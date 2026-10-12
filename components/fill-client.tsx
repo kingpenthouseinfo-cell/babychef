@@ -9,7 +9,7 @@ const NAMES: Record<string, string> = { title: 'Name', recipeName: 'Recipe name'
 export type FillProps = { slug: string | null; current: Record<string, string>; ingredientNames: string[]; sceneTitles: string[]; chefs: { id: string; name: string }[]; history: { at: string; created: string[]; skipped: string[]; warnings: string[] }[] };
 
 /** FILL FROM TEXT — paste, check it, then fill in the form. Nothing is saved until FILL IN FORM. */
-export function FillFromText({ slug, current, ingredientNames, sceneTitles, chefs, history }: FillProps) {
+export function FillFromText({ slug, current, ingredientNames, sceneTitles, chefs, history, onCancel }: FillProps & { onCancel?: () => void }) {
   const [text, setText] = useState('');
   const [checked, setChecked] = useState(false);
   const [choices, setChoices] = useState<Record<string, Choice>>({});
@@ -32,21 +32,21 @@ export function FillFromText({ slug, current, ingredientNames, sceneTitles, chef
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <CopyButton text={IMPORT_TEMPLATE} label="COPY IMPORT TEMPLATE" variant="secondary" />
-        <CopyButton text={IMPORT_PROMPT} label="COPY PROMPT FOR CHATGPT" variant="secondary" />
-        {history.length > 0 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowLast(!showLast)}>VIEW LAST IMPORT</button>}
+        <CopyButton text={IMPORT_TEMPLATE} label="Copy import template" variant="secondary" />
+        <CopyButton text={IMPORT_PROMPT} label="Copy prompt for ChatGPT" variant="secondary" />
+        {history.length > 0 && <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowLast(!showLast)}>View last import</button>}
       </div>
       {showLast && history[0] && (
         <div className="card text-[13px]"><div className="eyebrow">LAST IMPORT · {new Date(history[0].at).toLocaleString()}</div>
           <ul className="mt-1 list-disc pl-5">{history[0].created.map((c, i) => <li key={i}>{c}</li>)}</ul>
           {history[0].skipped.length > 0 && <><div className="eyebrow mt-2">LEFT ALONE</div><ul className="list-disc pl-5 text-ink-secondary">{history[0].skipped.map((c, i) => <li key={i}>{c}</li>)}</ul></>}</div>
       )}
-      <label className="block"><span className="label">PASTE YOUR INFO</span>
+      <label className="block"><span className="label">Paste your info</span>
         <textarea value={text} onChange={e => { setText(e.target.value); setChecked(false); }} rows={14} className="input font-mono text-[13px]" placeholder={'Paste the recipe or Baby Chef Studio text here and I’ll fill in the form for you.\n\nNAME: …\nRECIPE: …\nINGREDIENTS: …\nSCENE 1: …'} aria-label="Paste your info" /></label>
-      {!checked && <div className="flex gap-2"><button type="button" className="btn btn-primary" disabled={!text.trim()} onClick={() => setChecked(true)}>CHECK IT</button></div>}
+      {!checked && <div className="flex gap-2"><button type="button" className="btn btn-primary" disabled={!text.trim()} onClick={() => setChecked(true)}>Check it</button></div>}
       {parsed && (
         <section className="card space-y-3" aria-label="What I found">
-          <div className="eyebrow">WHAT I FOUND</div>
+          <div className="eyebrow">We found</div>
           {parsed.found.length === 0 ? <p className="text-[13px] text-[#8A6216]">⚠ {parsed.warnings[0]}</p> : <p className="text-[14px]">✓ {parsed.found.join(' · ')}</p>}
           {parsed.warnings.filter(w => parsed.found.length > 0 || false).map((w, i) => <p key={i} className="text-[13px] text-[#8A6216]">⚠ {w}</p>)}
           {parsed.babyChef && (
@@ -67,7 +67,7 @@ export function FillFromText({ slug, current, ingredientNames, sceneTitles, chef
             {nImg > 0 && <li>✓ {nImg} picture{nImg > 1 ? 's' : ''}</li>}
           </ul>
           {error && <p className="text-[13px] text-[#A8513F]">{error}</p>}
-          <div className="flex flex-wrap gap-2"><button type="button" className="btn btn-primary" disabled={pending || parsed.found.length === 0} onClick={() => start(async () => { try { await applyImport({ text, slug, choices, chef: chefValue }); } catch (e: any) { if (!String(e?.message || '').includes('NEXT_REDIRECT')) setError('Something went wrong — nothing was changed.'); } })}>{pending ? 'Filling in…' : 'FILL IN FORM'}</button><button type="button" className="btn" onClick={() => setChecked(false)}>CANCEL</button></div>
+          <div className="flex flex-wrap gap-2"><button type="button" className="btn btn-approve" disabled={pending || parsed.found.length === 0} onClick={() => start(async () => { try { await applyImport({ text, slug, choices, chef: chefValue }); } catch (e: any) { if (!String(e?.message || '').includes('NEXT_REDIRECT')) setError('Something went wrong — nothing was changed.'); } })}>{pending ? 'Filling in…' : 'Fill in form'}</button><button type="button" className="btn" onClick={() => (onCancel ? onCancel() : setChecked(false))}>{onCancel ? 'Cancel' : 'Back'}</button></div>
           <p className="text-[12px] text-ink-secondary">Nothing is saved until you press FILL IN FORM. Blank spots like [temperature] become questions in Missing Info.</p>
         </section>
       )}

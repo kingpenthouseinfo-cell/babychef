@@ -68,7 +68,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
             <Text name="title" label="Title" v={k.title} /><Text name="aspectRatio" label="Aspect ratio" v={k.aspectRatio || p.aspectRatio} />
             <div className="grid grid-cols-3 gap-2"><Text name="durationMin" label="Min (s)" type="number" v={k.durationMin} /><Text name="durationTarget" label="Preferred (s)" type="number" v={k.durationTarget} /><Text name="durationMax" label="Max (s)" type="number" v={k.durationMax} /></div>
             <Text name="purpose" label="Purpose" v={k.purpose} />
-            <fieldset className="sm:col-span-2"><legend className="label">Related scenes</legend><div className="flex flex-wrap gap-x-4 gap-y-1">{scenes.map(s => <label key={s.id} className="flex items-center gap-1.5 text-[13px]"><input type="checkbox" name="scenes" value={s.id} defaultChecked={k.scenes.some(x => x.sceneId === s.id)} className="h-4 w-4 accent-[#6A55A2]" />{sceneCode(s.order)} {s.title}</label>)}</div></fieldset>
+            <fieldset className="sm:col-span-2"><legend className="label">Related scenes</legend><div className="flex flex-wrap gap-x-4 gap-y-1">{scenes.map(s => <label key={s.id} className="flex items-center gap-1.5 text-[13px]"><input type="checkbox" name="scenes" value={s.id} defaultChecked={k.scenes.some(x => x.sceneId === s.id)} className="h-4 w-4 accent-[#6A4E98]" />{sceneCode(s.order)} {s.title}</label>)}</div></fieldset>
             <Area name="foodState" label="Food state in this clip" v={k.foodState} rows={2} className="sm:col-span-2" />
           </div>
         </Section>

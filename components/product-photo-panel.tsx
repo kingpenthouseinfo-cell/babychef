@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { addProductPhoto } from '@/lib/actions/project';
 import { SubmitBtn } from './client';
-import { INGREDIENT_IMPORTANCE, INGREDIENT_REF_TYPES } from '@/lib/constants';
+import { INGREDIENT_REF_TYPES } from '@/lib/constants';
 
 export type IngOpt = { id: string; label: string; brand: string; product: string; packageSize: string; importance: string; packageVisible: boolean; photos: number };
 
@@ -21,13 +21,13 @@ export function ProductPhotoPanel({ projectId, ings, initial, fixed = false }: {
       {cur ? (<>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block"><span className="label">Brand</span><input name="brand" className="input" defaultValue={cur.brand} placeholder="e.g. Grace" /></label>
-          <label className="block"><span className="label">Exact product / label name</span><input name="product" className="input" defaultValue={cur.product} placeholder="e.g. Coconut Milk, Original" /></label>
+          <label className="block"><span className="label">Label</span><input name="product" className="input" defaultValue={cur.product} placeholder="e.g. Coconut Milk, Original" /></label>
           <label className="block"><span className="label">Package size</span><input name="packageSize" className="input" defaultValue={cur.packageSize} placeholder="e.g. 13.5 oz can" /></label>
-          <label className="block"><span className="label">How much does it matter on camera?</span><select name="importance" className="input" defaultValue={cur.importance}>{Object.entries(INGREDIENT_IMPORTANCE).map(([k, v]) => <option key={k} value={k}>{k === 'PACKAGE_CRITICAL' ? 'Package must look exactly right' : k === 'TEXTURE_CRITICAL' ? 'Texture / look matters' : 'Not important'}</option>)}</select></label>
-          <label className="flex items-end gap-2 pb-2 text-[13px]"><input type="checkbox" name="packageVisible" defaultChecked={cur.packageVisible} className="accent-[#4C6B52]" /> The package appears on camera</label>
+          <label className="flex items-end gap-2 pb-2 text-[13.5px]"><input type="checkbox" name="texture" defaultChecked={cur.importance === 'TEXTURE_CRITICAL'} className="accent-[#4C6B52]" /> Texture is important</label>
+          <label className="flex items-end gap-2 pb-2 text-[13.5px]"><input type="checkbox" name="packageVisible" defaultChecked={cur.packageVisible} className="accent-[#4C6B52]" /> Package appears on screen</label>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="block sm:col-span-2"><span className="label">Product photo (front label, back label, the food itself…)</span><input type="file" name="file" accept="image/png,image/jpeg,image/webp,image/gif" className="input" /></label>
+          <label className="block sm:col-span-2"><span className="label">Add product photo from computer</span><input type="file" name="file" accept="image/png,image/jpeg,image/webp,image/gif" className="input" /></label>
           <label className="block"><span className="label">What is in the photo?</span><select name="category" className="input">{INGREDIENT_REF_TYPES.map(c => <option key={c}>{c}</option>)}</select></label>
           <label className="block"><span className="label">Title (optional)</span><input name="title" className="input" placeholder="e.g. Front label" /></label>
         </div>

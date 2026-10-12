@@ -22,7 +22,7 @@ export default async function Questions({ params }: { params: { slug: string } }
   return (
     <div className="max-w-[860px] space-y-6">
       <div><h1 className="text-[34px] md:text-[40px]">Missing Info</h1><p className="mt-1 text-[14px] text-ink-secondary">{open.length === 0 ? 'Nothing needed right now.' : `${open.length} thing${open.length > 1 ? 's' : ''} still need answers. Answers go straight into the recipe and prompts.`}</p></div>
-      {open.length === 0 && later.length === 0 && <div className="rounded-lg border border-sage-mid bg-sage-tint p-4 text-[14px] text-sage-deep">✓ Nothing needed right now.</div>}
+      {open.length === 0 && later.length === 0 && <div className="flex items-center gap-4 rounded-[16px] border p-6" style={{ background: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', borderColor: '#CFE3D3' }}><span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[20px] text-[#46704F]">✓</span><div><div className="font-serif text-[22px]">No missing info</div><div className="text-[14px] text-ink-secondary">Nothing needed right now.</div></div></div>}
       {soon.length > 0 && <section><h2 className="eyebrow mb-2 !font-sans text-[#8A6216]">NEED THIS SOON</h2>
         {grouped(soon).map(([g, l]) => <div key={g} className="mb-4"><div className="eyebrow mb-1.5">{g}</div><ul className="space-y-3">{l.map(q => <QuestionCard key={q.id} q={q} soon />)}</ul></div>)}</section>}
       {later.length > 0 && <section><h2 className="eyebrow mb-2 !font-sans">CAN ANSWER LATER</h2>

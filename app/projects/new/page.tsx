@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { Text, Area, Sel, Check } from '@/components/ui';
 import { DirtyForm, SubmitBtn } from '@/components/client';
+import { FillModalButton } from '@/components/fill-modal';
 import { createProject } from '@/lib/actions/project';
 import { PROJECT_STATUSES } from '@/lib/constants';
 
@@ -32,12 +33,12 @@ export default async function NewProject({ searchParams }: { searchParams: { che
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Text name="recipeName" label="Recipe name (if different)" /><Text name="cuisine" label="Cuisine" />
               <Sel name="status" label="Status" v={s.defaultProjectStatus} options={PROJECT_STATUSES} />
-              <Text name="longDuration" label="Long video length" v={s.defaultLongDuration} /><Text name="shortDuration" label="Short/Reel length" v={s.defaultShortDuration} />
+              <Text name="longDuration" label="Long video target" v={s.defaultLongDuration} /><Text name="shortDuration" label="Short video target" v={s.defaultShortDuration} />
               <Text name="aspectRatio" label="Picture shape" v={s.defaultAspect} />
               <div className="flex items-end"><Check name="verticalCrop" label="Also make a vertical version" v={s.defaultVerticalCrop === 'true'} /></div>
-              <Area name="description" label="Description" className="sm:col-span-2" /><Text name="recipeSource" label="Where the recipe came from" className="sm:col-span-2" />
+              <Area name="mainHook" label="Hook" className="sm:col-span-2" hint="What makes people keep watching in the first seconds." /><Area name="finishedFood" label="Finished food" className="sm:col-span-2" /><Text name="ctaCustom" label="Call to action" className="sm:col-span-2" /><Area name="description" label="Description" className="sm:col-span-2" /><Text name="recipeSource" label="Where the recipe came from" className="sm:col-span-2" />
             </div></details>
-          <div className="flex flex-wrap gap-3"><SubmitBtn className="btn-primary min-h-[48px] px-6" pendingText="Creating…">Create video</SubmitBtn><Link href="/fill" className="btn min-h-[48px] px-5">Fill from text</Link></div>
+          <div className="flex flex-wrap gap-3"><SubmitBtn className="btn-primary min-h-[48px] px-6" pendingText="Creating…">Create video</SubmitBtn><FillModalButton slug={null} current={{}} ingredientNames={[]} sceneTitles={[]} chefs={chefs.map(c => ({ id: c.id, name: c.displayName }))} history={[]} /></div>
         </DirtyForm>
         <aside className="h-fit rounded-[18px] border border-line bg-[#F8F7FB] p-6"><div className="eyebrow mb-4">SET UP AUTOMATICALLY</div>
           <ul className="space-y-4">{AUTO.map(([t, d]) => <li key={t} className="flex gap-3 text-[14px]"><span className="text-[#46704F]">✓</span><span><b className="block font-semibold">{t}</b><span className="text-ink-secondary">{d}</span></span></li>)}</ul></aside>
