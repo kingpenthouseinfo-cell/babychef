@@ -97,7 +97,7 @@ model Reference {
   category    String    @default("Other")
   description String?
   notes       String?
-  isGold      Boolean   @default(true)
+  isGold      Boolean   @default(false)
   active      Boolean   @default(true)
   version     Int       @default(1)
   deletedAt   DateTime?
