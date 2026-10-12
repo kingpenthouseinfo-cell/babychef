@@ -111,3 +111,20 @@ export function shotSummary(rows: { shotType?: string; shotPriority?: string }[]
 }
 
 export { sceneCode, imageCode, parseJson, lines };
+
+/** Everything that can be attached to an image as a reference, grouped for a <select>. */
+export async function refPool(project: { id: string; babyChefId: string | null }, excludeImageId?: string) {
+  const [masters, own, imgs] = await Promise.all([
+    project.babyChefId ? db.reference.findMany({ where: { babyChefId: project.babyChefId, kind: 'MASTER', deletedAt: null, active: true }, include: { ingredient: true }, orderBy: [{ isGold: 'desc' }, { createdAt: 'asc' }] }) : [],
+    db.reference.findMany({ where: { projectId: project.id, deletedAt: null, active: true }, include: { ingredient: true }, orderBy: { createdAt: 'asc' } }),
+    db.plannedImage.findMany({ where: { projectId: project.id, approvedAttemptId: { not: null }, ...(excludeImageId ? { id: { not: excludeImageId } } : {}) }, orderBy: { seq: 'asc' } }),
+  ]);
+  const refLabel = (r: any) => `${r.isGold ? '★ ' : ''}${r.ingredient ? r.ingredient.name + ' — ' : ''}${r.title} (${r.category})`;
+  return {
+    groups: [
+      { label: 'Baby Chef master references', options: masters.map(r => ({ value: `ref:${r.id}`, label: refLabel(r) })) },
+      { label: 'Project & ingredient references', options: own.map(r => ({ value: `ref:${r.id}`, label: refLabel(r) })) },
+      { label: 'Approved images (previous frames)', options: imgs.map(i => ({ value: `img:${i.id}`, label: `${imageCode(i.seq)} ${i.title}` })) },
+    ].filter(g => g.options.length),
+  };
+}

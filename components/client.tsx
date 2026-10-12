@@ -127,3 +127,18 @@ export function Lightbox({ src, alt, thumb }: { src: string; alt: string; thumb:
     </>
   );
 }
+
+export function PromptBox({ name, label, initial, rows = 12, downloadHref, copyLabel }: { name: string; label: string; initial: string; rows?: number; downloadHref?: string; copyLabel: string }) {
+  const [t, setT] = useState(initial);
+  return (
+    <div>
+      <label className="label" htmlFor={`pb-${name}`}>{label}</label>
+      <textarea id={`pb-${name}`} name={name} value={t} onChange={e => setT(e.target.value)} rows={rows} className="input mono" />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <CopyButton text={t} label={copyLabel} />
+        {downloadHref && <a className="btn btn-sm" href={downloadHref}>DOWNLOAD</a>}
+        <span className="text-xs text-neutral-500">{t.trim() ? t.trim().split(/\s+/).length + ' words' : 'empty'}</span>
+      </div>
+    </div>
+  );
+}
