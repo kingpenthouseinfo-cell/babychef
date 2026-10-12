@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Chip, Thumb, fileUrl } from './ui';
 import { CopyButton } from './client';
 import { imageCode, sceneCode } from '@/lib/util';
+import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 import type { ChecklistEntry } from '@/lib/queries';
 
 export function RefThumbs({ list, max = 6 }: { list: ChecklistEntry[]; max?: number }) {
@@ -38,6 +39,7 @@ export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug
   const thumb = img.approvedAttempt?.assetId ?? img.attempts?.[img.attempts.length - 1]?.assetId;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
   const href = `/projects/${slug}/images/${img.id}`;
+  const expected = expectedFilename({ slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextVersion((img.attempts ?? []).map((a: any) => a.number)) });
   return (
     <div className="card flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
@@ -52,7 +54,8 @@ export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug
       {blocked && <div className="text-xs font-semibold text-[#8A6216]">Waiting for {imageCode(img.dependsOn.seq)}.</div>}
       <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
         <Link href={href} className="btn btn-sm">Open</Link>
-        <CopyButton text={img.contPrompt || img.fullPrompt} label="Copy prompt" className="btn-sm" />
+        <CopyButton text={withFilename(img.contPrompt || img.fullPrompt, expected)} label="Copy prompt" className="btn-sm" />
+        <CopyButton text={expected} label="Copy filename" variant="secondary" className="btn-sm" />
         {img.status === 'REVIEW' ? <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link> : <Link href={`${href}#results`} className="btn btn-sm">Import</Link>}
       </div>
     </div>

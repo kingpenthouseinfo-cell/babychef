@@ -6,6 +6,7 @@ import { ChecklistText, RefThumbs } from '@/components/image-bits';
 import { CopyButton, SubmitBtn } from '@/components/client';
 import { QueueNext } from '@/components/queue-client';
 import { fmtDate } from '@/lib/util';
+import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 import { setImageStatus } from '@/lib/actions/image';
 import { getSettings } from '@/lib/settings';
 import { imageCode, sceneCode } from '@/lib/util';
@@ -20,7 +21,8 @@ export default async function Queue({ searchParams }: { searchParams: { project?
   const rank: Record<string, number> = { HIGH: 0, NORMAL: 1, LOW: 2 };
   let rows: any[] = show === 'ready' ? [...eligible, ...blocked] : rest.filter(i => show === 'all' || i.status === show.toUpperCase());
   if (searchParams.sort === 'priority') rows = [...rows].sort((a, b) => rank[a.priority] - rank[b.priority] || a.seq - b.seq);
-  const nextItems = eligible.map((i: any) => ({ id: i.id, slug: i.project.slug, code: imageCode(i.seq), title: i.title, project: i.project.title, scene: sceneCode(i.scene.order), shot: i.shotType, aspect: i.aspectRatio || i.project.aspectRatio, priority: i.priority, full: i.fullPrompt, cont: i.contPrompt, refs: buildChecklist(i).map(c => ({ label: c.label, assetId: c.assetId, required: c.required })) }));
+  const fname = (i: any) => expectedFilename({ slug: i.project.slug, sceneOrder: i.scene.order, seq: i.seq, title: i.title, version: nextVersion((i.attempts ?? []).map((a: any) => a.number)) });
+  const nextItems = eligible.map((i: any) => ({ filename: fname(i), id: i.id, slug: i.project.slug, code: imageCode(i.seq), title: i.title, project: i.project.title, scene: sceneCode(i.scene.order), shot: i.shotType, aspect: i.aspectRatio || i.project.aspectRatio, priority: i.priority, full: i.fullPrompt, cont: i.contPrompt, refs: buildChecklist(i).map(c => ({ label: c.label, assetId: c.assetId, required: c.required })) }));
   const q = (o: Record<string, string>) => '/queue?' + new URLSearchParams({ ...(pid ? { project: pid } : {}), ...(searchParams.sort ? { sort: searchParams.sort } : {}), show, ...o }).toString();
   return (
     <>
@@ -54,11 +56,12 @@ export default async function Queue({ searchParams }: { searchParams: { project?
                   <div className="mt-1 font-semibold">{i.title}</div><div className="text-xs text-ink-secondary">{i.project?.title} · {sceneCode(i.scene.order)} {i.scene.title} · {i.shotType}</div></div>
                 <div className="text-right text-xs text-ink-secondary">{cl.filter(c => c.required).length} required refs</div>
               </div>
+              <div className="mt-2 rounded-md border border-purple-mid bg-purple-tint/60 px-3 py-2"><span className="eyebrow text-purple-deep">NEXT RESULT FILE</span><div className="font-mono text-[12px] break-all">{fname(i)}</div></div>
               {isBlocked && <div className="mt-2 text-sm font-semibold text-[#8A6216]">Waiting for {imageCode(i.dependsOn.seq)}.</div>}
               {i.status === 'WAITING' && <div className="mt-2 rounded-md border border-[#E7D3A0] bg-[#F8EFD9]/60 px-3 py-2 text-[12px]"><b>Reason:</b> {i.waitingReason || '—'} · <b>Marked:</b> <span className="font-mono">{fmtDate(i.waitingAt)}</span>{i.waitingNote ? <> · <b>Notes:</b> {i.waitingNote}</> : null}</div>}
               <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]"><div><RefThumbs list={cl} max={8} /><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold">VIEW REFERENCES (checklist)</summary><div className="mt-2"><ChecklistText list={cl} /></div></details></div></div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <CopyButton text={i.fullPrompt} label="COPY FULL PROMPT" /><CopyButton text={i.contPrompt} label="COPY CONTINUATION PROMPT" variant="secondary" />
+                <CopyButton text={withFilename(i.fullPrompt, fname(i))} label="COPY FULL PROMPT" /><CopyButton text={withFilename(i.contPrompt, fname(i))} label="COPY CONTINUATION PROMPT" variant="secondary" /><CopyButton text={fname(i)} label="COPY FILENAME" variant="secondary" />
                 {i.status === 'READY' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="GENERATING" /><SubmitBtn className="" pendingText="…">MARK GENERATING</SubmitBtn></form>}
                 {['READY', 'GENERATING'].includes(i.status) && <form action={setImageStatus} className="flex gap-1"><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="WAITING" /><select name="reason" className="input w-44" aria-label="Waiting reason">{WAITING_REASONS.map(r => <option key={r}>{r}</option>)}</select><SubmitBtn className="" pendingText="…">MARK WAITING</SubmitBtn></form>}
                 {i.status === 'WAITING' && <form action={setImageStatus}><input type="hidden" name="id" value={i.id} /><input type="hidden" name="status" value="READY" /><SubmitBtn className="" pendingText="…">Return to READY</SubmitBtn></form>}

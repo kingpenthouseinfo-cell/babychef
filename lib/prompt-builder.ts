@@ -9,6 +9,7 @@ import { buildVars, render } from './template-engine';
 import { imageInclude, buildChecklist, relevantCorrections } from './queries';
 import { imageCode, klingCode, lines, parseJson, ratioLabel, sceneCode } from './util';
 import { CONTINUITY_FIELDS, INGREDIENT_IMPORTANCE } from './constants';
+import { expectedFilename, fileBlock, nextVersion } from './naming';
 
 export type BuilderType = 'plan' | 'script' | 'script-revision' | 'scenes' | 'image-plan' | 'image-full' | 'image-cont' | 'image-redo' | 'continuity' | 'kling-group' | 'kling-final' | 'kling-redo';
 export type Target = 'CHATGPT' | 'CLAUDE' | 'GENERIC AI';
@@ -32,9 +33,9 @@ export const BUILDERS: Record<BuilderType, BuilderDef> = {
   'script-revision': { group: 'Planning', label: 'Script revision', purpose: 'SCRIPT REVISION PROMPT', template: 'TPL-SCRIPT-REV', help: 'Revise the current script.', blocks: ['bible', 'chef', 'scriptCurrent', 'ingredients', 'overrides', 'specs'], extra: ['recipe', 'notes'], required: ['scriptCurrent'], bible: ['script', 'dialogue', 'humor', 'hook', 'asmr', 'pacing', 'short-form', 'safety', 'never', 'custom'] },
   scenes: { group: 'Planning', label: 'Scene breakdown', purpose: 'SCENE BREAKDOWN PROMPT', template: 'TPL-SCENES', help: 'Approved script → production scenes with food states.', blocks: ['bible', 'chef', 'scriptCurrent', 'recipe', 'ingredients', 'overrides', 'specs'], extra: ['productRefs', 'notes'], required: ['scriptCurrent'], bible: ['recipe-planning', 'scene-breakdown', 'cooking-action', 'food-state', 'food-realism', 'camera', 'crop', 'asmr', 'pacing', 'long-form', 'short-form', 'hook', 'kling', 'safety', 'never', 'custom'] },
   'image-plan': { group: 'Images', label: 'Image plan', purpose: 'IMAGE PLAN PROMPT', template: 'TPL-IMGPLAN', help: 'Decide which still images anchor the scenes.', blocks: ['bible', 'chef', 'scenesList', 'ingredients', 'productRefs', 'overrides', 'continuityDoc', 'corrections', 'specs'], extra: ['approvedImages', 'scriptCurrent'], required: ['scenesList'], bible: ['still-images', 'camera', 'crop', 'food-state', 'food-realism', 'food-physics', 'cooking-action', 'references', 'product-refs', 'character', 'kitchen', 'safety', 'kling', 'never', 'custom'] },
-  'image-full': { group: 'Images', label: 'Full image prompt', purpose: 'IMAGE PROMPT WRITING PROMPT', template: 'TPL-IMG-FULL-WRITER', help: 'Assemble the context so the AI writes the final, detailed still-image prompt.', blocks: ['bible', 'chef', 'continuityDoc', 'scene', 'image', 'refs', 'corrections', 'overrides'], extra: ['history', 'specs'], required: ['image'], needs: 'image', bible: IMG_BIBLE },
-  'image-cont': { group: 'Images', label: 'Continuation prompt', purpose: 'CONTINUATION PROMPT WRITING PROMPT', template: 'TPL-IMG-CONT-WRITER', help: 'Short prompt for a ChatGPT chat that already has the baby + previous frame.', blocks: ['bible', 'scene', 'image', 'refs', 'corrections'], extra: ['chef', 'continuityDoc', 'history', 'overrides'], required: ['image'], needs: 'image', bible: ['food-state', 'food-physics', 'food-realism', 'references', 'crop', 'never', 'custom'] },
-  'image-redo': { group: 'Images', label: 'Redo prompt', purpose: 'IMAGE REDO PROMPT', template: 'TPL-IMG-REDO', help: 'Fix ONLY the failed problem; preserve approved elements.', blocks: ['image', 'attempt', 'refs', 'corrections', 'bible'], extra: ['chef', 'scene', 'history'], required: ['image', 'attempt'], needs: 'attempt', bible: ['references', 'food-physics', 'food-realism', 'never', 'custom'] },
+  'image-full': { group: 'Images', label: 'Full image prompt', purpose: 'IMAGE PROMPT WRITING PROMPT', template: 'TPL-IMG-FULL-WRITER', help: 'Assemble the context so the AI writes the final, detailed still-image prompt.', blocks: ['bible', 'chef', 'continuityDoc', 'scene', 'image', 'refs', 'corrections', 'overrides', 'file'], extra: ['history', 'specs'], required: ['image', 'file'], needs: 'image', bible: IMG_BIBLE },
+  'image-cont': { group: 'Images', label: 'Continuation prompt', purpose: 'CONTINUATION PROMPT WRITING PROMPT', template: 'TPL-IMG-CONT-WRITER', help: 'Short prompt for a ChatGPT chat that already has the baby + previous frame.', blocks: ['bible', 'scene', 'image', 'refs', 'corrections', 'file'], extra: ['chef', 'continuityDoc', 'history', 'overrides'], required: ['image', 'file'], needs: 'image', bible: ['food-state', 'food-physics', 'food-realism', 'references', 'crop', 'never', 'custom'] },
+  'image-redo': { group: 'Images', label: 'Redo prompt', purpose: 'IMAGE REDO PROMPT', template: 'TPL-IMG-REDO', help: 'Fix ONLY the failed problem; preserve approved elements.', blocks: ['image', 'attempt', 'refs', 'corrections', 'bible', 'file'], extra: ['chef', 'scene', 'history'], required: ['image', 'attempt', 'file'], needs: 'attempt', bible: ['references', 'food-physics', 'food-realism', 'never', 'custom'] },
   continuity: { group: 'Images', label: 'Continuity review', purpose: 'CONTINUITY REVIEW PROMPT', template: 'TPL-CONTREV', help: 'Have the AI review food progression and continuity.', blocks: ['bible', 'continuityDoc', 'scenesList', 'approvedImages', 'corrections'], extra: ['chef'], required: ['scenesList'], bible: ['food-state', 'food-realism', 'character', 'kitchen', 'references', 'never'] },
   'kling-group': { group: 'Kling', label: 'Kling grouping', purpose: 'KLING GROUPING PROMPT', template: 'TPL-KLING-GROUP', help: 'Decide how approved stills group into clips.', blocks: ['bible', 'scenesList', 'approvedImages', 'specs'], extra: ['chef', 'existingClips'], required: ['approvedImages'], bible: ['kling', 'pacing', 'cooking-action', 'food-state', 'short-form', 'safety', 'custom'] },
   'kling-final': { group: 'Kling', label: 'Final Kling prompt', purpose: 'KLING PROMPT WRITING PROMPT', template: 'TPL-KLING-WRITER', help: 'Ordered @image references + action, voice, physics, camera, ASMR → the AI writes the Kling prompt.', blocks: ['bible', 'chef', 'kling', 'klingScenes', 'corrections', 'overrides'], extra: ['continuityDoc'], required: ['kling'], needs: 'kling', bible: ['kling', 'cooking-action', 'food-physics', 'food-state', 'food-realism', 'asmr', 'camera', 'crop', 'character', 'kitchen', 'safety', 'never', 'custom'] },
@@ -44,7 +45,7 @@ export const BUILDERS: Record<BuilderType, BuilderDef> = {
 export const BLOCK_LABELS: Record<string, string> = {
   bible: 'Production Bible', chef: 'Baby Chef profile', recipe: 'Recipe', ingredients: 'Ingredients', productRefs: 'Product reference summary', overrides: 'Project production overrides',
   notes: 'Project notes', specs: 'Durations, aspect ratio & crop', continuityDoc: 'Continuity Bible', scriptCurrent: 'Current script', scenesList: 'Scenes & food states', scene: 'Scene', image: 'Planned image',
-  refs: 'Reference images & instructions', corrections: 'Known corrections', attempt: 'Failed attempt & correction', approvedImages: 'Approved images', history: 'Earlier prompt versions', kling: 'Kling clip & ordered references',
+  refs: 'Reference images & instructions', file: 'Required result filename', corrections: 'Known corrections', attempt: 'Failed attempt & correction', approvedImages: 'Approved images', history: 'Earlier prompt versions', kling: 'Kling clip & ordered references',
   klingScenes: 'Related scenes & food states', klingAttempt: 'Failed Kling generation', existingClips: 'Existing Kling clips',
 };
 
@@ -206,6 +207,13 @@ const BLOCKS: Record<string, (c: Ctx, o: { bibleKeys?: string[]; type: BuilderTy
       rel = c.corrections.filter(x => { const keys = [x.ingredient, x.action].filter(Boolean).map(s => s!.toLowerCase()); return keys.length > 0 && keys.some(k => hay.includes(k) || k.split(/\s+/).some(w => w.length > 3 && hay.includes(w))); }).slice(0, 8);
     } else rel = c.corrections.slice(0, 10);
     return rel.length ? { text: H('KNOWN CORRECTIONS TO RESPECT', correctionLines(rel)), detail: rel.map(x => `"${x.title}"`).slice(0, 3).join(', ') + (rel.length > 3 ? ` +${rel.length - 3}` : '') } : null;
+  },
+  file: c => {
+    const i = c.img;
+    if (!i) return null;
+    const sc = c.project.scenes.find(s => s.id === i.sceneId);
+    const name = expectedFilename({ slug: c.project.slug, sceneOrder: sc?.order ?? 1, seq: i.seq, title: i.title, version: nextVersion(i.attempts.map(a => a.number)) });
+    return { text: H('REQUIRED RESULT FILENAME (must appear in the prompt you write)', `The final prompt you write MUST end with the following section, copied verbatim (do not change the filename):\n\n${fileBlock(name)}`), detail: name };
   },
   attempt: c => {
     const a = c.attempt, i = c.img;

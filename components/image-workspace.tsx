@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CopyButton } from './client';
 import { autosavePrompt, savePromptVersionAction, uploadResult } from '@/lib/actions/image';
+import { expectedFilename, withFilename } from '@/lib/naming';
 
 const rel = (ms: number | null) => {
   if (!ms) return 'not saved yet';
@@ -11,7 +12,7 @@ const rel = (ms: number | null) => {
 const words = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0);
 
 /** Blue prompt zone: Full / Continuation tabs, autosave, pinned Copy button. */
-export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, updatedAt }: { imageId: string; full: string; cont: string; fullVersion: number; contVersion: number; updatedAt: number }) {
+export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, updatedAt, filename }: { imageId: string; full: string; cont: string; fullVersion: number; contVersion: number; updatedAt: number; filename: string }) {
   const [tab, setTab] = useState<'full' | 'cont'>('full');
   const [text, setText] = useState({ full, cont });
   const [saved, setSaved] = useState<number | null>(updatedAt);
@@ -44,11 +45,11 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
     // ⌘C when nothing is focused/selected copies the current prompt
     const k = (e: KeyboardEvent) => {
       const el = document.activeElement as HTMLElement | null;
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !window.getSelection()?.toString() && !(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) navigator.clipboard.writeText(latest.current[tab]).catch(() => undefined);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !window.getSelection()?.toString() && !(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) navigator.clipboard.writeText(withFilename(latest.current[tab], filename)).catch(() => undefined);
     };
     window.addEventListener('keydown', k);
     return () => { window.removeEventListener('beforeunload', h); window.removeEventListener('keydown', k); };
-  }, [tab]);
+  }, [tab, filename]);
 
   const cur = text[tab];
   const ver = tab === 'full' ? fullVersion : contVersion;
@@ -61,7 +62,7 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
           ))}
         </div>
         <span className="font-mono text-[11px] text-ink-secondary">{ver ? `v${ver}` : 'no version yet'} · {words(cur)} words · {pending ? 'saving…' : label ? `saved ${label}` : 'saved'}</span>
-        <div className="ml-auto"><CopyButton text={cur} label={tab === 'full' ? 'COPY FULL PROMPT' : 'COPY CONTINUATION'} className="min-w-[190px]" /></div>
+        <div className="ml-auto"><CopyButton text={withFilename(cur, filename)} label={tab === 'full' ? 'COPY FULL PROMPT' : 'COPY CONTINUATION'} className="min-w-[190px]" /></div>
       </div>
       <textarea value={cur} onChange={e => change(e.target.value)} onBlur={flush} aria-label={tab === 'full' ? 'Full prompt' : 'Continuation prompt'}
         placeholder={tab === 'full' ? 'Full prompt — complete visual context for ChatGPT…' : 'Continuation prompt — only what changes from the previous frame…'}
@@ -104,7 +105,7 @@ export function RevealButton({ assetId, projectFolder, label = 'Show in Finder',
 }
 
 export type DlItem = { name: string; size: number; mtime: number };
-export type ImgOpt = { id: string; code: string; title: string; scene: string; slug: string; next: number };
+export type ImgOpt = { id: string; code: string; title: string; scene: string; slug: string; next: number; seq: number; sceneOrder: number };
 
 export function AddResultButton({ label = 'Add result', className = 'btn' }: { label?: string; className?: string }) {
   return <button type="button" className={className} onClick={() => window.dispatchEvent(new CustomEvent('bcs:add-result'))}>{label}</button>;
@@ -121,7 +122,7 @@ export function AddResultDialog({ currentId, images, downloads, folderLabel }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const cur = images.find(i => i.id === assigned) ?? images[0];
   const ext = (source === 'download' ? dl : fileName).split('.').pop()?.toLowerCase() || 'png';
-  const saveAs = `${cur.slug}_${cur.scene}_${cur.code}_attempt-v${cur.next}.${ext === 'jpeg' ? 'jpg' : ext}`;
+  const saveAs = expectedFilename({ slug: cur.slug, sceneOrder: cur.sceneOrder, seq: cur.seq, title: cur.title, version: cur.next, ext: ext === 'jpeg' ? 'jpg' : ext });
 
   const openWith = useCallback((f?: File) => {
     if (f && /\.(heic|heif)$/i.test(f.name)) { window.alert('HEIC/HEIF images are not supported yet. Export it as JPG or PNG first (Preview → File → Export…).'); return; }

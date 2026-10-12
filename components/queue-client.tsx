@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { CopyButton } from './client';
 import { startGenerating, markWaitingById } from '@/lib/actions/image';
 import { WAITING_REASONS } from '@/lib/constants';
+import { withFilename } from '@/lib/naming';
 
-export type QItem = { id: string; slug: string; code: string; title: string; project: string; scene: string; shot: string; aspect: string; priority: string; full: string; cont: string; refs: { label: string; assetId: string | null; required: boolean }[] };
+export type QItem = { id: string; slug: string; code: string; title: string; project: string; scene: string; shot: string; aspect: string; priority: string; full: string; cont: string; filename: string; refs: { label: string; assetId: string | null; required: boolean }[] };
 const TARGET = 20;
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -30,7 +31,8 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
   const cur = queue[0];
   const up = queue.slice(1, 6);
   const choose = (p: 'FULL' | 'CONT') => { setPref(p); try { localStorage.setItem('bcs-pref', p); } catch { /* ignore */ } };
-  const text = cur ? (pref === 'FULL' ? cur.full : cur.cont) : '';
+  const text = cur ? withFilename(pref === 'FULL' ? cur.full : cur.cont, cur.filename) : '';
+  const shown = cur ? (pref === 'FULL' ? cur.full : cur.cont) : '';
 
   async function copyNext() {
     if (!cur) return;
@@ -67,10 +69,11 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
           <button type="button" aria-pressed={pref === 'CONT'} className={`btn btn-sm ${pref === 'CONT' ? 'btn-copy-secondary' : 'btn-ghost'}`} onClick={() => choose('CONT')}>Continuation</button>
           <button type="button" aria-pressed={pref === 'FULL'} className={`btn btn-sm ${pref === 'FULL' ? 'btn-copy-secondary' : 'btn-ghost'}`} onClick={() => choose('FULL')}>Full prompt</button>
         </div>
-        <div className="mt-2 max-h-36 overflow-auto rounded-lg border border-line bg-surface px-4 py-3 text-[14px] leading-[1.6] text-ink-2">{text.trim() || <span className="text-[#A8513F]">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</span>}</div>
+        <div className="mt-2 max-h-36 overflow-auto rounded-lg border border-line bg-surface px-4 py-3 text-[14px] leading-[1.6] text-ink-2">{shown.trim() || <span className="text-[#A8513F]">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</span>}</div>
+        <div className="mt-3 rounded-lg border border-purple-mid bg-grad-purple p-3"><div className="eyebrow text-purple-deep">NEXT RESULT FILE</div><div className="mt-1 flex flex-wrap items-center gap-2"><code className="min-w-0 flex-1 break-all font-mono text-[13px] font-medium">{cur.filename}</code><CopyButton text={cur.filename} label="COPY FILENAME" variant="secondary" className="btn-sm" /></div></div>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy hidden min-h-[48px] min-w-[240px] px-6 text-[15px] md:inline-flex" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
-          <CopyButton text={pref === 'CONT' ? cur.full : cur.cont} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
+          <CopyButton text={withFilename(pref === 'CONT' ? cur.full : cur.cont, cur.filename)} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
           <a href={chatgpt} target="_blank" rel="noopener noreferrer" className="btn">Open ChatGPT ↗</a>
           <button type="button" className="btn" onClick={() => setWaitOpen(!waitOpen)} aria-expanded={waitOpen}>Mark waiting</button>
           <Link href={`/projects/${cur.slug}/images/${cur.id}#results`} className="btn">Add result</Link>
@@ -96,7 +99,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
             <li key={u.id}><Link href={`/projects/${u.slug}/images/${u.id}`} className="flex items-center gap-3 rounded-lg border border-line bg-surface p-2.5 hover:border-ink/30">
               <span className="font-mono text-[11px] text-ink-muted">{i + 2}</span>
               {u.refs[0]?.assetId ? <img src={`/api/files/${u.refs[0].assetId}?w=160`} alt="" className="h-[34px] w-[56px] rounded-sm border border-line object-cover" /> : <span className="h-[34px] w-[56px] rounded-sm bg-[repeating-linear-gradient(135deg,#ECE9EC_0_6px,#E5E1E5_6px_12px)]" />}
-              <span className="min-w-0 flex-1"><span className="block font-mono text-[12px] font-medium">{u.code}</span><span className="block truncate text-[12px] text-ink-secondary">{u.title}</span></span>
+              <span className="min-w-0 flex-1"><span className="block font-mono text-[12px] font-medium">{u.code}</span><span className="block truncate text-[12px] text-ink-secondary">{u.title}</span><span className="block truncate font-mono text-[10px] text-purple-deep" title={u.filename}>{u.filename}</span></span>
               <span className="chip st-ready">READY</span></Link></li>
           ))}
         </ul>

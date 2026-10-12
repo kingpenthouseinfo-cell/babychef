@@ -80,6 +80,7 @@ export const DEFAULT_SETTINGS: Record<string,string> = {
   defaultVerticalCrop: 'true',
   defaultProjectStatus: 'PLANNING',
   principles: DEFAULT_PRINCIPLES,
+  watchProjectFolders: 'true',
   url_ChatGPT: 'https://chatgpt.com/',
   url_Claude: 'https://claude.ai/',
   url_Kling: 'https://klingai.com/',

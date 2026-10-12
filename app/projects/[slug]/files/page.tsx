@@ -61,7 +61,7 @@ export default async function Files({ params, searchParams }: { params: { slug: 
             <a className="btn btn-sm" href={`/api/projects/${p.slug}/export?format=zip`}>Export ZIP</a>
           </div>
         </div>
-        <p className="mb-3 font-mono text-[11px] text-ink-muted">filename pattern: {'{project-slug}_{SC##}_{IMG-###}_attempt-v{n}.png'} · never overwritten</p>
+        <p className="mb-3 font-mono text-[11px] text-ink-muted">filename pattern: {'{project-slug}_{SC##}_{IMG-###}_{description}_v{n}.png'} · never overwritten</p>
         {list.length === 0 ? <Empty title="No files here yet." hint="References, added results and exported prompts appear in this folder view." /> : view === 'list' ? (
           <div className="overflow-hidden rounded-lg border border-line">
             {list.map(r => (

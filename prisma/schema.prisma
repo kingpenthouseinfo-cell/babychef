@@ -625,3 +625,17 @@ model BibleVersion {
   snapshot  String   // JSON: [{key,title,content,active,order,notes}]
   createdAt DateTime @default(now())
 }
+
+// Files found in a watched project folder that could not be matched confidently (never guessed).
+model UnmatchedFile {
+  id         String    @id @default(cuid())
+  relPath    String    @unique
+  name       String
+  folder     String
+  reason     String
+  status     String    @default("OPEN") // OPEN | ASSIGNED | IGNORED
+  assetId    String?
+  size       Int       @default(0)
+  foundAt    DateTime  @default(now())
+  assignedAt DateTime?
+}

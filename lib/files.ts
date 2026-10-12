@@ -54,7 +54,7 @@ export function imageSize(buf: Buffer): { width: number; height: number } | null
 }
 
 /** Pixel size as DISPLAYED (honours EXIF rotation, e.g. iPhone portrait photos), falling back to a header parse. */
-async function exifAwareSize(buf: Buffer): Promise<{ width: number; height: number } | null> {
+export async function exifAwareSize(buf: Buffer): Promise<{ width: number; height: number } | null> {
   try {
     const sharp = (await import('sharp')).default;
     const m = await sharp(buf).metadata();

@@ -12,8 +12,8 @@ export const dynamic = 'force-dynamic';
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   await ensureDefaults();
   await ensureBible();
-  const [s, queueCount] = await Promise.all([getSettings(), db.plannedImage.count({ where: { status: 'READY', project: { deletedAt: null } } })]);
+  const [s, queueCount, unmatchedCount] = await Promise.all([getSettings(), db.plannedImage.count({ where: { status: 'READY', project: { deletedAt: null } } }), db.unmatchedFile.count({ where: { status: 'OPEN' } })]);
   return (
-    <html lang="en"><body><Shell name={s.appName} queueCount={queueCount}>{children}</Shell></body></html>
+    <html lang="en"><body><Shell name={s.appName} queueCount={queueCount} unmatchedCount={unmatchedCount}>{children}</Shell></body></html>
   );
 }

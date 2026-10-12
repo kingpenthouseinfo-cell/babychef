@@ -12,6 +12,7 @@ import { approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
 import { imagePromptWarnings } from '@/lib/prompt-quality';
+import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 
 export default async function ImagePage({ params, searchParams }: { params: { slug: string; imageId: string }; searchParams: { attempt?: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -58,9 +59,12 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const contV = versions.find(v => v.type === 'CONTINUATION' && v.active)?.version ?? versions.find(v => v.type === 'CONTINUATION')?.version ?? 0;
   const attemptLabel = (s: string) => s === 'REDO' ? 'Redo' : s === 'REVIEW' ? 'In review' : s === 'APPROVED' ? 'Approved' : s === 'REJECTED' ? 'Rejected' : 'Replaced';
   const attemptColor = (s: string) => s === 'REDO' ? 'text-[#A8513F]' : s === 'REVIEW' ? 'text-[#33507A]' : s === 'APPROVED' ? 'text-[#3B6448]' : 'text-ink-muted';
-  const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, next: s.attemptCount + 1 }));
+  const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, next: s.attemptCount + 1, seq: s.seq, sceneOrder: s.scene.order }));
   const approveConfirm = img.approvedAttemptId && selected && selected.id !== img.approvedAttemptId ? `${code} already has an approved result (attempt ${img.attempts.find(x => x.id === img.approvedAttemptId)?.number}). Replace it with attempt ${selected.number}? The old one stays in history.` : undefined;
   const base = `/projects/${p.slug}/images`;
+  const nextV = nextVersion(img.attempts.map(a => a.number));
+  const expected = expectedFilename({ slug: p.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextV });
+  const fullCopy = withFilename(img.fullPrompt, expected), contCopy = withFilename(img.contPrompt, expected);
   const rawChecklist = parseJson<unknown>(selected?.checklist, {});
   const reviewState: Record<string, 'pass' | 'unsure' | 'fail'> = Array.isArray(rawChecklist) ? Object.fromEntries((rawChecklist as string[]).map(k => [k, 'pass' as const])) : (rawChecklist as Record<string, 'pass' | 'unsure' | 'fail'>);
 
@@ -171,7 +175,14 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               <AddResultButton label="+ Add result" className="btn btn-sm" />
             </div>
           )}
-          <div className="order-1 lg:order-none"><PromptEditor imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} /></div>
+          <div className="order-1 space-y-3.5 lg:order-none">
+            <div className="rounded-lg border border-purple-mid bg-grad-purple p-4" aria-label="Expected result filename">
+              <div className="eyebrow text-purple-deep">EXPECTED RESULT FILENAME</div>
+              <div className="mt-2 flex flex-wrap items-center gap-3"><code className="min-w-0 flex-1 break-all font-mono text-[14px] font-medium leading-snug" data-testid="expected-filename">{expected}</code><CopyButton text={expected} label="COPY FILENAME" variant="secondary" className="min-w-[160px]" /></div>
+              <p className="mt-2 text-[12px] text-ink-secondary">Save the generated image into <span className="font-mono">{folder}/02 Images</span> with exactly this name — Baby Chef Studio detects it automatically and adds it to {code} for review. COPY PROMPT adds a FILE ORGANIZATION section with this filename.</p>
+              <div className="mt-2"><RevealButton projectFolder={`${folder}/02 Images`} label="Show folder in Finder" /></div>
+            </div>
+            <PromptEditor filename={expected} imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} /></div>
           <div className="order-5 rounded-lg border border-blue-mid bg-blue-tint/60 p-3 lg:order-none">
             <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>
             <div className="flex flex-wrap gap-2">
@@ -205,8 +216,8 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           </dl>
 
           <div className="mt-auto flex flex-col gap-2.5">
-            <CopyButton text={img.fullPrompt} label="COPY FULL PROMPT" className="min-h-[40px] w-full" />
-            <CopyButton text={img.contPrompt} label="COPY CONTINUATION PROMPT" variant="secondary" className="w-full" />
+            <CopyButton text={fullCopy} label="COPY FULL PROMPT" className="min-h-[40px] w-full" />
+            <CopyButton text={contCopy} label="COPY CONTINUATION PROMPT" variant="secondary" className="w-full" />
             <div className="flex gap-2">
               <AddResultButton label="Add result" className="btn flex-1" />
               <details className="relative flex-1">
@@ -244,7 +255,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
 
       {/* sticky copy bar for phones */}
       <div className="fixed inset-x-0 bottom-14 z-40 flex gap-2 border-t border-line bg-surface p-2 md:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom) * 0)' }}>
-        <CopyButton text={img.fullPrompt} label="Copy full prompt" className="flex-1" /><AddResultButton label="Add result" className="btn flex-1" />
+        <CopyButton text={fullCopy} label="Copy full prompt" className="flex-1" /><AddResultButton label="Add result" className="btn flex-1" />
       </div>
 
       {/* REVIEW / REDO */}

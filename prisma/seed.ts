@@ -86,7 +86,7 @@ async function main() {
 
   const orderOf: Record<string, number> = { [s1.id]: 1, [s2.id]: 2, [s3.id]: 3 };
   const attempt = async (img: any, n: number, status: string, color: string, extra: any = {}) => {
-    const a = await importFile(await mk(`IMG-${String(img.seq).padStart(3, '0')} attempt ${n}`, color, status), { rootFolder: folder, folder: status === 'APPROVED' || status === 'REVIEW' ? '02 Images' : '03 Redos', fileBase: `${project.slug}_SC${String(orderOf[img.sceneId]).padStart(2, '0')}_IMG-${String(img.seq).padStart(3, '0')}_attempt-v${n}`, kind: 'GENERATED', version: n, projectSlug: project.slug });
+    const a = await importFile(await mk(`IMG-${String(img.seq).padStart(3, '0')} attempt ${n}`, color, status), { rootFolder: folder, folder: status === 'APPROVED' || status === 'REVIEW' ? '02 Images' : '03 Redos', fileBase: `${project.slug}_SC${String(orderOf[img.sceneId]).padStart(2, '0')}_IMG-${String(img.seq).padStart(3, '0')}_${img.title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40).replace(/-+$/, '')}_v${n}`, kind: 'GENERATED', version: n, projectSlug: project.slug });
     return db.attempt.create({ data: { imageId: img.id, number: n, assetId: a.id, status, sourceTool: 'ChatGPT', promptType: 'FULL', approvedAt: status === 'APPROVED' ? new Date() : null, ...extra } });
   };
   const a1 = await attempt(i1, 1, 'APPROVED', '#9a6b2f');

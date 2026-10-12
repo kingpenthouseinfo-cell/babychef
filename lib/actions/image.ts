@@ -6,6 +6,9 @@ import { importFile, nextCode, projectFolder, moveAssetToFolder } from '../files
 import { bool, imageCode, pickText, sceneCode, str, strRaw, int, parseJson } from '../util';
 import { logActivity } from '../activity';
 import { readDownload, removeDownload } from '../downloads';
+import { snapshotPrompts } from '../prompt-versions';
+import { registerAttempt } from '../results';
+import { expectedFilename, nextVersion } from '../naming';
 import { IMAGE_STATUSES, PRIORITIES } from '../constants';
 
 const IMG_TEXT = ['title','shotType','purpose','priority','promptStatus','aspectRatio','cropImportance','startingComposition','characterVisibility','expression','bodyPosition','handPosition','ingredients','ingredientQty','ingredientState','foodTexture','foodColor','cookware','utensils','objectPlacement','actionMoment','physics','lighting','cameraAngle','cameraDistance','lens','depthOfField','focusPoint','background','safety','mustBeVisible','mustNotChange','mustNotAppear','continuity','restrictions','notes','dependsOnId'];
@@ -69,17 +72,6 @@ export async function autosavePrompt(imageId: string, field: 'fullPrompt' | 'con
   return { savedAt: new Date().toISOString() };
 }
 
-/** Make the current Full/Continuation text a numbered prompt version (only if it differs from the latest version). */
-export async function snapshotPrompts(imageId: string, reason: string | null) {
-  const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId } });
-  for (const [type, text] of [['FULL', img.fullPrompt], ['CONTINUATION', img.contPrompt]] as const) {
-    if (!text.trim()) continue;
-    const last = await db.promptVersion.findFirst({ where: { ownerId: imageId, type }, orderBy: { version: 'desc' } });
-    if (last && last.text === text) { if (!last.active) { await db.promptVersion.updateMany({ where: { ownerId: imageId, type }, data: { active: false } }); await db.promptVersion.update({ where: { id: last.id }, data: { active: true } }); } continue; }
-    await db.promptVersion.updateMany({ where: { ownerId: imageId, type }, data: { active: false } });
-    await db.promptVersion.create({ data: { ownerId: imageId, type, version: (last?.version ?? 0) + 1, text, reason: reason || (last ? 'Revision' : 'Initial'), active: true } });
-  }
-}
 export async function savePromptVersionAction(fd: FormData) {
   await snapshotPrompts(str(fd, 'imageId')!, str(fd, 'reason'));
   touch();
@@ -163,17 +155,14 @@ export async function uploadResult(fd: FormData) {
     file = d.file; downloadPath = d.path;
   }
   if (!file || !file.size) throw new Error('Choose the generated image file');
-  const { img, code, sc, slug } = await pinfo(imageId);
-  const n = (await db.attempt.aggregate({ where: { imageId }, _max: { number: true } }))._max.number ?? 0;
-  const number = n + 1;
+  const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId }, include: { scene: true, project: true, attempts: { select: { number: true } } } });
+  const number = nextVersion(img.attempts.map(a => a.number));
   await snapshotPrompts(imageId, 'Snapshot when result was added'); // so the attempt can point at the exact prompt version used
-  const asset = await importFile(file, { rootFolder: await projectFolder(img.projectId), folder: '02 Images', fileBase: `${slug}_${sc}_${code}_attempt-v${number}`, kind: 'GENERATED', version: number, projectSlug: slug });
+  // Same naming as the EXPECTED RESULT FILENAME shown before generating: {slug}_{SC}_{IMG}_{desc}_v{n}.ext
+  const expected = expectedFilename({ slug: img.project.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: number, ext: (file.name.split('.').pop() || 'png').toLowerCase().replace('jpeg', 'jpg') });
+  const asset = await importFile(file, { rootFolder: await projectFolder(img.projectId), folder: '02 Images', fileBase: expected.replace(/\.[^.]+$/, ''), kind: 'GENERATED', version: number, projectSlug: img.project.slug });
   if (downloadPath && bool(fd, 'moveOriginal')) await removeDownload(downloadPath);
-  const pType = str(fd, 'promptType') || 'FULL';
-  const pv = await db.promptVersion.findFirst({ where: { ownerId: imageId, type: pType === 'FULL' ? 'FULL' : 'CONTINUATION', active: true } });
-  await db.attempt.create({ data: { imageId, number, assetId: asset.id, sourceTool: str(fd, 'sourceTool') || 'ChatGPT', promptType: pType, promptVersion: pv?.version ?? null, notes: str(fd, 'notes') } });
-  await db.plannedImage.update({ where: { id: imageId }, data: { attemptCount: number, status: img.approvedAttemptId ? img.status : 'REVIEW', ...(img.waitingAt ? { waitingAt: null, waitingReason: null, waitingNote: null } : {}) } });
-  await logActivity(`${code} result added (attempt ${number})`, `/projects/${slug}/images/${imageId}`, img.projectId);
+  await registerAttempt({ imageId, assetId: asset.id, number, sourceTool: str(fd, 'sourceTool') || 'ChatGPT', promptType: str(fd, 'promptType') || 'FULL', notes: str(fd, 'notes') });
   touch();
 }
 

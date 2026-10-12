@@ -12,7 +12,7 @@ const MORE: Item[] = [{ href: '/corrections', label: "Don't Do This" }, { href: 
 
 const isActive = (path: string, href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(href + '/'));
 
-export function TopNavLinks({ queueCount }: { queueCount: number }) {
+export function TopNavLinks({ queueCount, unmatchedCount }: { queueCount: number; unmatchedCount: number }) {
   const path = usePathname();
   return (
     <nav className="hidden items-center gap-4 md:flex lg:gap-5" aria-label="Primary">
@@ -23,6 +23,7 @@ export function TopNavLinks({ queueCount }: { queueCount: number }) {
           {i.href === '/queue' && queueCount > 0 && <span className="font-mono text-[12px] font-medium text-blue-deep">{queueCount}</span>}
         </Link>
       ))}
+      {unmatchedCount > 0 && <Link href="/unmatched" className="rounded-full bg-[#F8EFD9] px-3 py-1 text-[12px] font-semibold text-[#8A6216] ring-1 ring-[#E7D3A0]">Unmatched {unmatchedCount}</Link>}
     </nav>
   );
 }
@@ -43,7 +44,7 @@ export function NavSearch() {
   );
 }
 
-export function BottomNav({ queueCount }: { queueCount: number }) {
+export function BottomNav({ queueCount, unmatchedCount }: { queueCount: number; unmatchedCount: number }) {
   const path = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => setMore(false), [path]);
@@ -53,7 +54,7 @@ export function BottomNav({ queueCount }: { queueCount: number }) {
       {more && (
         <div className="fixed inset-x-0 bottom-14 z-40 border-t border-line bg-surface p-3 shadow-md" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <form action="/search" className="mb-2"><input name="q" placeholder="Search" aria-label="Search" className="input" /></form>
-          {[{ href: '/babychefs', label: 'Baby Chefs' }, ...MORE.filter(m => m.href !== '/search')].map(m => <Link key={m.href} href={m.href} className="flex min-h-[44px] items-center px-2 text-[15px]">{m.label}</Link>)}
+          {[{ href: '/babychefs', label: 'Baby Chefs' }, { href: '/unmatched', label: `Unmatched files${unmatchedCount ? ` (${unmatchedCount})` : ''}` }, ...MORE.filter(m => m.href !== '/search')].map(m => <Link key={m.href} href={m.href} className="flex min-h-[44px] items-center px-2 text-[15px]">{m.label}</Link>)}
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-surface" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Primary mobile">

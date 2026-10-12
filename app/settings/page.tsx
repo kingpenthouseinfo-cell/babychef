@@ -44,6 +44,7 @@ export default async function Settings() {
               <Text name="defaultShortDuration" label="Default short duration" v={s.defaultShortDuration} /><Text name="defaultLongDuration" label="Default long-form duration" v={s.defaultLongDuration} />
               <Sel name="defaultProjectStatus" label="Default project status" v={s.defaultProjectStatus} options={PROJECT_STATUSES} />
               <div className="flex items-end"><Check name="defaultVerticalCrop" label="Vertical crop required by default" v={s.defaultVerticalCrop === 'true'} /></div>
+              <div className="sm:col-span-2"><Check name="watchProjectFolders" label="Watch project folders and add new result images automatically (files named like project-slug_SC12_IMG-024_v1.png in 02 Images)" v={s.watchProjectFolders !== 'false'} /></div>
             </div>
           </Section></div>
           <div id="defaults" className="scroll-mt-24"><Section title="Production defaults"><Area name="principles" label="Default Baby Chef production principles (one per line)" v={s.principles} rows={14} hint="Also available as {{principles}} in prompt templates." /></Section></div>
@@ -57,7 +58,7 @@ export default async function Settings() {
           <ul className="mono space-y-1 text-xs leading-6">
             <li>Scene: SC## (SC01, SC02…) · Image: IMG-### (global, IMG-001…) · Kling: KLING-## · Correction: COR-###</li>
             <li>Reference: REF-BABY-001_name_category.jpg · REF-KITCHEN-001… · REF-PRODUCT-001_grace-coconut-milk_front-label.jpg</li>
-            <li>Generated: &lt;project-slug&gt;_SC12_IMG-024_attempt-v1.png (approved download name: …_approved-v2.png)</li>
+            <li>Generated results: &lt;project-slug&gt;_SC12_IMG-024_&lt;short-description&gt;_v1.png — the app always shows the exact NEXT filename (v1, then v2, …) and puts it in your ChatGPT prompt. Files saved in the project’s 02 Images folder with this name are detected automatically.</li>
             <li>Prompts: &lt;project-slug&gt;_SC12_IMG-024_full-prompt_v2.txt · &lt;project-slug&gt;_KLING-07_prompt_v1.txt</li>
             <li>Files are never overwritten: a changed file becomes _v2, a name clash becomes _dup2.</li>
           </ul>

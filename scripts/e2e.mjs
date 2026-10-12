@@ -222,7 +222,7 @@ await page.locator('#approve-form button').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Approve works: APPROVED RESULT badge', (await page.locator('text=APPROVED RESULT').count()) > 0);
 const genFiles = walk(path.join(STORE, PROJ));
-ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/e2e-soup-\w+_SC01_IMG-001_attempt-v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/e2e-soup-\w+_SC01_IMG-001_attempt-v1\.png$/.test(f)), genFiles.filter(f => /attempt/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
+ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
 
 // ---- Previous approved frame for IMG-002
 const img2Url = await newImage('Cumin in oil');
@@ -441,6 +441,39 @@ ok('Settings: storage root is validated and saved', (await page.locator('text=St
 await page.fill('input[name=root]', '~/Documents/Baby Chef Studio'); await page.click('button:has-text("SAVE STORAGE ROOT")'); await page.waitForTimeout(800);
 
 // ---- every screen at phone + tablet width: no page-level horizontal overflow
+// ---- folder watcher + unmatched files ----
+const projDirName = fs.readdirSync(STORE).find(d => d.startsWith('E2E Soup') && fs.existsSync(path.join(STORE, d, '02 Images')));
+const imgDir = path.join(STORE, projDirName, '02 Images');
+await go(img1Url.replace(BASE, ''));
+const scCode = (await page.locator('[data-testid=expected-filename]').first().textContent()).match(/_(SC\d+)_IMG/)[1];
+const okFile = await fixture('w-ok.png', 640, 360, '#336699');
+fs.copyFileSync(okFile, path.join(imgDir, `${slug}_${scCode}_IMG-001_v3.png`));
+fs.copyFileSync(okFile, path.join(imgDir, `${slug}_${scCode}_IMG-001_v1.png.dupe.png`));
+fs.copyFileSync(okFile, path.join(imgDir, 'random-download.png'));
+fs.writeFileSync(path.join(imgDir, `${slug}_${scCode}_IMG-001_v9.png.crdownload`), 'partial');
+await go('/unmatched');
+await page.click('button:has-text("Scan folders now")'); await page.waitForTimeout(3000); await go('/unmatched');
+await page.click('button:has-text("Scan folders now")'); await page.waitForTimeout(3000); await go('/unmatched');
+ok('Unmatched: bad-name file listed with reason', (await page.locator('text=random-download.png').count()) > 0 && (await page.locator('text=Why it is unmatched').count()) > 0);
+ok('Unmatched: partial download ignored', (await page.locator('text=crdownload').count()) === 0);
+await go(img1Url.replace(BASE, ''));
+ok('Watcher: correctly named v3 file added as an attempt in place', (await page.locator('text=/v3/').count()) > 0 && fs.existsSync(path.join(imgDir, `${slug}_${scCode}_IMG-001_v3.png`)));
+const expTxt = await page.locator('[data-testid=expected-filename]').first().textContent();
+ok('Expected next filename shows v4', /_v4\.png$/.test(expTxt || ''), expTxt);
+await go('/unmatched');
+const dupBefore = await page.locator('section:has-text("random-download.png")').count();
+await page.click('button:has-text("Scan folders now")'); await page.waitForTimeout(5000); await go('/unmatched');
+const dupCount = await page.locator('section:has-text("random-download.png")').count();
+ok('Rescan creates no duplicates', dupCount === dupBefore, `${dupBefore} -> ${dupCount}`);
+// assign flow
+const form = page.locator('section:has-text("random-download.png")').first();
+await await form.locator('select').nth(0).selectOption({ label: (await form.locator('select').nth(0).locator('option', { hasText: 'E2E Soup' }).first().textContent()) });
+const nScenes = await form.locator('select').nth(1).locator('option').count();
+for (let i = 1; i < nScenes; i++) { await form.locator('select').nth(1).selectOption({ index: i }); if ((await form.locator('select').nth(2).locator('option').count()) > 1) break; }
+await form.locator('select').nth(2).selectOption({ index: 1 });
+await form.locator('button:has-text("Assign")').click(); await page.waitForTimeout(2000);
+await go('/unmatched');
+ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.locator('text=random-download.png').count()) === 0 && fs.readdirSync(imgDir).some(f => new RegExp(`_${scCode}_IMG-001.*_v4\\.png$`).test(f)));
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,

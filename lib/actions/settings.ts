@@ -9,7 +9,7 @@ import { writeProjectTextFiles } from '../exports';
 export async function saveSettings(fd: FormData) {
   const keys = ['appName', 'defaultAspect', 'defaultShortDuration', 'defaultLongDuration', 'defaultProjectStatus', 'principles', ...TOOL_NAMES.map(t => `url_${t}`)];
   for (const k of keys) if (fd.has(k)) await setSetting(k, strRaw(fd, k).trim() || DEFAULT_SETTINGS[k] || '');
-  if (fd.has('_general')) await setSetting('defaultVerticalCrop', String(bool(fd, 'defaultVerticalCrop')));
+  if (fd.has('_general')) { await setSetting('defaultVerticalCrop', String(bool(fd, 'defaultVerticalCrop'))); await setSetting('watchProjectFolders', String(bool(fd, 'watchProjectFolders'))); }
   revalidatePath('/', 'layout');
 }
 

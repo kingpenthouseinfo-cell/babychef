@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { imageCode, sceneCode, klingCode } from '@/lib/util';
+import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +10,11 @@ export async function GET(req: NextRequest) {
   const type = u.searchParams.get('type') || '', id = u.searchParams.get('id') || '';
   let name = 'export', text = '';
   if (type === 'image-full' || type === 'image-cont') {
-    const i = await db.plannedImage.findUnique({ where: { id }, include: { scene: true, project: true } });
+    const i = await db.plannedImage.findUnique({ where: { id }, include: { scene: true, project: true, attempts: { select: { number: true } } } });
     if (!i) return new NextResponse('Not found', { status: 404 });
     const field = type === 'image-full' ? 'fullPrompt' : 'contPrompt';
     const ver = await db.promptVersion.count({ where: { ownerId: id, type: type === 'image-full' ? 'FULL' : 'CONTINUATION' } });
-    text = i[field]; name = `${i.project.slug}_${sceneCode(i.scene.order)}_${imageCode(i.seq)}_${type === 'image-full' ? 'full' : 'continuation'}-prompt_v${Math.max(ver, 1)}`;
+    text = withFilename(i[field], expectedFilename({ slug: i.project.slug, sceneOrder: i.scene.order, seq: i.seq, title: i.title, version: nextVersion(i.attempts.map(a => a.number)) })); name = `${i.project.slug}_${sceneCode(i.scene.order)}_${imageCode(i.seq)}_${type === 'image-full' ? 'full' : 'continuation'}-prompt_v${Math.max(ver, 1)}`;
   } else if (type === 'kling') {
     const k = await db.klingClip.findUnique({ where: { id }, include: { project: true } });
     if (!k) return new NextResponse('Not found', { status: 404 });

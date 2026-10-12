@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { NavSearch, BottomNav, TopNavLinks } from './nav-client';
+import { WatcherNotice } from './watcher-notice';
 
 /** Top nav (64px). No sidebar. Task colours: sage = references, blue = prompts. */
-export function Shell({ name, queueCount, children }: { name: string; queueCount: number; children: React.ReactNode }) {
+export function Shell({ name, queueCount, unmatchedCount, children }: { name: string; queueCount: number; unmatchedCount: number; children: React.ReactNode }) {
   const [first, ...rest] = name.split(' ');
   return (
     <div className="min-h-screen pb-[72px] md:pb-0">
@@ -12,7 +13,7 @@ export function Shell({ name, queueCount, children }: { name: string; queueCount
             <span className="h-4 w-4 rounded-full bg-logo" aria-hidden />
             <span><b className="font-bold">{first}</b> <span className="text-ink-secondary">{rest.join(' ')}</span></span>
           </Link>
-          <TopNavLinks queueCount={queueCount} />
+          <TopNavLinks queueCount={queueCount} unmatchedCount={unmatchedCount} />
           <div className="ml-auto flex items-center gap-4">
             <NavSearch />
             <span className="hidden items-center gap-1.5 font-mono text-[12px] text-ink-muted lg:inline-flex" title="Files are stored on this computer"><span className="h-1.5 w-1.5 rounded-full bg-sage-deep" />On this Mac</span>
@@ -21,7 +22,8 @@ export function Shell({ name, queueCount, children }: { name: string; queueCount
         </div>
       </header>
       <main className="mx-auto max-w-[1680px] px-4 py-5 md:px-6 md:py-7">{children}</main>
-      <BottomNav queueCount={queueCount} />
+      <BottomNav queueCount={queueCount} unmatchedCount={unmatchedCount} />
+      <WatcherNotice />
     </div>
   );
 }
