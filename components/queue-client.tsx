@@ -47,9 +47,9 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
   const req = cur.refs.filter(r => r.required);
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="zone-blue rounded-lg border p-5 md:p-6">
+      <section className="zone-pink rounded-[16px] border p-5 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2"><span className="eyebrow text-blue-deep">NEXT</span><span className="chip st-ready">READY</span></div>
+          <div className="flex items-center gap-2"><span className="eyebrow text-pink-deep">NEXT PICTURE</span><span className="chip st-ready">READY</span></div>
           <Link href={`/projects/${cur.slug}/images/${cur.id}`} className="text-[13px] font-medium text-blue-deep">Open image detail →</Link>
         </div>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-3"><span className="font-serif text-[34px] font-medium leading-none md:text-[44px]" title={cur.code}>Picture {cur.no}</span><span className="text-[22px] font-semibold md:text-[26px]">{cur.title}</span><span className="font-mono text-[12px] text-ink-secondary">{cur.scene} · {cur.shot.toLowerCase()} · {cur.aspect}</span></div>

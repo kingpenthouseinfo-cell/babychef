@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
 import { openImagePos, closeGaps } from '../order';
+import { autoAttachReferences } from '../auto-refs';
 import { importFile, nextCode, projectFolder, moveAssetToFolder } from '../files';
 import { bool, imageCode, pickText, sceneCode, str, strRaw, int, parseJson } from '../util';
 import { logActivity } from '../activity';
@@ -28,6 +29,7 @@ export async function createImage(fd: FormData) {
   const max = await db.plannedImage.aggregate({ where: { projectId }, _max: { seq: true } });
   const pos = await openImagePos(sceneId, str(fd, 'afterImageId'));
   const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title, shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT', priority: str(fd, 'priority') || 'NORMAL', purpose: str(fd, 'purpose') } });
+  await autoAttachReferences(img.id);
   const proj = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await logActivity(`${imageCode(img.seq)} planned: ${title}`, `/projects/${proj.slug}/images/${img.id}`, projectId);
   touch();
@@ -284,5 +286,11 @@ export async function startGenerating(imageId: string) {
   await snapshotPrompts(imageId, 'Snapshot when copied for generation');
   await db.plannedImage.update({ where: { id: imageId }, data: { status: 'GENERATING' } });
   await logActivity(`${code} marked GENERATING`, null, img.projectId);
+  touch();
+}
+
+/** "Pick the obvious ones for me" on a picture page. */
+export async function pickReferencesForMe(fd: FormData) {
+  await autoAttachReferences(str(fd, 'imageId')!);
   touch();
 }

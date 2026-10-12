@@ -10,6 +10,8 @@ import { StorageRootForm } from '@/components/settings-client';
 import { saveSettings } from '@/lib/actions/settings';
 import { PROJECT_STATUSES, TOOL_NAMES } from '@/lib/constants';
 import { SettingsNav } from '@/components/settings-nav';
+import { WatchToggle } from '@/components/watch-toggle';
+import { RevealButton } from '@/components/image-workspace';
 
 export default async function Settings() {
   const s = await getSettings();
@@ -20,7 +22,23 @@ export default async function Settings() {
   const dbFile = path.resolve(process.cwd(), 'prisma', dbUrl.replace(/^file:/, ''));
   return (
     <>
-      <PageHeader title="Settings" />
+      <h1 className="mb-6 text-[34px] md:text-[40px]">Settings</h1>
+      <div className="mb-8 max-w-[860px] space-y-4">
+        <section className="card !p-6"><h2 className="text-[24px]">Folders on this Mac</h2>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><div className="text-[13px] text-ink-secondary">Main folder</div><div className="break-all font-mono text-[13px]">{root.replace(/^\/Users\/[^/]+/, '~')}</div></div><div className="flex gap-2"><a href="#storage" className="btn btn-sm">Change</a><RevealButton projectFolder="." label="Show in folder" className="btn btn-sm" /></div></div>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4 text-[14.5px]"><span>Watch folders for new pictures and clips</span><WatchToggle on={s.watchProjectFolders !== 'false'} /></div>
+        </section>
+        <section className="card !p-6"><h2 className="text-[24px]">Defaults for new videos</h2>
+          <dl className="mt-4 grid gap-4 text-[14.5px] sm:grid-cols-3"><div><dt className="text-[13px] text-ink-secondary">Long video</dt><dd className="mt-0.5 font-medium">{s.defaultAspect} · {s.defaultLongDuration}</dd></div><div><dt className="text-[13px] text-ink-secondary">Short / Reel</dt><dd className="mt-0.5 font-medium">9:16 · {s.defaultShortDuration}</dd></div><div><dt className="text-[13px] text-ink-secondary">Pictures made in</dt><dd className="mt-0.5 font-medium">ChatGPT</dd></div><div><dt className="text-[13px] text-ink-secondary">Video clips made in</dt><dd className="mt-0.5 font-medium">Kling</dd></div></dl>
+          <a href="#general" className="mt-3 inline-block text-[13px] font-semibold text-blue-deep">Change defaults ↓</a>
+        </section>
+        <section className="card !p-6"><h2 className="text-[24px]">File names</h2>
+          <div className="mt-4 rounded-xl bg-[#FAF9FC] px-4 py-3 font-mono text-[13px]">jamaican-beef-patties_SC04_IMG-014_scotch-bonnet-close-up_v1.png</div>
+          <p className="mt-2 text-[13px] text-ink-secondary">Made automatically. Video · scene · picture · name · version.</p>
+        </section>
+        <section className="card flex flex-wrap items-center justify-between gap-3 !p-6"><div><h2 className="text-[24px]">Backups & exports</h2><p className="mt-1 text-[13.5px] text-ink-secondary">Everything is stored on this Mac. Nothing is uploaded.</p></div><a href="/api/export/all" className="btn">Export everything</a></section>
+      </div>
+      <h2 className="mb-3 text-[24px]">All settings</h2>
       <SettingsNav active="General" />
       <div className="space-y-5">
         <Section title="My Video Style & prompt templates">

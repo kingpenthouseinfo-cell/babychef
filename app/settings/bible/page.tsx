@@ -20,7 +20,7 @@ export default async function BiblePage({ searchParams }: { searchParams: { s?: 
         <nav className="card max-h-[75vh] space-y-0.5 overflow-y-auto p-2" aria-label="Rule sections">
           {secs.map((s, i) => (
             <div key={s.id} className="flex items-center gap-1">
-              <Link href={`/settings/bible?s=${s.key}`} className={`flex-1 rounded-lg px-2.5 py-2 text-sm ${s.key === sel?.key ? 'bg-ink font-semibold text-white' : 'hover:bg-sunken'} ${!s.active ? 'opacity-50' : ''}`}>{i + 1}. {s.title}</Link>
+              <Link href={`/settings/bible?s=${s.key}`} className={`flex-1 rounded-lg px-2.5 py-2 text-sm ${s.key === sel?.key ? 'bg-[#F1EAFB] font-semibold text-[#6A4E98]' : 'hover:bg-sunken'} ${!s.active ? 'opacity-50' : ''}`}>{i + 1}. {s.title}</Link>
               <form action={moveBibleSection}><input type="hidden" name="key" value={s.key} /><input type="hidden" name="dir" value="up" /><button className="btn btn-sm px-1.5" aria-label="Move up">↑</button></form>
               <form action={moveBibleSection}><input type="hidden" name="key" value={s.key} /><input type="hidden" name="dir" value="down" /><button className="btn btn-sm px-1.5" aria-label="Move down">↓</button></form>
             </div>

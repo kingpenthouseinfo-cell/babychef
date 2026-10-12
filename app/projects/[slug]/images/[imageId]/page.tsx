@@ -8,7 +8,7 @@ import { Area, BigImage, Check, Chip, Field, GoldBadge, Section, Sel, Text, Warn
 import { ConfirmForm, CopyButton, DirtyForm, SubmitBtn } from '@/components/client';
 import { AddResultButton, AddResultDialog, HoldApprove, PromptEditor, RevealButton } from '@/components/image-workspace';
 import { ReviewPanel } from '@/components/review-panel';
-import { makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
+import { pickReferencesForMe, makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
 import { imagePromptWarnings } from '@/lib/prompt-quality';
@@ -190,7 +190,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           ) : (
             <>
           <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
-            <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><span className="text-[12px] text-ink-secondary">attach these in this order</span></div>
+            <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><form action={pickReferencesForMe}><input type="hidden" name="imageId" value={img.id} /><button className="text-[12.5px] font-semibold text-blue-deep hover:underline">Pick the obvious ones for me</button></form></div>
           {prevSuggest && (
             <form action={usePreviousApproved} className="rounded-md border border-sage-mid bg-surface p-2.5"><input type="hidden" name="imageId" value={img.id} /><input type="hidden" name="sourceId" value={prevSuggest.id} />
               <div className="mb-2 flex items-center gap-2.5 text-[12px]"><img src={fileUrl(prevSuggest.approvedAttempt!.assetId, 160)} alt="" className="h-[44px] w-[60px] rounded-sm border border-line object-cover" /><span>Suggested previous: <b className="font-mono">{imageCode(prevSuggest.seq)}</b> {prevSuggest.title}</span></div>
@@ -206,6 +206,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
                 </div>); })}
               {checklist.length === 0 && <p className="text-[13px] text-ink-secondary">Nothing attached yet — choose the Baby Chef, the kitchen and any product photo.</p>}
             </div>
+            {checklist.length > 0 && <p className="mt-2 text-[12.5px] text-blue-deep">Picked automatically from the Baby Chef, kitchen and the picture before. Attach them to ChatGPT in this order.</p>}
           <details className="mt-3 rounded-xl border border-line bg-white/80 p-3">
             <summary className="cursor-pointer text-[13px] font-semibold text-blue-deep">Change</summary>
             <div className="mt-3 space-y-3">

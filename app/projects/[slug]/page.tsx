@@ -61,7 +61,7 @@ export default async function Overview({ params, searchParams }: { params: { slu
             </div>
             {usingRefs.length > 0 && (
               <div className="border-t border-white/70 bg-white/55 p-6 md:border-l md:border-t-0">
-                <div className="mb-3 flex items-center justify-between"><span className="eyebrow">USING</span><Link href={n!.href} className="rounded-full bg-[#E5EFFB] px-2.5 py-1 text-[11.5px] font-semibold text-blue-deep">See all</Link></div>
+                <div className="mb-3 flex items-center justify-between"><span className="eyebrow">USING</span><Link href={n!.href} className="rounded-full bg-[#E5EFFB] px-2.5 py-1 text-[11.5px] font-semibold text-blue-deep">Picked automatically</Link></div>
                 <div className="grid grid-cols-2 gap-3">{usingRefs.map((r, i) => <div key={i}><div className="aspect-[4/3] overflow-hidden rounded-xl bg-sunken">{r.asset ? <img src={fileUrl(r.asset, 400)} alt={r.label} className="h-full w-full object-cover" /> : null}</div><div className="mt-1 text-[12.5px]"><b className="text-[#46704F]">✓</b> {r.label}</div></div>)}</div>
               </div>
             )}

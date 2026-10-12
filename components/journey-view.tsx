@@ -22,7 +22,7 @@ function Icon({ state }: { state: JState }) {
   return <span className={`${base} border border-line-strong bg-white`} aria-label="Not started" />;
 }
 
-function Row({ s, hideDone, child = false }: { s: JStep; hideDone: boolean; child?: boolean }) {
+function Row({ s, hideDone, child = false, open = false }: { s: JStep; hideDone: boolean; child?: boolean; open?: boolean }) {
   if (hideDone && s.state === 'DONE') return null;
   const body = (
     <>
@@ -35,7 +35,7 @@ function Row({ s, hideDone, child = false }: { s: JStep; hideDone: boolean; chil
   if (!s.children?.length) return <li><Link href={s.href} className={`${row} hover:bg-sunken`}>{body}<span className="text-ink-muted" aria-hidden>›</span></Link></li>;
   return (
     <li>
-      <details>
+      <details open={open}>
         <summary className={`${row} cursor-pointer list-none hover:bg-sunken`}>{body}<span className="text-ink-muted" aria-hidden>▸</span></summary>
         <ul className="border-t border-line bg-[#FAF9FC] px-3 py-1">
           {s.children.map((c, i) => <Row key={i} s={c} hideDone={false} child />)}
@@ -57,7 +57,7 @@ export function JourneyList({ sections, hideDone }: { sections: { title: string;
         return (
           <section key={sec.title} className="overflow-hidden rounded-[18px] border bg-white" style={{ borderColor: b.bd }}>
             <h2 className="flex items-center justify-between px-4 py-2.5 font-sans text-[11.5px] font-bold uppercase tracking-[0.14em]" style={{ background: b.bg, color: b.ink }}><span>{sec.title}</span><span>{done} / {sec.steps.length}</span></h2>
-            <ul className="divide-y divide-line">{sec.steps.map((s, i) => <Row key={i} s={s} hideDone={hideDone} />)}</ul>
+            <ul className="divide-y divide-line">{sec.steps.map((s, i) => <Row key={i} s={s} hideDone={hideDone} open={sec.title === 'MAKE THE PICTURES' && i === sec.steps.findIndex(x => x.state !== 'DONE' && x.state !== 'NOT STARTED')} />)}</ul>
           </section>
         );
       })}

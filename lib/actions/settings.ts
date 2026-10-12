@@ -39,3 +39,9 @@ export async function addProjectFile(fd: FormData) {
   await importFile(file, { rootFolder: await projectFolder(projectId), folder: '07 Other', fileBase: `${p.slug}_${base}`, kind: 'OTHER', projectSlug: p.slug });
   revalidatePath('/', 'layout');
 }
+
+/** The "watch folders" switch on its own (so it never touches the other defaults). */
+export async function setWatchFolders(fd: FormData) {
+  await setSetting('watchProjectFolders', String(fd.get('watch') === 'on'));
+  revalidatePath('/', 'layout');
+}

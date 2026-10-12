@@ -8,6 +8,7 @@ import { ensureChecklist, getSettings } from '../settings';
 import { parseImport } from '../quick-import';
 import { openImagePos, openScenePos, backfillPositions } from '../order';
 import { syncQuestions } from '../questions';
+import { autoAttachReferences } from '../auto-refs';
 
 export type Choice = 'KEEP' | 'REPLACE' | 'MERGE';
 export type ApplyInput = { text: string; slug: string | null; choices: Record<string, Choice>; chef: string }; // chef: existing id | 'NEW' | ''
@@ -89,7 +90,8 @@ export async function applyImport(input: ApplyInput) {
       if (await db.plannedImage.findFirst({ where: { sceneId: sc.id, title: im.title } })) { skipped.push(`Picture “${im.title}” (already there)`); continue; }
       const seq = ((await db.plannedImage.aggregate({ where: { projectId: pid }, _max: { seq: true } }))._max.seq ?? 0) + 1;
       const pos = await openImagePos(sc.id);
-      await db.plannedImage.create({ data: { projectId: pid, sceneId: sc.id, seq, pos, title: im.title.slice(0, 140), purpose: im.purpose ?? null, fullPrompt: im.fullPrompt ?? '' } as any });
+      const made = await db.plannedImage.create({ data: { projectId: pid, sceneId: sc.id, seq, pos, title: im.title.slice(0, 140), purpose: im.purpose ?? null, fullPrompt: im.fullPrompt ?? '' } as any });
+      await autoAttachReferences(made.id);
       created.push(`Picture “${im.title}”`);
     }
   }
