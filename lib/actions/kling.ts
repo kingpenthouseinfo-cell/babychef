@@ -22,6 +22,25 @@ export async function createKling(fd: FormData) {
   redirect(`/projects/${p.slug}/kling/${k.id}`);
 }
 
+/** One video clip per scene: gathers the scene's pictures that look good, in order, then opens the clip. */
+export async function makeClipForScene(fd: FormData) {
+  const sceneId = str(fd, 'sceneId')!;
+  const sc = await db.scene.findUniqueOrThrow({ where: { id: sceneId } });
+  const p = await db.project.findUniqueOrThrow({ where: { id: sc.projectId } });
+  const existing = await db.klingClip.findFirst({ where: { projectId: p.id, scenes: { some: { sceneId } } } });
+  if (existing) { redirect(`/projects/${p.slug}/kling/${existing.id}`); }
+  const scenesNo = (await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], select: { id: true } })).findIndex(x => x.id === sceneId) + 1;
+  const max = await db.klingClip.aggregate({ where: { projectId: p.id }, _max: { order: true } });
+  const k = await db.klingClip.create({ data: { projectId: p.id, title: `Scene ${scenesNo} video — ${sc.title}`, order: (max._max.order ?? 0) + 1 } });
+  await db.klingScene.create({ data: { klingId: k.id, sceneId } });
+  const pics = await db.plannedImage.findMany({ where: { sceneId, approvedAttemptId: { not: null } }, orderBy: [{ pos: 'asc' }, { seq: 'asc' }] });
+  let o = 0;
+  for (const im of pics) await db.klingRef.create({ data: { klingId: k.id, imageId: im.id, order: ++o } });
+  await logActivity(`${klingCode(k.order)} made from scene ${scenesNo}`, `/projects/${p.slug}/kling/${k.id}`, p.id);
+  touch();
+  redirect(`/projects/${p.slug}/kling/${k.id}`);
+}
+
 async function snapshotPrompt(id: string, oldText: string, newText: string, reason: string | null) {
   if (oldText === newText) return;
   const n = await db.promptVersion.count({ where: { ownerId: id, type: 'KLING' } });

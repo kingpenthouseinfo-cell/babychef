@@ -24,7 +24,7 @@ export default async function Settings() {
       <SettingsNav active="General" />
       <div className="space-y-5">
         <Section title="My Video Style & prompt templates">
-          <div className="flex flex-wrap gap-2"><Link href="/settings/bible" className="btn btn-primary">PRODUCTION BIBLE (v{bibleV})</Link><Link href="/templates" className="btn">PROMPT TEMPLATES ({tplCount})</Link></div>
+          <div className="flex flex-wrap gap-2"><Link href="/settings/bible" className="btn btn-primary">My Video Style (v{bibleV})</Link><Link href="/templates" className="btn">Prompt templates ({tplCount})</Link></div>
           <p className="mt-2 text-sm text-ink-secondary">Your permanent creative rules and the templates behind every prompt. Everything is stored in your local database and editable.</p>
         </Section>
         <div id="storage" className="scroll-mt-24"><Section title="Storage (local files)">

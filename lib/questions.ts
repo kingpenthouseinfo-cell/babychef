@@ -104,7 +104,16 @@ export async function desiredQuestions(projectId: string): Promise<Q[]> {
 }
 
 /** Create new auto questions, auto-close ones whose answer now exists elsewhere. Manual questions and your answers are never touched. */
+const locks = new Map<string, Promise<void>>();
+/** Safe to call from several places at once (Home asks for many projects in parallel): runs one at a time per project. */
 export async function syncQuestions(projectId: string) {
+  const prev = locks.get(projectId) ?? Promise.resolve();
+  const run = prev.catch(() => undefined).then(() => syncQuestionsNow(projectId));
+  locks.set(projectId, run.then(() => undefined, () => undefined));
+  return run;
+}
+
+async function syncQuestionsNow(projectId: string) {
   const want = await desiredQuestions(projectId);
   const have = await db.projectQuestion.findMany({ where: { projectId } });
   const byKey = new Map(have.map(h => [h.key, h]));
@@ -113,7 +122,7 @@ export async function syncQuestions(projectId: string) {
     const h = byKey.get(w.key);
     if (!h) {
       if (w.resolved) continue; // already known — nothing to ask
-      await db.projectQuestion.create({ data: { projectId, key: w.key, group: w.group, question: w.question, hint: w.hint ?? null, answerType: w.answerType, choices: w.choices ? JSON.stringify(w.choices) : null, target: w.target ?? null, priority: w.priority, blocksText: w.blocksText ?? null, source: 'AUTO' } });
+      await db.projectQuestion.create({ data: { projectId, key: w.key, group: w.group, question: w.question, hint: w.hint ?? null, answerType: w.answerType, choices: w.choices ? JSON.stringify(w.choices) : null, target: w.target ?? null, priority: w.priority, blocksText: w.blocksText ?? null, source: 'AUTO' } }).catch((e: any) => { if (e?.code !== 'P2002') throw e; });
     } else if (h.status === 'OPEN' || h.status === 'UNKNOWN') {
       if (w.resolved) await db.projectQuestion.update({ where: { id: h.id }, data: { status: 'ANSWERED', answer: w.resolved === 'in recipe' ? 'Already in the recipe' : w.resolved, answeredAt: new Date() } });
       else await db.projectQuestion.update({ where: { id: h.id }, data: { question: w.question, hint: w.hint ?? null, priority: h.status === 'UNKNOWN' ? 'LATER' : w.priority, blocksText: w.blocksText ?? null, choices: w.choices ? JSON.stringify(w.choices) : null } });

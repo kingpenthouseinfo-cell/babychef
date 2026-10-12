@@ -8,13 +8,13 @@ import { Area, BigImage, Check, Chip, Field, GoldBadge, Section, Sel, Text, Warn
 import { ConfirmForm, CopyButton, DirtyForm, SubmitBtn } from '@/components/client';
 import { AddResultButton, AddResultDialog, HoldApprove, PromptEditor, RevealButton } from '@/components/image-workspace';
 import { ReviewPanel } from '@/components/review-panel';
-import { approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
+import { makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
 import { imagePromptWarnings } from '@/lib/prompt-quality';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 
-export default async function ImagePage({ params, searchParams }: { params: { slug: string; imageId: string }; searchParams: { attempt?: string } }) {
+export default async function ImagePage({ params, searchParams }: { params: { slug: string; imageId: string }; searchParams: { attempt?: string; fix?: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   const img = await db.plannedImage.findFirst({ where: { id: params.imageId, projectId: p.id }, include: imageInclude });
@@ -62,6 +62,11 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const attemptLabel = (s: string) => s === 'REDO' ? 'Needs fixing' : s === 'REVIEW' ? 'Check this' : s === 'APPROVED' ? 'Looks good' : s === 'REJECTED' ? "Don't use" : 'Replaced';
   const attemptColor = (s: string) => s === 'REDO' ? 'text-[#A8513F]' : s === 'REVIEW' ? 'text-[#33507A]' : s === 'APPROVED' ? 'text-[#3B6448]' : 'text-ink-muted';
   const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, next: s.attemptCount + 1, seq: s.seq, sceneOrder: s.scene.order }));
+  const fixMode = searchParams.fix === '1';
+  const foundState = !fixMode && !!selected && selected.status === 'REVIEW' && img.status !== 'APPROVED';
+  const goodState = !fixMode && img.status === 'APPROVED' && !!img.approvedAttemptId;
+  const nextPic = siblings[idx + 1] ?? null;
+  const ago = (d: Date) => { const m = Math.round((Date.now() - d.getTime()) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} hr ago` : fmtDate(d); };
   const approveConfirm = img.approvedAttemptId && selected && selected.id !== img.approvedAttemptId ? `${code} already has an approved result (attempt ${img.attempts.find(x => x.id === img.approvedAttemptId)?.number}). Replace it with attempt ${selected.number}? The old one stays in history.` : undefined;
   const base = `/projects/${p.slug}/images`;
   const nextV = nextVersion(img.attempts.map(a => a.number));
@@ -151,8 +156,39 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           </div>
         </div>
 
-        {/* RIGHT — what to give ChatGPT, the prompt, the file name */}
+        {/* RIGHT — one state at a time: Make → Found → Fix it → Looks good */}
         <div className="min-w-0 space-y-4">
+          {fixMode && selected ? (
+            <form action={makeFixPrompt} className="rounded-[16px] border border-line bg-white p-6" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
+              <input type="hidden" name="attemptId" value={selected.id} />
+              <h2 className="text-[28px]">What needs fixing?</h2>
+              <label className="mt-5 block"><span className="mb-1.5 block text-[14px] font-semibold">What’s wrong?</span><textarea name="wrong" rows={2} required className="input" placeholder="The pepper looks like a big red bell pepper." /></label>
+              <label className="mt-4 block"><span className="mb-1.5 block text-[14px] font-semibold">What should it look like instead?</span><textarea name="change" rows={2} className="input" placeholder="Small, wrinkled, lantern-shaped, orange-red." /></label>
+              <label className="mt-4 block"><span className="mb-1.5 block text-[14px] font-semibold">What should stay exactly the same? <span className="font-normal text-ink-secondary">optional</span></span><textarea name="keep" rows={2} className="input" placeholder="Baby’s hand, the board, the light." /></label>
+              <div className="mt-5 flex flex-wrap items-center gap-4"><SubmitBtn className="btn-copy min-h-[48px] px-7" pendingText="Saving…">Make fix prompt</SubmitBtn><Link href={`${base}/${img.id}`} className="text-[14px] text-ink-secondary hover:text-ink">Cancel</Link></div>
+              <p className="mt-3 text-[12.5px] text-ink-secondary">Saves as a new version. The old picture stays in the folder.</p>
+            </form>
+          ) : foundState && selected ? (
+            <section className="rounded-[16px] border p-6" style={{ background: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', borderColor: '#F0CDDA' }} aria-label="Picture found">
+              <div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#46704F]">✓ Picture found · {ago(selected.createdAt)}</div>
+              <div className="mt-1.5 break-all font-mono text-[12.5px] text-ink-secondary">{selected.asset.relPath.split('/').pop()}</div>
+              <h2 className="mt-4 text-[30px]">Does this look right?</h2>
+              <form id="approve-form" action={approveAttempt} className="mt-4 flex"><input type="hidden" name="attemptId" value={selected.id} /><HoldApprove formId="approve-form" confirm={approveConfirm} /></form>
+              <Link href={`${base}/${img.id}?attempt=${selected.id}&fix=1`} className="btn mt-3 min-h-[48px] w-full">Fix it</Link>
+              <form action={rejectAttempt} className="mt-3 text-center"><input type="hidden" name="attemptId" value={selected.id} /><button className="text-[14px] font-medium text-[#A5473A]">Don’t use this</button></form>
+            </section>
+          ) : goodState && selected ? (
+            <>
+              <section className="rounded-[16px] border p-6" style={{ background: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', borderColor: '#CFE3D3' }} aria-label="Looks good">
+                <div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#46704F]">✓ Looks good</div>
+                <div className="mt-2 break-all font-mono text-[12.5px]">{selected.asset.relPath.split('/').pop()}</div>
+                <div className="mt-3"><RevealButton assetId={selected.assetId} label="Show in folder" className="btn btn-sm" /></div>
+              </section>
+              {nextPic && <section className="rounded-[16px] border p-6" style={{ background: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', borderColor: '#F0CDDA' }}><div className="text-[11.5px] font-bold uppercase tracking-[0.14em] text-[#9A4A64]">WHAT TO DO NEXT</div><div className="mt-1 text-[13px] text-ink-secondary">Picture {pictureNo + 1}</div><h2 className="text-[28px]">{nextPic.title}</h2><Link href={`${base}/${nextPic.id}`} className="btn btn-accent mt-3 min-h-[48px] px-6">Continue</Link></section>}
+              <div className="text-center text-[13.5px]"><Link href={`${base}/${img.id}?attempt=${selected.id}&fix=1`} className="font-semibold text-blue-deep">Replace or fix this picture</Link></div>
+            </>
+          ) : (
+            <>
           <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
             <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><span className="text-[12px] text-ink-secondary">attach these in this order</span></div>
           {prevSuggest && (
@@ -195,15 +231,18 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           <RevealButton projectFolder={`${folder}/01 References`} className="btn btn-sm mt-3" />
 
           </section>
+
           <div className="space-y-3.5">
             <PromptEditor filename={expected} imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} />
           </div>
+
             <div className="rounded-[18px] border border-line bg-white p-4" aria-label="Save this picture as">
               <div className="eyebrow text-purple-deep">SAVE THIS PICTURE AS</div>
               <div className="mt-2 flex flex-wrap items-center gap-3"><code className="min-w-0 flex-1 break-all font-mono text-[14px] font-medium leading-snug" data-testid="expected-filename">{expected}</code><CopyButton text={expected} label="COPY FILENAME" variant="secondary" className="min-w-[160px]" /></div>
               <p className="mt-2 text-[12px] text-ink-secondary">Save the generated image into <span className="font-mono">{folder}/02 Images</span> with exactly this name — Baby Chef Studio detects it automatically and adds it to {code} for review. COPY PROMPT adds a FILE ORGANIZATION section with this filename.</p>
               <div className="mt-2"><RevealButton projectFolder={`${folder}/02 Images`} label="Show folder in Finder" /></div>
             </div>
+
 
           <section className="rounded-[18px] border border-line bg-white p-4"><div className="eyebrow mb-3">ACTIONS</div><a href="https://chatgpt.com/" target="_blank" rel="noreferrer" className="btn mb-2.5 w-full">Open ChatGPT ↗</a>
           <div className="flex flex-col gap-2.5">
@@ -222,27 +261,11 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               {img.status === 'READY' && <form action={setImageStatus}><input type="hidden" name="id" value={img.id} /><input type="hidden" name="status" value="GENERATING" /><SubmitBtn className="btn-sm" pendingText="…">MARK GENERATING</SubmitBtn></form>}
               <form action={setImageStatus} className="flex gap-1"><input type="hidden" name="id" value={img.id} /><select name="status" defaultValue={img.status} className="input !min-h-[32px] !w-auto !py-1 text-[12px]" aria-label="Set status">{IMAGE_STATUSES.map(s => <option key={s}>{s}</option>)}</select><SubmitBtn className="btn-sm" pendingText="…">Set</SubmitBtn></form>
             </div>
-            <hr className="border-pink-mid/70" />
-            {selected ? (
-              <>
-                <div className="flex gap-2">
-                  <details className="flex-1">
-                    <summary className="btn btn-danger w-full cursor-pointer list-none">Fix this picture</summary>
-                    <form action={redoAttempt} className="mt-2 space-y-2 rounded-lg border border-line bg-surface p-3"><input type="hidden" name="attemptId" value={selected.id} />
-                      <div className="text-[12px] text-ink-secondary">Fix attempt v{selected.number}</div>
-                      <Area name="wrong" label="WHAT IS WRONG?" rows={2} /><Area name="change" label="WHAT SHOULD CHANGE?" rows={2} /><Area name="keep" label="WHAT SHOULD STAY THE SAME?" rows={2} />
-                      <Sel name="corrCategory" label="Category" options={CORRECTION_CATEGORIES} /><Sel name="severity" label="Severity" v="MEDIUM" options={SEVERITIES} />
-                      <Text name="notes" label="Notes" /><Check name="addToLibrary" label="Add to Corrections library" />
-                      <SubmitBtn className="btn-danger btn-sm" pendingText="…">SAVE FIX</SubmitBtn></form>
-                  </details>
-                  <form id="approve-form" action={approveAttempt} className="flex flex-[1.4]"><input type="hidden" name="attemptId" value={selected.id} /><HoldApprove formId="approve-form" confirm={approveConfirm} /></form>
-                </div>
-                <p className="text-[11px] text-ink-secondary">Acting on attempt <b className="font-mono">v{selected.number}</b> ({selected.status}). Keyboard: hold Enter/Space on Approve.</p>
-              </>
-            ) : <p className="text-[12px] text-ink-secondary">Add a result to review, redo or approve it.</p>}
           </div>
-
           </section>
+
+            </>
+          )}
           <details className="rounded-[18px] border border-line bg-white p-4"><summary className="cursor-pointer text-[14px] font-semibold text-ink-secondary">More details</summary><div className="mt-3 space-y-3.5">
           <div className="order-5 rounded-lg border border-blue-mid bg-blue-tint/60 p-3 lg:order-none">
             <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>

@@ -203,6 +203,21 @@ export async function redoAttempt(fd: FormData) {
   await logActivity(`${imageCode(a.image.seq)} attempt ${a.number} → REDO`, null, a.image.projectId);
   touch();
 }
+/** "Fix it": save what is wrong, keep the old picture in the folder, and write the next version's prompt with a clear fix header. */
+export async function makeFixPrompt(fd: FormData) {
+  const id = str(fd, 'attemptId')!;
+  const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: true } });
+  await redoAttempt(fd);
+  const wrong = str(fd, 'wrong') ?? '', change = str(fd, 'change') ?? '', keep = str(fd, 'keep') ?? '';
+  const header = `Fix from version ${a.number}: ${wrong || 'see the corrections below'}.${change ? ` It should look like this instead: ${change}.` : ''}${keep ? ` Keep exactly the same: ${keep}.` : ''}`;
+  const old = a.image.fullPrompt ?? '';
+  const base = old.replace(/^Fix from version \d+:[^\n]*\n\n/, '');
+  const next = `${header}\n\n${base}`.trimEnd();
+  await maybeVersion(a.imageId, 'FULL', old, next, `Fix from version ${a.number}`);
+  await db.plannedImage.update({ where: { id: a.imageId }, data: { fullPrompt: next, ...(a.image.approvedAttemptId ? {} : { status: 'READY' }) } });
+  touch();
+  redirect(`/projects/${(await db.project.findUniqueOrThrow({ where: { id: a.image.projectId } })).slug}/images/${a.imageId}`);
+}
 export async function rejectAttempt(fd: FormData) {
   const id = str(fd, 'attemptId')!;
   const a = await db.attempt.findUniqueOrThrow({ where: { id }, include: { image: true } });
