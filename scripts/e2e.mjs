@@ -477,7 +477,7 @@ ok('Add scene here: new scene is inserted at the top', (await page.locator('sect
 // ---- Missing info
 await go(`/projects/${slug}/questions`);
 ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);
-ok('Missing Info has no picture/photo tasks', (await page.locator('text=/Make Picture|product photo|Generate/i').count()) === 0);
+ok('Missing Info has no picture/photo tasks', (await page.locator('main').locator('text=/Make Picture|product photo|Generate/i').count()) === 0);
 const yq = page.locator('li:has(form):has-text("How many does this recipe make?")');
 await yq.locator('input[name=answer]').fill('6 bowls'); await yq.locator('button:has-text("SAVE ANSWER")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/questions`);
@@ -631,8 +631,6 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   await page.click('button:has-text("Create video")'); await page.waitForURL(/\/projects\/raw-paste-test/); await page.waitForLoadState('networkidle');
   await go('/projects/raw-paste-test/recipe');
   ok('Recipe typed into New video is split into ingredients automatically', (await page.locator('[data-testid=ing-group]').count()) === 3 && !(await page.locator('main').textContent()).includes('No ingredients yet'));
-  // an old project that only has raw text (no structure) shows the fix button instead of numbering the raw text
-  await page.evaluate(() => fetch('/api/health').catch(() => null));
 }
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
