@@ -29,6 +29,9 @@ export function Empty({ title, hint, children }: { title: string; hint?: string;
     </div>
   );
 }
+export function Fold({ title, children, open = false }: { title: string; children: React.ReactNode; open?: boolean }) {
+  return <details open={open} className="card"><summary className="cursor-pointer font-serif text-[20px] font-medium">{title}</summary><div className="mt-4">{children}</div></details>;
+}
 export function Section({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
   return <section className="card"><div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-[17px]">{title}</h2>{right}</div>{children}</section>;
 }

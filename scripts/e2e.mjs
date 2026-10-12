@@ -80,9 +80,9 @@ ok('Reference files in human-readable folders', babyDir.some(f => /References\/B
 // ---- Project
 await go('/projects/new');
 await page.fill('input[name=title]', PROJ);
-await page.selectOption('select[name=babyChefId]', { label: CHEF });
+await page.locator(`label:has(input[name=babyChefId]):has-text("${CHEF}")`).click();
 await page.fill('textarea[name=recipeOriginal]', '1 cup lentils, 2 tbsp oil, 1/2 tsp cumin seeds, 1 cup coconut milk.');
-await page.click('text=START RECIPE VIDEO');
+await page.click('button:has-text("Create video")');
 await page.waitForURL(/\/projects\/e2e-soup/);
 const slug = new URL(page.url()).pathname.split('/')[2];
 ok('Create project with auto slug', slug.startsWith('e2e-soup'), slug);
@@ -551,7 +551,7 @@ ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.l
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
-  `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/story`, `/projects/${slug}/start`, `/projects/${slug}/start?hide=done`, `/projects/${slug}/questions`, `/projects/${slug}/fill`, '/fill', '/unmatched', `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
+  `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/story`, `/projects/${slug}/more`, `/projects/${slug}/start`, `/projects/${slug}/start?hide=done`, `/projects/${slug}/questions`, `/projects/${slug}/fill`, '/fill', '/unmatched', `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {
   await page.setViewportSize({ width: w, height: h });

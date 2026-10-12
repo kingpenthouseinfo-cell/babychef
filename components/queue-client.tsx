@@ -7,7 +7,7 @@ import { startGenerating, markWaitingById } from '@/lib/actions/image';
 import { WAITING_REASONS } from '@/lib/constants';
 import { withFilename } from '@/lib/naming';
 
-export type QItem = { id: string; slug: string; code: string; title: string; project: string; scene: string; shot: string; aspect: string; priority: string; full: string; cont: string; filename: string; refs: { label: string; assetId: string | null; required: boolean }[] };
+export type QItem = { id: string; slug: string; code: string; no: number; title: string; project: string; scene: string; shot: string; aspect: string; priority: string; full: string; cont: string; filename: string; refs: { label: string; assetId: string | null; required: boolean }[] };
 const TARGET = 20;
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -52,7 +52,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
           <div className="flex items-center gap-2"><span className="eyebrow text-blue-deep">NEXT</span><span className="chip st-ready">READY</span></div>
           <Link href={`/projects/${cur.slug}/images/${cur.id}`} className="text-[13px] font-medium text-blue-deep">Open image detail →</Link>
         </div>
-        <div className="mt-3 flex flex-wrap items-baseline gap-x-3"><span className="font-mono text-[34px] font-medium leading-none md:text-[44px]">{cur.code}</span><span className="text-[22px] font-semibold md:text-[26px]">{cur.title}</span><span className="font-mono text-[12px] text-ink-secondary">{cur.scene} · {cur.shot.toLowerCase()} · {cur.aspect}</span></div>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3"><span className="font-serif text-[34px] font-medium leading-none md:text-[44px]" title={cur.code}>Picture {cur.no}</span><span className="text-[22px] font-semibold md:text-[26px]">{cur.title}</span><span className="font-mono text-[12px] text-ink-secondary">{cur.scene} · {cur.shot.toLowerCase()} · {cur.aspect}</span></div>
         <div className="eyebrow mt-5 text-sage-deep">Required references · attach to ChatGPT in this order</div>
         <ol className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-4">
           {req.length === 0 && <li className="col-span-full text-[13px] text-ink-secondary">No references attached.</li>}

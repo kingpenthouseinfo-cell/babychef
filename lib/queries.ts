@@ -1,4 +1,5 @@
 import { db } from './db';
+import { IMAGE_ORDER } from './order';
 import { imageCode, sceneCode, parseJson, lines, klingCode } from './util';
 
 export type ChecklistEntry = {
@@ -51,7 +52,7 @@ export async function nextReadyImages(projectId?: string | null) {
   const ok = (i: any) => !i.dependsOn || i.dependsOn.status === 'APPROVED';
   imgs.sort((a, b) =>
     a.project.title.localeCompare(b.project.title) ||
-    a.scene.order - b.scene.order || a.seq - b.seq || rank[a.priority] - rank[b.priority]);
+    (a.scene as any).pos - (b.scene as any).pos || a.scene.order - b.scene.order || (a as any).pos - (b as any).pos || a.seq - b.seq || rank[a.priority] - rank[b.priority]);
   return { eligible: imgs.filter(ok), blocked: imgs.filter(i => !ok(i)) };
 }
 
@@ -85,10 +86,11 @@ export async function getProjectBySlug(slug: string) {
 
 /** Suggest the previous image (by sequence) that has an approved result. */
 export async function suggestPrevious(projectId: string, seq: number) {
-  return db.plannedImage.findFirst({
-    where: { projectId, seq: { lt: seq }, approvedAttemptId: { not: null } },
-    orderBy: { seq: 'desc' }, include: { approvedAttempt: { include: { asset: true } } },
-  });
+  // previous = the closest earlier picture in the VISIBLE order that has an approved result (inserts and moves are respected)
+  const all = await db.plannedImage.findMany({ where: { projectId }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: { include: { asset: true } } } });
+  const i = all.findIndex(x => x.seq === seq);
+  for (let j = i - 1; j >= 0; j--) if (all[j].approvedAttemptId) return all[j];
+  return null;
 }
 
 export async function relevantCorrections(img: { projectId: string; ingredients: string | null; actionMoment: string | null; title: string }, babyChefId: string | null | undefined) {

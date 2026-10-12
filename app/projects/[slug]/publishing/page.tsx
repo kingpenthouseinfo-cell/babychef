@@ -5,7 +5,7 @@ import { getProjectBySlug } from '@/lib/queries';
 import { ensureChecklist } from '@/lib/settings';
 import { buildVars, render } from '@/lib/template-engine';
 import { contextBlock } from '@/lib/publishing';
-import { Area, Check, Chip, Empty, Section, Sel, Text } from '@/components/ui';
+import { Area, Check, Chip, Empty, Fold, Sel, Text } from '@/components/ui';
 import { ConfirmForm, CopyButton, DirtyForm, SubmitBtn } from '@/components/client';
 import { addChecklist, createPublishingAssets, deleteChecklist, deletePublishingAsset, preparePublishingPrompt, quickResult, savePubContext, savePublishingAsset, saveThumbnail, setPublishingStatus, toggleChecklist } from '@/lib/actions/prompts';
 import { PUB_CONTEXT_FIELDS, PUB_STATUSES } from '@/lib/constants';
@@ -38,15 +38,16 @@ export default async function Publishing({ params, searchParams }: { params: { s
   const imgOpts: [string, string][] = [['', '— none —'], ...images.map(i => [i.id, `${imageCode(i.seq)} ${i.title}`] as [string, string])];
   return (
     <div className="space-y-5">
-      <div className="rounded-lg bg-sunken p-3 text-sm">Nothing is posted automatically. For each item: <b>PREPARE PROMPT</b> → <b>COPY</b> → paste into ChatGPT/Claude → paste the answer back → write the <b>selected final text</b>.</div>
-      <Section title="Publishing context (what gets added to every publishing prompt)">
+      <div><h1 className="text-[34px] md:text-[40px]">Post Video</h1><p className="mt-1 text-[14px] text-ink-secondary">Text is made from the recipe and scenes. Prepare it any time — the final video isn’t needed yet.</p></div>
+      <div className="rounded-[14px] bg-[#F4F1FA] p-3.5 text-[13.5px] text-[#47434F]">Nothing is posted automatically. For each item: <b>PREPARE PROMPT</b> → <b>COPY</b> → paste into ChatGPT/Claude → paste the answer back → write the <b>selected final text</b>.</div>
+      <Fold title="Publishing context (what gets added to every publishing prompt)">
         <DirtyForm action={savePubContext} className="space-y-3"><input type="hidden" name="projectId" value={p.id} />
           <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">{PUB_CONTEXT_FIELDS.map(f => <label key={f} className="flex items-center gap-2 text-sm"><input type="checkbox" name="include" value={f} defaultChecked={inc.includes(f)} className="h-4 w-4" />{f}</label>)}</div>
           <div className="grid gap-3 sm:grid-cols-2">{['Funny moments', 'Recipe highlights', 'Cooking techniques', 'Notes'].map(f => <Area key={f} name={`x:${f}`} label={f} v={ctx[f]} rows={2} />)}</div>
           <SubmitBtn>SAVE CONTEXT</SubmitBtn>
         </DirtyForm>
         <details className="mt-3"><summary className="cursor-pointer text-sm font-semibold">Preview context</summary><pre className="mono mt-2 whitespace-pre-wrap rounded-lg bg-sunken p-3">{preview || '(nothing selected / nothing filled in yet)'}</pre></details>
-      </Section>
+      </Fold>
 
       {assets.length === 0 ? (
         <Empty title="No publishing items yet." hint="Create the standard set for YouTube, Shorts, Facebook, Instagram and TikTok."><form action={createPublishingAssets}><input type="hidden" name="projectId" value={p.id} /><SubmitBtn pendingText="Creating…">CREATE STANDARD PUBLISHING ITEMS</SubmitBtn></form></Empty>
@@ -120,15 +121,15 @@ export default async function Publishing({ params, searchParams }: { params: { s
         </div>
       )}
 
-      <Section title="YouTube thumbnail planning">
+      <Fold title="YouTube thumbnail planning">
         <DirtyForm action={saveThumbnail} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="projectId" value={p.id} />
           <Area name="concept" label="Thumbnail concept" v={th.concept} rows={3} /><Text name="text" label="Thumbnail text" v={th.text} />
           <Sel name="refImageId" label="Thumbnail reference image" v={th.refImageId} options={imgOpts} /><Sel name="foodImageId" label="Food beauty image" v={th.foodImageId} options={imgOpts} />
           <Sel name="babyImageId" label="Baby reaction image" v={th.babyImageId} options={imgOpts} /><Area name="notes" label="Notes" v={th.notes} rows={2} />
           <div className="flex flex-wrap gap-2 sm:col-span-2"><SubmitBtn>SAVE THUMBNAIL PLAN</SubmitBtn><CopyButton text={thumbPrompt} label="COPY THUMBNAIL IDEAS PROMPT" /></div></DirtyForm>
-      </Section>
+      </Fold>
 
-      <Section title={`Publishing checklist (${done}/${checklist.length})`}>
+      <Fold title={`Publishing checklist (${done}/${checklist.length})`}>
         {groups.map(g => (
           <div key={g} className="mb-3"><h3 className="mb-1">{g}</h3>
             {checklist.filter(c => c.group === g).map(c => (
@@ -138,7 +139,7 @@ export default async function Publishing({ params, searchParams }: { params: { s
               </div>))}
           </div>))}
         <form action={addChecklist} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="projectId" value={p.id} /><input name="label" className="input max-w-sm" placeholder="Add custom checklist item…" aria-label="Custom checklist item" /><button className="btn">Add</button></form>
-      </Section>
+      </Fold>
     </div>
   );
 }
