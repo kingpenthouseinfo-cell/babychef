@@ -16,7 +16,7 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
   const [text, setText] = useState({ full, cont });
   const [saved, setSaved] = useState<number | null>(updatedAt);
   const [pending, setPending] = useState(false);
-  const [, tick] = useState(0);
+  const [label, setLabel] = useState('');
   const [reason, setReason] = useState('');
   const [isPending, start] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,7 +36,8 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, 1200);
   }
-  useEffect(() => { const i = setInterval(() => tick(n => n + 1), 15000); return () => clearInterval(i); }, []);
+  // relative time depends on the clock, so compute it only in the browser (avoids a server/client text mismatch)
+  useEffect(() => { setLabel(rel(saved)); const i = setInterval(() => setLabel(rel(saved)), 15000); return () => clearInterval(i); }, [saved]);
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => { if (dirty.current.size) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', h);
@@ -59,7 +60,7 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`rounded-sm px-3 py-1.5 text-[13px] font-medium transition ${tab === k ? 'bg-blue-light text-blue-deep' : 'text-ink-secondary hover:bg-white/60'}`}>{l}</button>
           ))}
         </div>
-        <span className="font-mono text-[11px] text-ink-secondary">{ver ? `v${ver}` : 'no version yet'} · {words(cur)} words · {pending ? 'saving…' : `saved ${rel(saved)}`}</span>
+        <span className="font-mono text-[11px] text-ink-secondary">{ver ? `v${ver}` : 'no version yet'} · {words(cur)} words · {pending ? 'saving…' : label ? `saved ${label}` : 'saved'}</span>
         <div className="ml-auto"><CopyButton text={cur} label={tab === 'full' ? 'COPY FULL PROMPT' : 'COPY CONTINUATION'} className="min-w-[190px]" /></div>
       </div>
       <textarea value={cur} onChange={e => change(e.target.value)} onBlur={flush} aria-label={tab === 'full' ? 'Full prompt' : 'Continuation prompt'}

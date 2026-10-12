@@ -71,7 +71,9 @@ export function ReviewPanel(p: ReviewProps) {
               <form action={undoApprove} className="mt-2"><input type="hidden" name="attemptId" value={p.attemptId} /><button className="btn btn-sm">Undo</button></form></div>
           ) : (
             <div className="space-y-2">
-              <form id={`rv-approve-${p.attemptId}`} action={approveAttempt} className="flex"><input type="hidden" name="attemptId" value={p.attemptId} /><HoldApprove formId={`rv-approve-${p.attemptId}`} confirm={p.replaceConfirm} ms={700} /></form>
+              <form id={`rv-approve-${p.attemptId}`} action={approveAttempt} className="hidden md:flex"><input type="hidden" name="attemptId" value={p.attemptId} /><HoldApprove formId={`rv-approve-${p.attemptId}`} confirm={p.replaceConfirm} ms={700} /></form>
+              <div className="fixed inset-x-0 bottom-14 z-40 flex border-t border-line bg-surface p-2 md:hidden"><HoldApprove formId={`rv-approve-${p.attemptId}`} confirm={p.replaceConfirm} ms={700} /></div>
+              <p className="text-[11px] text-ink-secondary md:hidden">Approve lives in the bar below, away from Redo.</p>
               <hr className="border-line" />
               <div className="flex gap-2">
                 <button type="button" className="btn btn-danger flex-1" onClick={() => setRedo(!redo)} aria-expanded={redo}>Redo</button>

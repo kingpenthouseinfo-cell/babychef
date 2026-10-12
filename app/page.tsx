@@ -42,14 +42,14 @@ export default async function Dashboard() {
         <Link href="/projects/new" className="btn btn-primary min-h-[44px] px-5">+ New Project</Link>
       </div>
       {chefs === 0 && <div className="mb-5"><Empty title="No Baby Chefs yet." hint="Create your first Baby Chef to begin."><Link href="/babychefs/new" className="btn btn-primary">+ ADD BABY CHEF</Link></Empty></div>}
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-8 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map(c => (
-          <Link key={c.label} href={c.href} className={`block rounded-lg border p-4 transition hover:-translate-y-px ${c.cls}`}>
-            <div className="text-[12px] font-semibold">{c.label}</div><div className="my-1 font-mono text-[30px] font-medium leading-none text-ink">{c.value}</div><div className="text-[12px] text-ink-secondary">{c.sub}</div>
+          <Link key={c.label} href={c.href} className={`flex items-center gap-4 rounded-lg border p-4 transition hover:-translate-y-px sm:block ${c.cls}`}>
+            <div className="font-mono text-[30px] font-medium leading-none text-ink sm:order-2 sm:my-1 sm:block">{c.value}</div><div className="min-w-0 sm:order-1"><div className="text-[12px] font-semibold">{c.label}</div><div className="truncate text-[12px] text-ink-secondary sm:hidden">{c.sub}</div></div><div className="hidden text-[12px] text-ink-secondary sm:order-3 sm:block">{c.sub}</div>
           </Link>
         ))}
       </div>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <section>
           <div className="mb-3 flex items-baseline gap-2"><h2>Action Center</h2><span className="text-[12px] text-ink-secondary">sorted by what unblocks the most</span></div>
           {items.length === 0 ? <Empty title="You're all caught up." hint="Nothing needs you right now." /> : (

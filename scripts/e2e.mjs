@@ -179,7 +179,7 @@ ok('IMG-001 is the NEXT card in the Prompt Queue', (await page.locator('text=IMG
 ok('NEXT card lists required references in order, incl. Coconut Milk brand ref', (await page.locator('text=Coconut Milk (Example Brand) Brand Reference').count()) > 0 && (await page.locator('ol li:has-text("Master face")').count()) > 0);
 await page.locator('button:has-text("Copy full prompt")').first().click(); await page.waitForTimeout(300);
 ok('Secondary button copies the other prompt type (FULL)', (await clip()).startsWith('FULL:'));
-await page.locator('button:has-text("Copy Next Prompt")').click(); await page.waitForTimeout(1500);
+await page.locator('button:has-text("Copy Next Prompt"):visible').click(); await page.waitForTimeout(1500);
 ok('Copy Next Prompt copies the continuation prompt', (await clip()).startsWith('CONT:'));
 await page.waitForTimeout(800); await page.reload({ waitUntil: 'networkidle' });
 ok('Copy Next Prompt advanced the queue ("Oil in pan" is no longer ready)', (await page.locator('text=Oil in pan').count()) === 0);
@@ -282,7 +282,7 @@ const klingUrl = page.url();
 await go(`/projects/${slug}/builder?type=plan`);
 let ta = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
 ok('A: Plan prompt includes Bible, chef, recipe, ingredients, hooks', ['LEVEL 1', 'PACING RULES', 'FOOD PHYSICS RULES', 'LEVEL 2', CHEF, 'lentils', 'Coconut Milk', 'PRODUCT REFERENCE SUMMARY', 'PACKAGE CRITICAL', 'SHORT KEEP', 'ASMR RULES'].every(s => ta.toUpperCase().includes(s.toUpperCase())));
-ok('A: Plan prompt copies', await (async () => { await page.click('button:has-text("COPY PROMPT")'); await page.waitForTimeout(300); return (await clip()).length > 3000; })());
+ok('A: Plan prompt copies', await (async () => { await page.locator('button:has-text("COPY PROMPT"):visible').first().click(); await page.waitForTimeout(300); return (await clip()).length > 3000; })());
 const imgId1 = img1Url.split('/').pop();
 await go(`/projects/${slug}/builder?type=image-full&image=${imgId1}`);
 ta = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
@@ -298,7 +298,7 @@ await go(`/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/')
 const tk = await page.inputValue('textarea[aria-label="Final copy-ready prompt"]');
 ok('E: Final Kling writer has @image order, voice, ASMR/ending rules', ['@image1 = IMG-002', '@image2 = IMG-001', '@image3 = IMG-003', 'Raspy toddler voice', 'ENDING STATE', 'Place @image1'.toUpperCase()].every(s => tk.toUpperCase().includes(s.toUpperCase())));
 // save version + paste result + apply
-await page.click('button:has-text("SAVE VERSION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.locator('button:has-text("SAVE VERSION"):visible').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Save prompt version records metadata', (await page.locator('text=Bible v').count()) > 0);
 await page.fill('textarea[name=result]', '@image1 AI-WRITTEN KLING PROMPT'); await page.click('button:has-text("SAVE RESULT")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);
 await page.click('button:has-text("USE RESULT AS KLING PROMPT")'); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');

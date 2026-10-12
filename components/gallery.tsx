@@ -35,7 +35,7 @@ export function Gallery({ tiles, targets }: { tiles: GTile[]; targets: ImgTarget
       <div className="mb-3 flex items-center justify-end"><div role="group" aria-label="Thumbnail size" className="flex gap-1 rounded-md bg-sunken p-1 text-[11px] font-semibold">
         {(['S', 'M', 'L'] as const).map(s => <button key={s} type="button" onClick={() => { setSize(s); try { localStorage.setItem('bcs-gallery-size', s); } catch { /* ignore */ } }} aria-pressed={size === s} className={`rounded-sm px-2.5 py-1 ${size === s ? 'bg-surface shadow-sm' : 'text-ink-secondary'}`}>{s}</button>)}</div></div>
       {sel.length > 0 && (
-        <div className="sticky top-[72px] z-20 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-ink px-4 py-2.5 text-[13px] text-white">
+        <div className="fixed inset-x-0 bottom-14 z-40 flex flex-wrap items-center gap-x-4 gap-y-2 bg-ink px-4 py-2.5 text-[13px] text-white md:sticky md:inset-x-auto md:top-[72px] md:bottom-auto md:z-20 md:mb-3 md:rounded-lg">
           <b>{sel.length} selected</b>
           <button type="button" className="hover:underline" onClick={() => setLink(!link)}>Link to image…</button>
           <button type="button" className="hover:underline" disabled={pending} onClick={() => start(async () => { await setGoldBulk(sel, !allGold); })}>{allGold ? 'Remove Gold Standard' : 'Mark Gold Standard'}</button>

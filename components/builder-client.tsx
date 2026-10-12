@@ -36,9 +36,12 @@ export function BuilderEditor({ projectId, initial, meta, label, chatgpt, claude
         </div>
       )}
       <textarea name="text" value={t} onChange={e => { setT(e.target.value); window.__bcsDirty = e.target.value.trim() !== initial.trim(); }} rows={28} className="w-full rounded-lg border border-blue-mid bg-grad-blue px-[18px] py-4 text-[14px] leading-[1.65] text-ink-2 outline-none focus:ring-2 focus:ring-blue-mid" aria-label="Final copy-ready prompt" />
+      <div className="fixed inset-x-0 bottom-14 z-40 flex gap-2 border-t border-line bg-surface p-2 md:hidden">
+        <CopyButton text={t} label="Copy Prompt" className="flex-1" /><SubmitBtn className="flex-1" pendingText="Saving…">Save version</SubmitBtn>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
-        <CopyButton text={t} label="COPY PROMPT" />
-        <SubmitBtn className="" pendingText="Saving…">SAVE VERSION</SubmitBtn>
+        <span className="hidden md:inline-flex"><CopyButton text={t} label="COPY PROMPT" /></span>
+        <span className="hidden md:inline-flex"><SubmitBtn className="" pendingText="Saving…">SAVE VERSION</SubmitBtn></span>
         <button type="button" className="btn" onClick={() => (document.getElementById('ctx-form') as HTMLFormElement | null)?.requestSubmit()}>Rebuild</button>
         <a className="btn" href={chatgpt} target="_blank" rel="noopener noreferrer">OPEN CHATGPT ↗</a>
         <a className="btn" href={claude} target="_blank" rel="noopener noreferrer">OPEN CLAUDE ↗</a>

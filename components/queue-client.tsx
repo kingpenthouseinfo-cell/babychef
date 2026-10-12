@@ -41,7 +41,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
   if (!cur) return <div className="rounded-lg border border-dashed border-line-strong bg-surface/70 p-8 text-center"><div className="text-[15px] font-semibold">No images ready.</div><p className="mt-1 text-[13px] text-ink-secondary">Finish a prompt or resolve dependencies — your prompt queue is clear.</p></div>;
   const req = cur.refs.filter(r => r.required);
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="zone-blue rounded-lg border p-5 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2"><span className="eyebrow text-blue-deep">NEXT</span><span className="chip st-ready">READY</span></div>
@@ -66,7 +66,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
         </div>
         <div className="mt-2 max-h-36 overflow-auto rounded-lg border border-line bg-surface px-4 py-3 text-[14px] leading-[1.6] text-ink-2">{text.trim() || <span className="text-[#A8513F]">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</span>}</div>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
-          <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy min-h-[48px] min-w-[240px] px-6 text-[15px]" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
+          <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy hidden min-h-[48px] min-w-[240px] px-6 text-[15px] md:inline-flex" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
           <CopyButton text={pref === 'CONT' ? cur.full : cur.cont} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
           <a href={chatgpt} target="_blank" rel="noopener noreferrer" className="btn">Open ChatGPT ↗</a>
           <button type="button" className="btn btn-ghost ml-auto" onClick={() => setSkipped([...skipped, cur.id])}>Skip → next</button>
@@ -74,7 +74,10 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
         <p className="mt-2 text-[11px] text-ink-secondary">Copy Next Prompt marks this image GENERATING and moves to the next one.</p>
       </section>
 
-      <aside className="space-y-3">
+      <div className="fixed inset-x-0 bottom-14 z-40 border-t border-line bg-surface p-2 md:hidden">
+        <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy min-h-[48px] w-full text-[15px]" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : `Copy Next Prompt · ${cur.code}`}</button>
+      </div>
+      <aside className="space-y-3 pb-16 md:pb-0">
         <div className="flex items-center justify-between"><div className="eyebrow">UPCOMING</div><div className="flex items-center gap-2 text-[12px] text-ink-secondary">This session <span className="h-1.5 w-20 overflow-hidden rounded-full bg-sunken"><span className="block h-full bg-btn-blue" style={{ width: `${Math.min(100, (done / TARGET) * 100)}%` }} /></span><span className="font-mono">{done} / {TARGET}</span></div></div>
         {up.length === 0 && <p className="text-[13px] text-ink-secondary">Nothing else ready after this one.</p>}
         <ul className="space-y-2">

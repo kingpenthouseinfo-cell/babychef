@@ -86,9 +86,9 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
       {pkgAttached.length > 0 && <div className="rounded-md border border-gold-border bg-gold-bg px-3 py-2 text-[13px] text-gold-text"><b>PACKAGE CRITICAL</b> — {pkgAttached.map(c => c.label).join('; ')}. Add this label reference to ChatGPT.</div>}
       {pkgMissing.map(i => <div key={i.id} className="rounded-md border border-gold-border bg-gold-bg px-3 py-2 text-[13px] text-gold-text"><b>PACKAGE CRITICAL:</b> {i.name}{i.brand ? ` (${i.brand})` : ''} appears in this image but no brand reference is attached.</div>)}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_312px] xl:grid-cols-[272px_minmax(0,1fr)_312px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_312px] xl:grid-cols-[272px_minmax(0,1fr)_312px]">
         {/* LEFT — references (sage zone) */}
-        <aside className="zone-sage order-3 space-y-3.5 rounded-lg border p-5 lg:order-1 lg:col-span-2 xl:col-span-1">
+        <aside className="zone-sage order-2 space-y-3.5 rounded-lg border p-5 lg:order-1 lg:col-span-2 xl:col-span-1">
           <div className="eyebrow text-sage-deep">REFERENCES FOR {code}</div>
           <p className="text-[13px] text-ink-secondary">Linked from <span className="font-mono text-[12px]">01 References</span> · attach to ChatGPT in this order</p>
           {prevSuggest && (
@@ -141,15 +141,15 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
         </aside>
 
         {/* CENTER — image, attempts, prompt (blue zone) */}
-        <div className="order-1 flex min-w-0 flex-col gap-3.5 lg:order-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="contents min-w-0 lg:order-2 lg:flex lg:flex-col lg:gap-3.5">
+          <div className="order-3 flex flex-wrap items-center justify-between gap-2 lg:order-none">
             <div className="min-w-0 truncate font-mono text-[12px] text-ink-secondary" title={selected?.asset.relPath}>{selected ? selected.asset.relPath.split('/').slice(-2).join(' / ') : `${folder} / 02 Images`}</div>
             <div className="flex items-center gap-3 text-[12px]">
               {compareCode && selected && <a href="#compare" className="font-medium text-blue-deep underline">Compare with {compareCode}</a>}
               {selected && <RevealButton assetId={selected.assetId} className="text-[12px] font-medium text-blue-deep underline" />}
             </div>
           </div>
-          {selected ? (
+          <div className="order-3 lg:order-none">{selected ? (
             <BigImage id={selected.assetId} alt={`${code} attempt ${selected.number}`} imgClass="mx-auto max-h-[min(46vh,420px)] w-full object-contain" wrapClass="bg-[#F1EFF1]" w={1200} />
           ) : (
             <div className="flex aspect-video max-h-[270px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-pink-mid bg-pink-tint/50 text-center">
@@ -157,9 +157,9 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               <p className="text-[13px] text-ink-secondary">Drop a generated image anywhere on this page, or</p>
               <AddResultButton label="Add result" className="btn btn-primary" />
             </div>
-          )}
+          )}</div>
           {img.attempts.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2" aria-label="Attempts">
+            <div className="order-4 flex flex-wrap items-center gap-2 lg:order-none" aria-label="Attempts">
               {img.attempts.map(a => (
                 <Link key={a.id} href={`${base}/${img.id}?attempt=${a.id}`} scroll={false} aria-current={selected?.id === a.id}
                   className={`flex items-center gap-2 rounded-md border bg-purple-tint p-1.5 pr-3 transition hover:border-purple-deep ${selected?.id === a.id ? 'border-purple-deep' : 'border-purple-mid'}`}>
@@ -171,8 +171,8 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               <AddResultButton label="+ Add result" className="btn btn-sm" />
             </div>
           )}
-          <PromptEditor imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} />
-          <div className="rounded-lg border border-blue-mid bg-blue-tint/60 p-3">
+          <div className="order-1 lg:order-none"><PromptEditor imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} /></div>
+          <div className="order-5 rounded-lg border border-blue-mid bg-blue-tint/60 p-3 lg:order-none">
             <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>
             <div className="flex flex-wrap gap-2">
               <Link href={`/projects/${p.slug}/builder?type=image-full&image=${img.id}`} className="btn btn-sm btn-copy-secondary">PREPARE FULL IMAGE PROMPT</Link>
@@ -184,7 +184,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
         </div>
 
         {/* RIGHT — production details (pink zone) */}
-        <aside className="zone-pink order-2 flex flex-col gap-[18px] rounded-lg border p-5 lg:order-3">
+        <aside className="zone-pink order-6 flex flex-col gap-[18px] rounded-lg border p-5 lg:order-3">
           <div>
             <div className="flex items-center gap-3"><span className="font-mono text-[26px] font-medium leading-none">{code}</span><Chip>{img.status}</Chip></div>
             <h1 className="mt-3 break-words text-[24px] md:text-[28px]">{img.title}</h1>
@@ -244,7 +244,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
 
       {/* sticky copy bar for phones */}
       <div className="fixed inset-x-0 bottom-14 z-40 flex gap-2 border-t border-line bg-surface p-2 md:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom) * 0)' }}>
-        <CopyButton text={img.fullPrompt} label="COPY FULL" className="flex-1" /><CopyButton text={img.contPrompt} label="COPY CONT." variant="secondary" className="flex-1" />
+        <CopyButton text={img.fullPrompt} label="Copy full prompt" className="flex-1" /><AddResultButton label="Add result" className="btn flex-1" />
       </div>
 
       {/* REVIEW / REDO */}
