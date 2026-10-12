@@ -492,7 +492,7 @@ ok('Start to Finish shows the whole project in order', ['GET READY', 'PLAN THE V
 ok('Start to Finish: recipe is DONE and has a next step + CONTINUE', (await page.locator('[aria-label="Done"]').count()) > 0 && (await page.locator('a:has-text("CONTINUE")').count()) > 0);
 ok('Start to Finish: the extra scene is included automatically', (await page.locator('text=Extra scene E2E').count()) > 0);
 await page.click('a:has-text("HIDE DONE")'); await page.waitForURL(/hide=done/); await page.waitForLoadState('networkidle');
-ok('HIDE DONE removes finished steps', (await page.locator('[aria-label="Done"]:visible').count()) === 0);
+ok('HIDE DONE removes finished steps', (await page.locator('section > ul > li > a [aria-label="Done"]:visible').count()) === 0);
 // ---- Fill from text
 await go(`/projects/${slug}/fill`);
 await page.fill('textarea[aria-label="Paste your info"]', 'INGREDIENTS:\n- 2 cups flour, sifted\n- 1 tsp salt\nSCENE: Fill Test Scene\nACTION: Baby bakes at [temperature]\nIMAGE: Fill test picture\nPURPOSE: close up\nYIELD: 12 pieces\n');
