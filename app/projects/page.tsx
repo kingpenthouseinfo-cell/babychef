@@ -1,8 +1,9 @@
+import { ProjectCard } from '@/components/project-card';
 import Link from 'next/link';
 import { db } from '@/lib/db';
 import { Empty, PageHeader } from '@/components/ui';
 import { projectStats } from '@/lib/queries';
-import { ProjectCard } from '@/components/project-card';
+
 import { PROJECT_STATUSES } from '@/lib/constants';
 
 export default async function Projects({ searchParams }: { searchParams: { status?: string; q?: string } }) {

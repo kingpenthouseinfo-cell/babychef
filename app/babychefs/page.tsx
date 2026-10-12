@@ -13,8 +13,8 @@ export default async function BabyChefs() {
       {chefs.length === 0 ? <Empty title="No Baby Chefs yet." hint="Create your first Baby Chef to begin."><Link href="/babychefs/new" className="btn btn-primary">+ ADD BABY CHEF</Link></Empty> : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {chefs.map(c => (
-            <Link key={c.id} href={`/babychefs/${c.id}`} className="card block hover:border-ink">
-              <Thumb id={c.references[0]?.assetId} alt={c.displayName} />
+            <Link key={c.id} href={`/babychefs/${c.id}`} className="block overflow-hidden rounded-lg border border-line bg-surface p-3 transition hover:border-sage-deep">
+              <div className="relative"><Thumb id={c.references[0]?.assetId} alt={c.displayName} ratio="aspect-[4/5]" w={640} />{c.references[0]?.isGold && <span className="absolute right-2 top-2 rounded-xs border border-gold-border bg-gold-bg px-1.5 py-[3px] text-[10px] font-semibold leading-none text-gold-text">GS</span>}</div>
               <div className="mt-3 flex items-center justify-between gap-2"><div className="font-semibold">{c.displayName}</div>{!c.active && <Chip>INACTIVE</Chip>}</div>
               <div className="text-sm text-ink-secondary">{[c.seriesName, c.cuisine].filter(Boolean).join(' · ') || '—'}</div>
               <div className="mt-1 text-xs text-ink-secondary">{c._count.references} references · {c._count.projects} projects</div>

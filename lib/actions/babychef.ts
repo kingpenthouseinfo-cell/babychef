@@ -16,14 +16,19 @@ async function uniqueSlug(base: string) {
 
 export async function saveBabyChef(fd: FormData) {
   const id = str(fd, 'id');
-  const data = { ...pickText(fd, FIELDS), active: bool(fd, 'active') } as any;
-  if (!data.displayName) throw new Error('Baby Chef name is required');
+  // The profile is edited in tabs, so only fields present in the submitted form are changed.
+  const data = { ...pickText(fd, FIELDS) } as any;
+  if (fd.has('_hasActive')) data.active = bool(fd, 'active');
   if (id) {
-    await db.babyChef.update({ where: { id }, data });
-    await logActivity(`Baby Chef "${data.displayName}" updated`, `/babychefs/${id}`);
+    if (fd.has('displayName') && !data.displayName) throw new Error('Baby Chef name is required');
+    if (Object.keys(data).length) await db.babyChef.update({ where: { id }, data });
+    const name = data.displayName ?? (await db.babyChef.findUnique({ where: { id } }))?.displayName;
+    await logActivity(`Baby Chef "${name}" updated`, `/babychefs/${id}`);
     revalidatePath('/babychefs'); revalidatePath(`/babychefs/${id}`);
     return;
   }
+  if (!data.displayName) throw new Error('Baby Chef name is required');
+  data.active = fd.has('_hasActive') ? bool(fd, 'active') : true;
   const b = await db.babyChef.create({ data: { ...data, slug: await uniqueSlug(data.displayName) } });
   await logActivity(`Baby Chef "${b.displayName}" created`, `/babychefs/${b.id}`);
   redirect(`/babychefs/${b.id}`);
@@ -133,3 +138,19 @@ export async function deleteCorrection(fd: FormData) {
   revalidatePath('/', 'layout');
 }
 export async function deleteAsset(assetId: string) { await deleteAssetIfOrphan(assetId); }
+
+/** Gallery bulk actions. */
+export async function setGoldBulk(ids: string[], value: boolean) {
+  await db.reference.updateMany({ where: { id: { in: ids } }, data: { isGold: value } });
+  revalidatePath('/', 'layout');
+}
+export async function linkRefsToImage(imageId: string, refIds: string[], role: string) {
+  if (!imageId || !refIds.length) return;
+  const max = await db.imageRef.aggregate({ where: { imageId }, _max: { order: true } });
+  let order = (max._max.order ?? -1) + 1;
+  for (const referenceId of refIds) {
+    if (await db.imageRef.findFirst({ where: { imageId, referenceId } })) continue;
+    await db.imageRef.create({ data: { imageId, referenceId, role: role || 'CUSTOM REFERENCE', required: true, order: order++ } });
+  }
+  revalidatePath('/', 'layout');
+}

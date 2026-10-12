@@ -144,3 +144,22 @@ export async function addChecklist(fd: FormData) {
 }
 export async function deleteChecklist(fd: FormData) { await db.checklistItem.delete({ where: { id: str(fd, 'id')! } }); touch(); }
 void DEFAULT_CHECKLIST;
+
+/** Quick status moves from the publishing list (Mark selected / Mark published). */
+export async function setPublishingStatus(fd: FormData) {
+  const id = str(fd, 'id')!, status = str(fd, 'status')!;
+  const a = await db.publishingAsset.findUniqueOrThrow({ where: { id } });
+  const data: any = { status };
+  if (status === 'SELECTED' && !a.selected.trim() && a.returned.trim()) data.selected = a.returned;
+  if (status === 'PUBLISHED') { data.publishedAt = a.publishedAt ?? new Date(); if (!a.selected.trim() && a.returned.trim()) data.selected = a.returned; }
+  await db.publishingAsset.update({ where: { id }, data });
+  await logActivity(`${a.platform} ${a.assetType} → ${status}`, null, a.projectId);
+  touch();
+}
+export async function quickResult(fd: FormData) {
+  const id = str(fd, 'id')!;
+  const a = await db.publishingAsset.findUniqueOrThrow({ where: { id } });
+  const returned = strRaw(fd, 'returned');
+  await db.publishingAsset.update({ where: { id }, data: { returned, status: returned.trim() && ['NEEDS PROMPT', 'PROMPT READY'].includes(a.status) ? 'GENERATED' : a.status } });
+  touch();
+}

@@ -171,18 +171,20 @@ ok('Attach Master Kitchen', await attach('Master kitchen', 'MASTER KITCHEN'));
 ok('Attach Ingredient Front Label', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
 ok('Checklist shows Coconut Milk brand reference + PACKAGE CRITICAL', (await page.locator('text=Coconut Milk (Example Brand) Brand Reference').count()) > 0 && (await page.locator('text=PACKAGE CRITICAL').count()) > 0);
 await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+const IMG1_URL_FOR_QUEUE = page.url();
 
 // ---- Prompt queue
 await go('/queue');
-ok('IMG-001 visible in Prompt Queue with checklist', (await page.locator('text=IMG-001').count()) > 0);
-await page.locator('summary:has-text("VIEW REFERENCES")').first().click();
-ok('Queue checklist lists Coconut Milk brand ref', (await page.locator('text=Coconut Milk (Example Brand) Brand Reference').count()) > 0);
-await page.locator('button:has-text("COPY NEXT PROMPT")').click(); await page.waitForTimeout(300);
-const cp = await clip();
-ok('COPY NEXT PROMPT copies continuation prompt', cp.startsWith('CONT:'), cp.slice(0, 40));
-await page.locator('button:has-text("FULL PROMPT")').first().click();
-await page.locator('button:has-text("COPY NEXT PROMPT")').click(); await page.waitForTimeout(300);
-ok('Prompt type preference switches to FULL', (await clip()).startsWith('FULL:'));
+ok('IMG-001 is the NEXT card in the Prompt Queue', (await page.locator('text=IMG-001').count()) > 0 && (await page.locator('text=NEXT').count()) > 0);
+ok('NEXT card lists required references in order, incl. Coconut Milk brand ref', (await page.locator('text=Coconut Milk (Example Brand) Brand Reference').count()) > 0 && (await page.locator('ol li:has-text("Master face")').count()) > 0);
+await page.locator('button:has-text("Copy full prompt")').first().click(); await page.waitForTimeout(300);
+ok('Secondary button copies the other prompt type (FULL)', (await clip()).startsWith('FULL:'));
+await page.locator('button:has-text("Copy Next Prompt")').click(); await page.waitForTimeout(1500);
+ok('Copy Next Prompt copies the continuation prompt', (await clip()).startsWith('CONT:'));
+await page.waitForTimeout(800); await page.reload({ waitUntil: 'networkidle' });
+ok('Copy Next Prompt advanced the queue ("Oil in pan" is no longer ready)', (await page.locator('text=Oil in pan').count()) === 0);
+await page.goto(`${BASE}/queue?show=generating`, { waitUntil: 'networkidle' });
+ok('Image appears under Generating', (await page.locator('text=IMG-001').count()) > 0);
 
 // ---- Import result -> redo -> import -> approve
 await page.goto(img1Url + '#results', { waitUntil: 'networkidle' });
@@ -321,14 +323,16 @@ ok('Imported scenes appended (SC02, SC03), SC01 untouched', (await page.locator(
 // ---- Publishing / short / files / export
 await go(`/projects/${slug}/publishing`);
 await page.click('button:has-text("CREATE STANDARD PUBLISHING ITEMS")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-await page.locator('summary:has-text("Title")').first().click();
-await page.locator('button:has-text("PREPARE PROMPT")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
-ok('Publishing prompt prepared', (await page.locator('button:has-text("COPY PROMPT")').count()) > 0);
+await page.locator('button:has-text("Prepare prompt")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+ok('Publishing prompt prepared (Copy prompt appears)', (await page.locator('button:has-text("Copy prompt")').count()) > 0);
+await page.locator('textarea[aria-label^="Paste result for"]').first().fill('1. Cozy Lentil Soup With Baby Chef'); await page.locator('button:has-text("Save result")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+await page.locator('button:has-text("Mark selected")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+ok('Publishing: result pasted and Mark selected works', (await page.locator('text=Cozy Lentil Soup').count()) > 0 && (await page.locator('.chip.st-selected').count()) > 0);
 await go(`/projects/${slug}/short`);
 await page.click('button:has-text("COLLECT SHORT KEEP SCENES")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 ok('Short version collects SHORT KEEP scenes', (await page.locator('text=Wash lentils').count()) > 0);
 await go(`/projects/${slug}/files`);
-await page.click('button:has-text("WRITE TEXT FILES TO PROJECT FOLDER")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.click('button:has-text("Write text files")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Text files written into project folder (05 Prompts)', walk(path.join(STORE, PROJ, '05 Prompts')).length > 0);
 const z = await ctx.request.get(`${BASE}/api/projects/${slug}/export?format=zip`);
 ok('Project ZIP export', z.ok() && (await z.body()).length > 1000, `${(await z.body()).length} bytes`);

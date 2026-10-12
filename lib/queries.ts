@@ -1,5 +1,5 @@
 import { db } from './db';
-import { imageCode, sceneCode, parseJson, lines } from './util';
+import { imageCode, sceneCode, parseJson, lines, klingCode } from './util';
 
 export type ChecklistEntry = {
   id: string; label: string; role: string; required: boolean; notes: string | null;
@@ -127,4 +127,27 @@ export async function refPool(project: { id: string; babyChefId: string | null }
       { label: 'Approved images (previous frames)', options: imgs.map(i => ({ value: `img:${i.id}`, label: `${imageCode(i.seq)} ${i.title}` })) },
     ].filter(g => g.options.length),
   };
+}
+
+export type ActionItem = { key: string; kind: 'READY' | 'REVIEW' | 'REDO' | 'WAITING' | 'KLING' | 'PUB'; code: string; chip: string; title: string; desc: string; cta: string; href: string; score: number; project: string };
+
+/** "What needs me now", sorted by what unblocks the most. */
+export async function actionCenter(limit = 8): Promise<ActionItem[]> {
+  const live = { project: { deletedAt: null, status: { not: 'ARCHIVED' } } };
+  const [imgs, clips, pubs] = await Promise.all([
+    db.plannedImage.findMany({ where: { status: { in: ['READY', 'REVIEW', 'REDO', 'WAITING'] }, ...live }, include: { project: true, scene: true, dependents: { select: { id: true } }, dependsOn: true } }),
+    db.klingClip.findMany({ where: { status: { in: ['READY', 'REVIEW', 'REDO'] }, ...live }, include: { project: true } }),
+    db.publishingAsset.findMany({ where: { status: 'GENERATED', ...live }, include: { project: true } }),
+  ]);
+  const items: ActionItem[] = [];
+  for (const i of imgs) {
+    if (i.status === 'READY' && i.dependsOn && i.dependsOn.status !== 'APPROVED') continue;
+    const unblocks = i.dependents.length;
+    const base = `/projects/${i.project.slug}/images/${i.id}`;
+    const cfg = { READY: { cta: 'Copy prompt', href: '/queue', w: 1 }, REVIEW: { cta: 'Review', href: `${base}#review`, w: 3 }, REDO: { cta: 'Fix', href: base, w: 2 }, WAITING: { cta: 'Retry', href: '/queue?show=waiting', w: 0 } }[i.status as 'READY' | 'REVIEW' | 'REDO' | 'WAITING'];
+    items.push({ key: i.id, kind: i.status as ActionItem['kind'], code: imageCode(i.seq), chip: i.status, title: i.title, desc: i.status === 'WAITING' ? `${i.waitingReason ?? 'waiting'}` : unblocks ? `${i.scene.title} · unblocks ${unblocks} image${unblocks > 1 ? 's' : ''}` : i.scene.title, cta: cfg.cta, href: cfg.href, score: cfg.w * 2 + unblocks * 3 + (i.priority === 'HIGH' ? 2 : 0), project: i.project.title });
+  }
+  for (const k of clips) items.push({ key: k.id, kind: 'KLING', code: klingCode(k.order), chip: k.status, title: k.title, desc: k.project.title, cta: k.status === 'REDO' ? 'Fix' : 'Open clip', href: `/projects/${k.project.slug}/kling/${k.id}`, score: 4, project: k.project.title });
+  for (const a of pubs) items.push({ key: a.id, kind: 'PUB', code: `${a.platform.split(' ')[0].slice(0, 2).toUpperCase()} ${a.assetType.toLowerCase()}`, chip: 'GENERATED', title: `${a.platform} · ${a.assetType}`, desc: 'result pasted — choose the version to use', cta: 'Select', href: `/projects/${a.project.slug}/publishing`, score: 1, project: a.project.title });
+  return items.sort((a, b) => b.score - a.score).slice(0, limit);
 }

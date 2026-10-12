@@ -261,3 +261,13 @@ export async function undoApprove(fd: FormData) {
   await logActivity(`${imageCode(a.image.seq)} approval undone`, `/projects/${a.image.project.slug}/images/${a.imageId}`, a.image.projectId);
   touch();
 }
+
+/** Prompt Queue: copying the next prompt marks the image GENERATING so the queue advances. */
+export async function startGenerating(imageId: string) {
+  const { img, code } = await pinfo(imageId);
+  if (img.status !== 'READY') return;
+  await snapshotPrompts(imageId, 'Snapshot when copied for generation');
+  await db.plannedImage.update({ where: { id: imageId }, data: { status: 'GENERATING' } });
+  await logActivity(`${code} marked GENERATING`, null, img.projectId);
+  touch();
+}

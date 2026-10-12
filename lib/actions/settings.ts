@@ -26,3 +26,16 @@ export async function writeTextFiles(fd: FormData) {
   await writeProjectTextFiles(str(fd, 'projectId')!);
   revalidatePath('/', 'layout');
 }
+
+/** "+ Add file": copy any file into the project's "07 Other" folder (tracked in the database). */
+export async function addProjectFile(fd: FormData) {
+  const { importFile, projectFolder } = await import('../files');
+  const { db } = await import('../db');
+  const file = fd.get('file') as File | null;
+  const projectId = str(fd, 'projectId')!;
+  if (!file || !file.size) throw new Error('Choose a file');
+  const p = await db.project.findUniqueOrThrow({ where: { id: projectId } });
+  const base = (file.name.replace(/\.[^.]+$/, '') || 'file').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'file';
+  await importFile(file, { rootFolder: await projectFolder(projectId), folder: '07 Other', fileBase: `${p.slug}_${base}`, kind: 'OTHER', projectSlug: p.slug });
+  revalidatePath('/', 'layout');
+}
