@@ -1,3 +1,4 @@
+import { sceneLabels } from '@/lib/scene-label';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db';
@@ -19,6 +20,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
     db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true } }),
   ]);
+  const lab = sceneLabels(scenes);
   const linked = new Set(clips.flatMap(c => c.scenes.map(x => x.sceneId)));
   const other = clips.filter(c => c.scenes.length === 0 || c.scenes.some(x => !scenes.some(sc => sc.id === x.sceneId)));
   let opened = false;
@@ -40,7 +42,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
           <section key={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
             <details open={open}>
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-4">
-                <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {i + 1} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>
+                <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {lab.get(sc.id)} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>
                 <div className="flex items-center gap-1.5" aria-hidden>{pics.slice(0, 5).map(x => <span key={x.id} className="h-7 w-9 overflow-hidden rounded-md bg-sunken">{x.approvedAttempt && <img src={fileUrl(x.approvedAttempt.assetId, 80)} alt="" className="h-full w-full object-cover" />}</span>)}</div>
                 <span className={`rounded-full px-3 py-1 text-[12.5px] font-semibold ${clip?.status === 'APPROVED' ? 'bg-[#E6EEE3] text-[#46704F]' : chip[1]}`}>{clip?.status === 'APPROVED' ? '✓ Looks good' : chip[0]}</span>
               </summary>

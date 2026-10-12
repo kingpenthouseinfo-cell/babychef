@@ -7,6 +7,7 @@ import { logActivity } from '../activity';
 import { openImagePos, openScenePos, moveImagePos, moveScenePos, closeGaps, orderedPictures, backfillPositions } from '../order';
 import { addNotice, getNotices, setNotices } from '../notices';
 import { autoAttachReferences } from '../auto-refs';
+import { autoTitle } from '../auto-title';
 
 const touch = () => revalidatePath('/', 'layout');
 const storyUrl = async (projectId: string, hash = '') => `/projects/${(await db.project.findUniqueOrThrow({ where: { id: projectId } })).slug}/story${hash}`;
@@ -14,16 +15,16 @@ const storyUrl = async (projectId: string, hash = '') => `/projects/${(await db.
 /** Add a picture right after `afterImageId` ('START' = first in the scene, empty = end of the scene). */
 export async function addPictureHere(fd: FormData) {
   const projectId = str(fd, 'projectId')!;
-  const title = str(fd, 'title');
-  if (!title) throw new Error('Describe the picture you need');
+  const what = str(fd, 'what') || str(fd, 'purpose');
   const afterImageId = str(fd, 'afterImageId');
   let sceneId = str(fd, 'sceneId');
   if (!sceneId && afterImageId && afterImageId !== 'START') sceneId = (await db.plannedImage.findUnique({ where: { id: afterImageId } }))?.sceneId ?? null;
   if (!sceneId) sceneId = (await db.scene.findFirst({ where: { projectId }, orderBy: { pos: 'desc' } }))?.id ?? null;
   if (!sceneId) throw new Error('Add a scene first');
   const max = await db.plannedImage.aggregate({ where: { projectId }, _max: { seq: true } });
+  const title = (str(fd, 'title') || autoTitle(what, (max._max.seq ?? 0) + 1)).slice(0, 140);
   const pos = await openImagePos(sceneId, afterImageId);
-  const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title: title.slice(0, 140), purpose: str(fd, 'what') || str(fd, 'purpose'), shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT' } as any });
+  const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title, purpose: what, shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT' } as any });
   // continuity: the picture before it becomes its Previous Picture; if the next picture was using that one, ask before changing it.
   const all = await orderedPictures(projectId);
   const i = all.findIndex(x => x.id === img.id);
@@ -49,7 +50,8 @@ export async function addSceneHere(fd: FormData) {
   if (!title) throw new Error('Give the scene a name');
   const max = await db.scene.aggregate({ where: { projectId }, _max: { order: true } });
   const pos = await openScenePos(projectId, { afterId: str(fd, 'afterSceneId'), beforeId: str(fd, 'beforeSceneId') });
-  const sc = await db.scene.create({ data: { projectId, order: (max._max.order ?? 0) + 1, pos, title: title.slice(0, 140), narrative: str(fd, 'narrative'), dialogue: str(fd, 'dialogue'), notes: str(fd, 'notes') } });
+  const later = await db.scene.count({ where: { projectId, pos: { gte: pos } } });
+  const sc = await db.scene.create({ data: { projectId, order: (max._max.order ?? 0) + 1, pos, inserted: later > 0, title: title.slice(0, 140), narrative: str(fd, 'narrative'), dialogue: str(fd, 'dialogue'), notes: str(fd, 'notes') } });
   await logActivity(`Scene added: ${title}`, null, projectId);
   touch();
   redirect(await storyUrl(projectId, `#scene-${sc.id}`));
@@ -71,7 +73,7 @@ export async function duplicateScene(fd: FormData) {
   const { id, order, pos, createdAt, updatedAt, ...rest } = sc as any;
   const max = await db.scene.aggregate({ where: { projectId: sc.projectId }, _max: { order: true } });
   const np = await openScenePos(sc.projectId, { afterId: sc.id });
-  const copy = await db.scene.create({ data: { ...rest, title: `${sc.title} (copy)`, order: (max._max.order ?? 0) + 1, pos: np, status: 'PLANNED' } });
+  const copy = await db.scene.create({ data: { ...rest, inserted: true, title: `${sc.title} (copy)`, order: (max._max.order ?? 0) + 1, pos: np, status: 'PLANNED' } });
   touch(); redirect(await storyUrl(sc.projectId, `#scene-${copy.id}`));
 }
 export async function duplicatePicture(fd: FormData) {
@@ -98,7 +100,7 @@ export async function splitScene(fd: FormData) {
   const max = await db.scene.aggregate({ where: { projectId: sc.projectId }, _max: { order: true } });
   const np = await openScenePos(sc.projectId, { afterId: sc.id });
   const { id, order, pos, createdAt, updatedAt, ...rest } = sc as any;
-  const second = await db.scene.create({ data: { ...rest, title: str(fd, 'title') || `${sc.title} (part 2)`, order: (max._max.order ?? 0) + 1, pos: np, status: 'PLANNED' } });
+  const second = await db.scene.create({ data: { ...rest, inserted: true, title: str(fd, 'title') || `${sc.title} (part 2)`, order: (max._max.order ?? 0) + 1, pos: np, status: 'PLANNED' } });
   const moving = await db.plannedImage.findMany({ where: { id: { in: ids }, sceneId: sc.id }, orderBy: [{ pos: 'asc' }, { seq: 'asc' }], select: { id: true } });
   await db.$transaction(moving.map((m, i) => db.plannedImage.update({ where: { id: m.id }, data: { sceneId: second.id, pos: i + 1 } })));
   await closeGaps(sc.projectId, sc.id);

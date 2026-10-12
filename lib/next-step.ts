@@ -1,3 +1,4 @@
+import { sceneLabels } from './scene-label';
 import { db } from './db';
 import { klingCode } from './util';
 import { IMAGE_ORDER, SCENE_ORDER, backfillPositions } from './order';
@@ -47,7 +48,7 @@ export async function nextStep(projectId: string, slug: string): Promise<NextSte
   if (fixing.length) { const i = imgs.find(i => i.status === 'REDO')!; const reds = imgs.filter(x => x.status === 'REDO'); steps.push({ title: reds.length > 1 ? `Fix ${reds.length} pictures` : `Fix ${pic(i.id)}`, body: reds.length > 1 ? reds.map(x => pic(x.id)).join(' and ') : `${i.title} needs another try.`, cta: 'FIX THIS PICTURE', href: `${b}/images/${i.id}`, tone: 'pink', imageId: i.id }); }
   const emptyScene = scenes.find(s => s.images.length === 0);
   if (scenes.length === 0) { steps.push({ title: 'Add Scene 1', body: 'Break the video into scenes.', cta: 'ADD FIRST SCENE', href: `${b}/scenes`, tone: 'blue' }); todo.push({ text: 'Add the scenes', href: `${b}/scenes` }); }
-  else { done.push(`${scenes.length} scene${scenes.length > 1 ? 's' : ''} added`); if (emptyScene) { steps.push({ title: `Add the first picture for Scene ${scenes.indexOf(emptyScene) + 1}`, body: emptyScene.title, cta: 'ADD PICTURE', href: `${b}/images`, tone: 'pink' }); todo.push({ text: `Add pictures for ${scenes.filter(s => s.images.length === 0).length} scene${scenes.filter(s => s.images.length === 0).length > 1 ? 's' : ''}`, href: `${b}/images` }); } }
+  else { done.push(`${scenes.length} scene${scenes.length > 1 ? 's' : ''} added`); if (emptyScene) { steps.push({ title: `Add the first picture for Scene ${sceneLabels(scenes).get(emptyScene.id)}`, body: emptyScene.title, cta: 'ADD PICTURE', href: `${b}/images`, tone: 'pink' }); todo.push({ text: `Add pictures for ${scenes.filter(s => s.images.length === 0).length} scene${scenes.filter(s => s.images.length === 0).length > 1 ? 's' : ''}`, href: `${b}/images` }); } }
   const open = imgs.filter(i => !['APPROVED', 'SKIPPED', 'REJECTED'].includes(i.status));
   if (open.length) todo.push({ text: `Make ${open.length} picture${open.length > 1 ? 's' : ''}`, href: `${b}/images` });
   const okImgs = imgs.filter(i => i.status === 'APPROVED').length;

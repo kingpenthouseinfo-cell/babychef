@@ -1,4 +1,5 @@
 'use server';
+import { sceneLabels } from '../scene-label';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -29,7 +30,7 @@ export async function makeClipForScene(fd: FormData) {
   const p = await db.project.findUniqueOrThrow({ where: { id: sc.projectId } });
   const existing = await db.klingClip.findFirst({ where: { projectId: p.id, scenes: { some: { sceneId } } } });
   if (existing) { redirect(`/projects/${p.slug}/kling/${existing.id}`); }
-  const scenesNo = (await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], select: { id: true } })).findIndex(x => x.id === sceneId) + 1;
+  const scenesNo = sceneLabels(await db.scene.findMany({ where: { projectId: p.id }, select: { id: true, pos: true, order: true, inserted: true } })).get(sceneId) ?? '?';
   const max = await db.klingClip.aggregate({ where: { projectId: p.id }, _max: { order: true } });
   const k = await db.klingClip.create({ data: { projectId: p.id, title: `Scene ${scenesNo} video — ${sc.title}`, order: (max._max.order ?? 0) + 1 } });
   await db.klingScene.create({ data: { klingId: k.id, sceneId } });

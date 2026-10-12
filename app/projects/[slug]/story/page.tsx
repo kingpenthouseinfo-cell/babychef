@@ -7,6 +7,7 @@ import { getNotices } from '@/lib/notices';
 import { imageCode, sceneCode } from '@/lib/util';
 import { statusWords } from '@/lib/words';
 import { Empty, fileUrl } from '@/components/ui';
+import { sceneLabels } from '@/lib/scene-label';
 import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 import { Sortable, Handle } from '@/components/sortable';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
@@ -25,6 +26,9 @@ export default async function Story({ params, searchParams }: { params: { slug: 
     getNotices(p.id),
   ]);
   const num = new Map(imgs.map((i, n) => [i.id, n + 1]));
+  const lab = sceneLabels(scenes);
+  const nextSeq = imgs.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
+  const ctxOf = (s: { order: number }) => ({ slug: p.slug, sceneOrder: s.order, nextSeq });
   const b = `/projects/${p.slug}`;
   const done = imgs.filter(i => i.status === 'APPROVED').length;
   const thumbOf = (i: (typeof imgs)[number]) => i.approvedAttempt?.assetId ?? i.attempts[0]?.assetId ?? null;
@@ -55,7 +59,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                     <details open={!allDone}>
                       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 py-4 pl-3 pr-16">
                         <Handle label={s.title} />
-                        <div className="min-w-[200px] flex-1"><div className="eyebrow" title={sceneCode(s.order)}>SCENE {si + 1}</div><h2 className="mt-1.5 text-[22px]">{s.title}</h2>{(s.narrative || s.purpose) && <div className="mt-0.5 line-clamp-1 text-[13.5px] text-ink-secondary">{(s.narrative || s.purpose || '').split('\n')[0]}</div>}</div>
+                        <div className="min-w-[200px] flex-1"><div className="eyebrow" title={sceneCode(s.order)}>SCENE {lab.get(s.id)}</div><h2 className="mt-1.5 text-[22px]">{s.title}</h2>{(s.narrative || s.purpose) && <div className="mt-0.5 line-clamp-1 text-[13.5px] text-ink-secondary">{(s.narrative || s.purpose || '').split('\n')[0]}</div>}</div>
                         <div className="flex items-center gap-1.5" aria-hidden>{list.slice(0, 4).map(i => { const t = thumbOf(i); return t ? <img key={i.id} src={fileUrl(t, 80)} alt="" className="h-7 w-9 rounded-md object-cover" /> : <span key={i.id} className="h-7 w-9 rounded-md border border-dashed border-line-strong" />; })}</div>
                         <span className={`rounded-full px-3 py-1 text-[12.5px] font-semibold ${pill}`}>{list.length === 0 ? 'No pictures yet' : `${ok} of ${list.length} look good`}</span>
                       </summary>
@@ -73,11 +77,11 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                   <Link href={href} title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} className="min-w-0 flex-1"><span className="block text-[12px] text-ink-secondary">Picture {num.get(i.id)}</span><span className="block truncate text-[14px] font-semibold">{i.title}</span></Link>
                                   <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{waitingFor ? `Waiting for Picture ${waitingFor}` : statusWords(i.status)}</span>
                                   {act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}
-                                  <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} />
+                                  <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} />
                                 </div>);
                             })}
                           </Sortable>
-                          <div className="mt-2"><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} label="+ Add picture here" /></div>
+                          <div className="mt-2"><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} label="+ Add picture here" ctx={ctxOf(s)} /></div>
                         </div>
                       ) : (
                         <Sortable className="grid grid-cols-2 gap-3 px-4 pb-4 md:grid-cols-3 xl:grid-cols-5" onSave={reorderPictures.bind(null, s.id)}>
@@ -96,12 +100,12 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                   <div className="text-[14px] font-semibold leading-snug">{i.title}</div>
                                 </Link>
                                 <div className="absolute left-3.5 top-3.5 rounded-md bg-white/85 backdrop-blur"><Handle label={i.title} /></div>
-                                <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} /></div>
+                                <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} /></div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}</div>
                               </div>
                             );
                           })}
-                          <InsertTile projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} />
+                          <InsertTile projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} ctx={ctxOf(s)} />
                         </Sortable>
                       )}
                     </details>

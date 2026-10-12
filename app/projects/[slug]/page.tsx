@@ -1,3 +1,4 @@
+import { sceneLabels } from '@/lib/scene-label';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -37,7 +38,8 @@ export default async function Overview({ params, searchParams }: { params: { slu
   let lastImport: { created: string[]; warnings: string[] } | null = null; try { lastImport = JSON.parse(hist?.data || '{}').items?.[0] ?? null; } catch { /* none */ }
   const order = await orderedPictures(p.id);
   const numOf = (id: string) => order.find(x => x.id === id)?.n;
-  const sceneNo = (sceneId: string) => 1 + order.map(x => x.sceneId).filter((v, i, a) => a.indexOf(v) === i).indexOf(sceneId);
+  const sLabels = sceneLabels(await db.scene.findMany({ where: { projectId: p.id }, select: { id: true, pos: true, order: true, inserted: true } }));
+  const sceneNo = (sceneId: string) => sLabels.get(sceneId) ?? '?';
   const usingRefs = refs.map(r => ({ asset: r.reference?.asset?.id ?? r.sourceImage?.approvedAttempt?.assetId ?? null, label: r.sourceImage ? 'Previous picture' : (r.reference?.title ?? 'Example') })).slice(0, 4);
   const nQ = ns.questions.soon + ns.questions.later;
   const tile = (label: string, value: React.ReactNode, bg: string, bd: string, bar?: number) => (

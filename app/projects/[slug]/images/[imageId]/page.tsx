@@ -1,3 +1,4 @@
+import { sceneLabels } from '@/lib/scene-label';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -46,7 +47,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const checklist = buildChecklist(img);
   const idx = siblings.findIndex(s => s.id === img.id);
   const pictureNo = idx + 1;
-  const sceneNo = 1 + (await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], select: { id: true } })).findIndex(x => x.id === img.sceneId);
+  const sceneNo = sceneLabels(await db.scene.findMany({ where: { projectId: p.id }, select: { id: true, pos: true, order: true, inserted: true } })).get(img.sceneId) ?? '?';
   const attached = new Set(img.refs.map(r => r.sourceImageId).filter(Boolean));
   const prevSuggest = prev && !attached.has(prev.id) ? prev : null;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';

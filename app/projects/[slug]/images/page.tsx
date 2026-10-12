@@ -8,6 +8,8 @@ import { CopyButton, SubmitBtn } from '@/components/client';
 import { createImage, batchImages } from '@/lib/actions/image';
 import { IMAGE_STATUSES, PRIORITIES, SHOT_TYPES, IMAGE_REF_ROLES } from '@/lib/constants';
 import { imageCode, sceneCode } from '@/lib/util';
+import { AddPictureFields } from '@/components/add-picture-fields';
+import { sceneLabels } from '@/lib/scene-label';
 
 export default async function Images({ params, searchParams }: { params: { slug: string }; searchParams: { status?: string; scene?: string; shot?: string; ingredient?: string; keep?: string; add?: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -17,6 +19,8 @@ export default async function Images({ params, searchParams }: { params: { slug:
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }] }),
     refPool(p),
   ]);
+  const lab = sceneLabels(scenes);
+  const nextSeq = all.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
   const st = searchParams.status;
   const list = all.filter(i =>
     (!st || st === 'ALL' || i.status === st || (st === 'PLANNED' && i.status === 'PROMPT DRAFT')) &&
@@ -62,11 +66,12 @@ export default async function Images({ params, searchParams }: { params: { slug:
         {scenes.length === 0 ? <p className="text-sm text-ink-secondary">Create a scene first (Scenes tab).</p> : (
           <form action={createImage} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="projectId" value={p.id} />
-            <Sel name="sceneId" label="Scene *" v={searchParams.scene || scenes[0].id} options={scenes.map(s => [s.id, `${sceneCode(s.order)} ${s.title}`] as [string, string])} />
-            <Text name="title" label="Image title *" required placeholder="Medium shot of Baby Chef beside skillet" />
-            <Sel name="shotType" label="Shot type" options={SHOT_TYPES} /><Sel name="priority" label="Priority" v="NORMAL" options={PRIORITIES} />
-            <Text name="purpose" label="Purpose" className="sm:col-span-2" />
-            <div className="sm:col-span-2"><SubmitBtn pendingText="Creating…">ADD PICTURE (next: {imageCode((all[all.length - 1]?.seq ?? 0) + 1)})</SubmitBtn></div>
+            <div className="space-y-3 sm:col-span-2">
+              <AddPictureFields ctx={{ slug: p.slug, sceneOrder: (scenes.find(s => s.id === (searchParams.scene || scenes[0].id)) ?? scenes[0]).order, nextSeq }} sceneId={searchParams.scene || scenes[0].id}
+                scenes={scenes.map(s => ({ id: s.id, order: s.order, label: `Scene ${lab.get(s.id)} · ${s.title}` }))}
+                extra={<><Sel name="shotType" label="Shot type" options={SHOT_TYPES} /><Sel name="priority" label="Priority" v="NORMAL" options={PRIORITIES} /></>} />
+            </div>
+            <div className="sm:col-span-2"><SubmitBtn pendingText="Creating…">ADD PICTURE</SubmitBtn></div>
           </form>
         )}
       </section>

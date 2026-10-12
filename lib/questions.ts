@@ -1,3 +1,4 @@
+import { sceneLabels } from './scene-label';
 import { db } from './db';
 import { SCENE_ORDER } from './order';
 
@@ -79,11 +80,12 @@ export async function desiredQuestions(projectId: string): Promise<Q[]> {
   add({ key: 'mainHook', group: 'VIDEO STYLE', question: 'What is the hook — the first few seconds that make people keep watching?', answerType: 'long', target: 'project.mainHook', priority: 'LATER', resolved: p.mainHook });
   add({ key: 'finishedFood', group: 'VIDEO STYLE', question: 'What does the finished food look like?', answerType: 'long', target: 'project.finishedFood', priority: 'LATER', resolved: p.finishedFood });
   add({ key: 'cta', group: 'VIDEO STYLE', question: 'What should Baby Chef say at the end? (call to action)', answerType: 'long', target: 'project.ctaCustom', priority: 'LATER', resolved: p.ctaCustom || (p.ctaPreference && p.ctaPreference !== 'Custom' ? p.ctaPreference : null) });
+  const sl = sceneLabels(scenes);
   scenes.forEach((s, n) => {
     const early = n < 2;
-    if (!has(s.narrative) && !has(s.mainAction)) add({ key: `scene:${s.id}:what`, group: 'SCENES', question: `What happens in Scene ${n + 1} (“${s.title}”)?`, answerType: 'long', target: `scene.${s.id}.narrative`, priority: early ? 'SOON' : 'LATER' });
-    if (s.adultAssist === 'YES' && !has(s.adultNotes)) add({ key: `scene:${s.id}:adult`, group: 'SCENES', question: `What does the adult do in Scene ${n + 1} (“${s.title}”)?`, hint: 'Safety steps like hot pans or knives.', answerType: 'long', target: `scene.${s.id}.adultNotes`, priority: 'SOON' });
-    if (has(s.narrative) || has(s.mainAction)) if (!has(s.foodAfter)) add({ key: `scene:${s.id}:after`, group: 'SCENES', question: `What does the food look like at the end of Scene ${n + 1} (“${s.title}”)?`, answerType: 'long', target: `scene.${s.id}.foodAfter`, priority: 'LATER' });
+    if (!has(s.narrative) && !has(s.mainAction)) add({ key: `scene:${s.id}:what`, group: 'SCENES', question: `What happens in Scene ${sl.get(s.id)} (“${s.title}”)?`, answerType: 'long', target: `scene.${s.id}.narrative`, priority: early ? 'SOON' : 'LATER' });
+    if (s.adultAssist === 'YES' && !has(s.adultNotes)) add({ key: `scene:${s.id}:adult`, group: 'SCENES', question: `What does the adult do in Scene ${sl.get(s.id)} (“${s.title}”)?`, hint: 'Safety steps like hot pans or knives.', answerType: 'long', target: `scene.${s.id}.adultNotes`, priority: 'SOON' });
+    if (has(s.narrative) || has(s.mainAction)) if (!has(s.foodAfter)) add({ key: `scene:${s.id}:after`, group: 'SCENES', question: `What does the food look like at the end of Scene ${sl.get(s.id)} (“${s.title}”)?`, answerType: 'long', target: `scene.${s.id}.foodAfter`, priority: 'LATER' });
   });
 
   // placeholders left in text

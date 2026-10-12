@@ -12,6 +12,7 @@ import { snapshotPrompts } from '../prompt-versions';
 import { registerAttempt } from '../results';
 import { expectedFilename, nextVersion } from '../naming';
 import { IMAGE_STATUSES, PRIORITIES } from '../constants';
+import { autoTitle } from '../auto-title';
 
 const IMG_TEXT = ['title','shotType','purpose','priority','promptStatus','aspectRatio','cropImportance','startingComposition','characterVisibility','expression','bodyPosition','handPosition','ingredients','ingredientQty','ingredientState','foodTexture','foodColor','cookware','utensils','objectPlacement','actionMoment','physics','lighting','cameraAngle','cameraDistance','lens','depthOfField','focusPoint','background','safety','mustBeVisible','mustNotChange','mustNotAppear','continuity','restrictions','notes','dependsOnId'];
 
@@ -23,12 +24,12 @@ const touch = () => revalidatePath('/', 'layout');
 
 export async function createImage(fd: FormData) {
   const projectId = str(fd, 'projectId')!, sceneId = str(fd, 'sceneId');
-  const title = str(fd, 'title');
   if (!sceneId) throw new Error('Choose a scene');
-  if (!title) throw new Error('Image title is required');
   const max = await db.plannedImage.aggregate({ where: { projectId }, _max: { seq: true } });
+  const what = str(fd, 'what') || str(fd, 'purpose');
+  const title = (str(fd, 'title') || autoTitle(what, (max._max.seq ?? 0) + 1)).slice(0, 140);
   const pos = await openImagePos(sceneId, str(fd, 'afterImageId'));
-  const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title, shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT', priority: str(fd, 'priority') || 'NORMAL', purpose: str(fd, 'purpose') } });
+  const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title, shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT', priority: str(fd, 'priority') || 'NORMAL', purpose: what } });
   await autoAttachReferences(img.id);
   const proj = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await logActivity(`${imageCode(img.seq)} planned: ${title}`, `/projects/${proj.slug}/images/${img.id}`, projectId);

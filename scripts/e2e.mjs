@@ -146,7 +146,8 @@ ok('Create scene SC01', (await page.locator('text=SC01').count()) > 0);
 
 async function newImage(title) {
   await go(`/projects/${slug}/images`);
-  await page.fill('#add input[name=title]', title);
+  await page.fill('#add textarea[name=what]', title);
+  await page.locator('#add details > summary').click(); await page.fill('#add input[name=title]', title);
   await page.click('#add button:has-text("ADD PICTURE")');
   await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
   return page.url();
@@ -369,7 +370,7 @@ ok('Keep my edits preserves the text', (await page.inputValue('textarea[aria-lab
 
 // ---- Mark waiting from the Prompt Queue NEXT card
 await go(`/projects/${slug}/images`);
-await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+await page.fill('#add textarea[name=what]', 'Waiting test image'); await page.locator('#add details > summary').click(); await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 await page.click('button[role=tab]:has-text("Continuation")'); await page.fill('textarea[aria-label="Continuation prompt"]', 'CONT: waiting test'); await page.locator('textarea[aria-label="Continuation prompt"]').blur(); await page.waitForTimeout(900);
 await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 await go('/queue');
@@ -455,12 +456,12 @@ ok('Story: shows Picture 1.. with technical ID only in tooltip', picsBefore.leng
 const firstGap = page.locator('[id^="pic-"]').first();
 await firstGap.locator('summary[aria-label="Picture menu"]').click();
 await firstGap.locator('summary:text-is("Quick add after")').click();
-await firstGap.locator('input[name=title]').last().fill('Close-up of butter being rubbed in');
+await firstGap.locator('textarea[name=what]').last().fill('Close-up of butter being rubbed in');
 await firstGap.locator('button:has-text("ADD")').last().click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const picsAfter = await picNames();
-ok('Insert between: new picture appears right after Picture 1 and numbers update', picsAfter.length === picsBefore.length + 1 && picsAfter[1].includes('Picture 2') && picsAfter[1].includes('Close-up of butter'), picsAfter.join(' ; '));
+ok('Insert between: new picture appears right after Picture 1 and numbers update', picsAfter.length === picsBefore.length + 1 && picsAfter[1].includes('Picture 2') && picsAfter[1].includes('Butter Being Rubbed In'), picsAfter.join(' ; '));
 const oldIds = picsBefore.map(x => x.split('|')[0]).join();
 ok('Stable internal IDs are unchanged by an insert', picsBefore.every((x, i) => picsAfter.map(y => y.split('|')[0]).includes(x.split('|')[0])) && oldIds.length > 0);
 await go(`/projects/${slug}/story`);
@@ -468,11 +469,28 @@ await page.locator('[id^="pic-"]').nth(1).locator('button[aria-label="Picture me
 await page.locator('[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const picsMoved = await picNames();
-ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Close-up of butter') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
+ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Butter Being Rubbed In') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
 await page.locator('summary:text-is("+ Add scene here")').first().click();
 await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Extra scene E2E');
 await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Add scene here: new scene is inserted at the top', (await page.locator('section[id^="scene-"] h2').first().textContent()) === 'Extra scene E2E');
+// ---- automatic picture names + inserted scene labels
+await go(`/projects/${slug}/story`);
+await page.locator('summary:text-is("+ Add scene here")').nth(1).click();
+await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Squeezed-in scene');
+await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await go(`/projects/${slug}/story`);
+const eyebrows = await page.locator('section[id^="scene-"] .eyebrow').allTextContents();
+ok('Inserted scene is labelled 1A and later scenes are not renumbered', eyebrows[0].trim() === 'SCENE 1' && eyebrows[1].trim() === 'SCENE 1A' && eyebrows[2].trim() === 'SCENE 2', eyebrows.join(' | '));
+await go(`/projects/${slug}/images`);
+await page.fill('#add textarea[name=what]', 'Close-up of Baby Chef rubbing the butter into the flour.');
+ok('Add picture: live preview shows auto title + file name', (await page.locator('[data-testid=will-be-added]').textContent()).includes('Butter Rubbed Into Flour') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_IMG-') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_v1.png'));
+await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+ok('Add picture: title was made automatically', (await page.locator('body').textContent()).includes('Butter Rubbed Into Flour'));
+await go(`/projects/${slug}/images`);
+await page.fill('#add textarea[name=what]', '');
+await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+ok('Add picture: blank description still works (Picture N title)', /Picture \d+/.test(await page.locator('h1').first().textContent()), await page.locator('h1').first().textContent());
 // ---- Missing info
 await go(`/projects/${slug}/questions`);
 ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);

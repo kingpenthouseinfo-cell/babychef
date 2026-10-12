@@ -262,6 +262,7 @@ model Scene {
   projectId      String
   order          Int      // stable scene number (SC code) — never renumbered
   pos            Int      @default(0) // visible position; inserts/moves change this, not the stable number
+  inserted       Boolean  @default(false) // added between existing scenes → shown as 4A, 4B…
   title          String
   recipeStep     String?
   purpose        String?

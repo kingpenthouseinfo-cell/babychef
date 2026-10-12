@@ -1,3 +1,4 @@
+import { sceneLabels } from './scene-label';
 import { db } from './db';
 import { SCENE_ORDER, IMAGE_ORDER, backfillPositions } from './order';
 import { syncQuestions } from './questions';
@@ -54,6 +55,7 @@ export async function buildJourney(projectId: string, slug: string): Promise<Jou
     { label: 'Create Scenes', state: scenes.length > 0 ? 'DONE' : 'NOT STARTED', href: `${b}/story` },
     { label: 'Finish Picture Plan', state: scenes.length === 0 ? 'NOT STARTED' : withPics === scenes.length ? 'DONE' : withPics > 0 ? 'IN PROGRESS' : 'NOT STARTED', href: `${b}/story`, detail: scenes.length && withPics < scenes.length ? `${scenes.length - withPics} scene${scenes.length - withPics > 1 ? 's' : ''} have no pictures yet` : undefined },
   ];
+  const sl = sceneLabels(scenes);
   const pictures: JStep[] = scenes.map((s, n) => {
     const list = imgs.filter(i => i.sceneId === s.id);
     const states = list.map(picState);
@@ -61,7 +63,7 @@ export async function buildJourney(projectId: string, slug: string): Promise<Jou
     const state: JState = list.length === 0 ? 'NOT STARTED' : worst(states);
     const fixN = states.filter(x => x === 'NEEDS FIXING').length;
     return {
-      label: `Scene ${n + 1}: ${s.title}`, state, href: `${b}/story#scene-${s.id}`,
+      label: `Scene ${sl.get(s.id)}: ${s.title}`, state, href: `${b}/story#scene-${s.id}`,
       detail: list.length === 0 ? undefined : fixN ? `${fixN} picture${fixN > 1 ? 's need' : ' needs'} fixing · ${ok} of ${list.length} done` : state === 'DONE' ? undefined : `${ok} of ${list.length} pictures done`,
       children: list.map(i => ({ label: `Picture ${num.get(i.id)}`, state: picState(i), href: `${b}/images/${i.id}${i.status === 'REVIEW' ? '#review' : ''}`, detail: i.title })),
     };
@@ -74,7 +76,7 @@ export async function buildJourney(projectId: string, slug: string): Promise<Jou
     { label: 'Check Remaining Pictures', state: review.length ? 'IN PROGRESS' : imgs.length && imgs.every(i => ['APPROVED', 'SKIPPED', 'REJECTED'].includes(i.status)) ? 'DONE' : 'NOT STARTED', href: review[0] ? `${b}/images/${review[0].id}#review` : `${b}/story`, detail: review.length ? `${review.length} waiting to be checked` : undefined },
   ];
   const clipState = (s: string): JState => s === 'APPROVED' ? 'DONE' : s === 'REDO' ? 'NEEDS FIXING' : ['READY', 'REVIEW', 'GENERATING'].includes(s) ? 'IN PROGRESS' : s === 'WAITING' ? 'WAITING' : 'NOT STARTED';
-  const clipSteps: JStep[] = clips.length ? clips.map(c => ({ label: `Video Clip ${c.order}: ${c.title}`, state: clipState(c.status), href: `${b}/kling/${c.id}` })) : scenes.map((s, n) => ({ label: `Scene ${n + 1} Video Clip`, state: 'NOT STARTED' as JState, href: `${b}/kling` }));
+  const clipSteps: JStep[] = clips.length ? clips.map(c => ({ label: `Video Clip ${c.order}: ${c.title}`, state: clipState(c.status), href: `${b}/kling/${c.id}` })) : scenes.map((s, n) => ({ label: `Scene ${sl.get(s.id)} Video Clip`, state: 'NOT STARTED' as JState, href: `${b}/kling` }));
   const keepScenes = scenes.filter(s => s.shortKeep).length;
   const shortSteps: JStep[] = [
     { label: 'Choose Short Moments', state: keepScenes + shortItems > 0 ? 'DONE' : 'NOT STARTED', href: `${b}/short` },
