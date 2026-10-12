@@ -42,7 +42,7 @@ export function NavSearch() {
   return (
     <form className="relative hidden lg:block" onSubmit={e => { e.preventDefault(); const q = ref.current?.value.trim(); if (q) router.push(`/search?q=${encodeURIComponent(q)}`); }} role="search">
       <input ref={ref} aria-label="Search" placeholder="Search pictures, scenes, recipes" className="h-9 w-[260px] rounded-[9px] border border-line-strong bg-white pl-8 pr-10 text-[13.5px] outline-none placeholder:text-[#8A8592] focus:border-blue-deep" />
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#8A8592]" aria-hidden>⌕</span><kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[11px] text-ink-muted">⌘K</kbd>
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#8A8592]" aria-hidden>⌕</span><kbd className="pointer-events-none absolute right-3 top-1/2 hidden xl:block -translate-y-1/2 font-mono text-[11px] text-ink-muted">⌘K</kbd>
     </form>
   );
 }

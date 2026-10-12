@@ -22,6 +22,10 @@ Open a **Recipe Video** and the first thing you see is **What do I do next?** wi
 * **Fill from text** (New Recipe Video, Overview, Recipe, Ingredients, Scenes & Pictures): paste labelled text, check it, then fill in. Nothing is saved until you confirm; existing answers are kept unless you choose Replace/Merge.
 * Technical names (Planned Image, Prompt Queue, Production Brain…) remain in code and the database only.
 
+## The Simple Studio design
+
+The interface follows the "Simple Studio" handoff: white pages, soft pink/green/blue/purple/coral panels, dark and pastel raised buttons, Newsreader + Hanken Grotesk + IBM Plex Mono. **Home** shows your two active videos with % done and "Show next steps", plus boxes to start a video and add a Baby Chef or kitchen. Inside a video: Overview · Start to Finish · Missing Info · Recipe · Scenes & Pictures (drag to reorder, large or compact) · Video Clips (one per scene) · Post Video · More. A picture moves through four states: Make → Found → Fix it → Looks good. Mobile layouts are not part of this design pass.
+
 ## Technology
 
 Next.js 14 (App Router) · TypeScript · React · Tailwind CSS · Prisma · SQLite · local file storage (behind a small `StorageProvider` interface). No auth, no billing, no cloud, no AI SDKs.

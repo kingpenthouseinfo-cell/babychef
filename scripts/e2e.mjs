@@ -221,6 +221,7 @@ await page.fill('textarea[name=change]', 'Only 2 tbsp small pool');
 await page.locator('button:has-text("Make fix prompt")').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 ok('Redo saved: correction history shows', (await page.locator('text=Too much oil').count()) > 0);
+ok('Fix it: next prompt starts with the fix header and the file name moves to v2', (await page.locator('textarea[aria-label="Full prompt"]').first().inputValue().catch(() => '')).includes('Fix from version 1: Too much oil') && /_v2\.png/.test((await page.locator('[data-testid=expected-filename]').first().textContent()) || ''));
 ok('Attempt chip shows v1 Redo', (await page.locator('a:has-text("v1"):has-text("Needs fixing")').count()) > 0);
 await importResult(r2);
 ok('Version 2 uploaded; attempt 1 preserved', (await page.locator('text=Version 1').count()) > 0 && (await page.locator('text=Version 2').count()) > 0);
@@ -548,6 +549,25 @@ await form.locator('select').nth(2).selectOption({ index: 1 });
 await form.locator('button:has-text("Assign")').click(); await page.waitForTimeout(2000);
 await go('/unmatched');
 ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.locator('text=random-download.png').count()) === 0 && fs.readdirSync(imgDir).some(f => new RegExp(`_${scCode}_IMG-001.*_v4\\.png$`).test(f)));
+// ---- final design: Home, menus, compact list, video clips
+await go('/');
+await page.locator('summary:has-text("Show next steps")').first().click();
+ok('Home: Show next steps lists numbered steps', (await page.locator('ol li a').count()) > 0);
+await page.fill('textarea[aria-label="Paste a recipe"]', 'Quick E2E Pancakes\n1 cup flour\n1 egg');
+await page.click('button:has-text("Create video")'); await page.waitForURL(/\/projects\/quick-e2e-pancakes/);
+ok('Home: Start a new video creates it from the first line of the recipe', (await page.locator('h1:has-text("Quick E2E Pancakes")').count()) === 1);
+await go('/');
+await page.fill('input[aria-label="Name"]', 'E2E Added Chef'); await page.click('button:has-text("Add Baby Chef")');
+await page.waitForURL(/babychefs\?chef=/); await page.waitForLoadState('networkidle');
+ok('Home: Add a Baby Chef creates a profile', (await page.locator('h1:has-text("E2E Added Chef")').count()) === 1);
+await go('/projects');
+await page.locator('summary[aria-label^="Menu for Quick E2E Pancakes"]').click(); await page.locator('button:has-text("Duplicate")').first().click();
+await page.waitForURL(/quick-e2e-pancakes-copy/);
+ok('Recipe Videos menu: Duplicate copies a video', (await page.locator('h1:has-text("(copy)")').count()) === 1);
+await go(`/projects/${slug}/story?view=compact`);
+ok('Scenes & Pictures: compact list view works', (await page.locator('[id^="pic-"]').count()) > 0 && (await page.locator('[data-handle]').count()) > 0);
+await go(`/projects/${slug}/kling`);
+ok('Video Clips: one card per scene', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
