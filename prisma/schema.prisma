@@ -287,6 +287,11 @@ model Scene {
   foodDuring     String?
   foodAfter      String?
   continuity     String?
+  mainShot       String?
+  insertShots    String?
+  duration       String?
+  anchors        String?  // PLANNED IMAGE ANCHORS from the scene breakdown
+  klingNote      String?  // KLING GROUPING NOTE
   shortKeep      Boolean  @default(false)
   hook           Boolean  @default(false)
   beauty         Boolean  @default(false)
@@ -306,6 +311,9 @@ model PlannedImage {
   projectId       String
   sceneId         String
   seq             Int      // stable global picture number (IMG code) — never renumbered
+  autoPlanned     Boolean  @default(false) // created by the automatic image plan
+  foodState       String?  // exact food state at this moment
+  why             String?  // WHY THIS IMAGE IS NEEDED
   pos             Int      @default(0) // visible position inside its scene
   title           String
   shotType        String   @default("MAIN NARRATIVE SHOT")

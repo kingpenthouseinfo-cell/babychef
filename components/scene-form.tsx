@@ -12,6 +12,11 @@ export function SceneForm({ projectId, s, first }: { projectId: string; s?: any;
         <div className="sm:col-span-3 text-xs font-bold uppercase tracking-wide text-[#8A6216]">Food-state continuity</div>
         <Area name="foodBefore" label="Food state BEFORE" v={s?.foodBefore} rows={3} /><Area name="foodDuring" label="Food state DURING" v={s?.foodDuring} rows={3} /><Area name="foodAfter" label="Food state AFTER" v={s?.foodAfter} rows={3} />
       </div>
+      <div className="grid gap-3 rounded-lg border border-line bg-surface p-3 sm:grid-cols-2">
+        <div className="sm:col-span-2 text-xs font-bold uppercase tracking-wide text-ink-secondary">Picture plan</div>
+        <Area name="anchors" label="Planned image anchors (one per line)" v={(s as any)?.anchors} rows={3} /><Area name="klingNote" label="Video clip grouping note" v={(s as any)?.klingNote} rows={3} />
+        <Text name="mainShot" label="Main shot" v={(s as any)?.mainShot} /><Text name="insertShots" label="Insert shots" v={(s as any)?.insertShots} /><Text name="duration" label="Estimated duration" v={(s as any)?.duration} />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Text name="recipeStep" label="Recipe step" v={s?.recipeStep} /><Text name="purpose" label="Purpose" v={s?.purpose} />
         <Area name="narrative" label="Narrative description" v={s?.narrative} /><Area name="dialogue" label="Dialogue" v={s?.dialogue} />

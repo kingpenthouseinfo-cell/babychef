@@ -474,23 +474,6 @@ await page.locator('summary:text-is("+ Add scene here")').first().click();
 await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Extra scene E2E');
 await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Add scene here: new scene is inserted at the top', (await page.locator('section[id^="scene-"] h2').first().textContent()) === 'Extra scene E2E');
-// ---- automatic picture names + inserted scene labels
-await go(`/projects/${slug}/story`);
-await page.locator('summary:text-is("+ Add scene here")').nth(1).click();
-await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Squeezed-in scene');
-await page.locator('button:has-text("ADD SCENE"):visible').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
-await go(`/projects/${slug}/story`);
-const eyebrows = await page.locator('section[id^="scene-"] .eyebrow').allTextContents();
-ok('Inserted scene is labelled 1A and later scenes are not renumbered', eyebrows[0].trim() === 'SCENE 1' && eyebrows[1].trim() === 'SCENE 1A' && eyebrows[2].trim() === 'SCENE 2', eyebrows.join(' | '));
-await go(`/projects/${slug}/images`);
-await page.fill('#add textarea[name=what]', 'Close-up of Baby Chef rubbing the butter into the flour.');
-ok('Add picture: live preview shows auto title + file name', (await page.locator('[data-testid=will-be-added]').textContent()).includes('Butter Rubbed Into Flour') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_IMG-') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_v1.png'));
-await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
-ok('Add picture: title was made automatically', (await page.locator('body').textContent()).includes('Butter Rubbed Into Flour'));
-await go(`/projects/${slug}/images`);
-await page.fill('#add textarea[name=what]', '');
-await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
-ok('Add picture: blank description still works (Picture N title)', /Picture \d+/.test(await page.locator('h1').first().textContent()), await page.locator('h1').first().textContent());
 // ---- Missing info
 await go(`/projects/${slug}/questions`);
 ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);
@@ -598,6 +581,23 @@ await go(`/projects/${slug}/story?view=compact`);
 ok('Scenes & Pictures: compact list view works', (await page.locator('[id^="pic-"]').count()) > 0 && (await page.locator('[data-handle]').count()) > 0);
 await go(`/projects/${slug}/kling`);
 ok('Video Clips: one card per scene', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
+// ---- automatic picture names + inserted scene labels
+await go(`/projects/${slug}/story`);
+await page.locator('summary:text-is("+ Add scene here")').nth(1).click();
+await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Squeezed-in scene');
+await page.locator('button:has-text("ADD SCENE"):visible').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await go(`/projects/${slug}/story`);
+const eyebrows = (await page.locator('section[id^="scene-"] .eyebrow').allTextContents()).filter(t => /^SCENE/.test(t.trim()));
+ok('Inserted scene is labelled 1A and later scenes are not renumbered', eyebrows[0].trim() === 'SCENE 1' && eyebrows[1].trim() === 'SCENE 1A' && eyebrows[2].trim() === 'SCENE 2', eyebrows.join(' | '));
+await go(`/projects/${slug}/images`);
+await page.fill('#add textarea[name=what]', 'Close-up of Baby Chef rubbing the butter into the flour.');
+ok('Add picture: live preview shows auto title + file name', (await page.locator('[data-testid=will-be-added]').textContent()).includes('Butter Rubbed Into Flour') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_IMG-') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_v1.png'));
+await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+ok('Add picture: title was made automatically', (await page.locator('body').textContent()).includes('Butter Rubbed Into Flour'));
+await go(`/projects/${slug}/images`);
+await page.fill('#add textarea[name=what]', '');
+await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+ok('Add picture: blank description still works (Picture N title)', /Picture \d+/.test(await page.locator('body').textContent()));
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,

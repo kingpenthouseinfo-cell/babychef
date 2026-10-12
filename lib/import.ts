@@ -41,6 +41,7 @@ export function toSceneData(s: ParsedScene) {
     purpose: f.purpose || null, recipeStep: f.recipeStep || null, dialogue: f.dialogue || null, mainAction: f.mainAction || null,
     adultAssist: adult.startsWith('YES') ? 'YES' : adult.startsWith('OPTIONAL') ? 'OPTIONAL' : 'NO', adultNotes: f.adult || null,
     foodBefore: f.foodBefore || null, foodDuring: f.foodDuring || null, foodAfter: f.foodAfter || null,
+    mainShot: f.mainShot || null, insertShots: f.inserts || null, duration: f.duration || null, anchors: f.anchors || null, klingNote: f.klingNote || null,
     asmr: f.asmr || null, cameraAngle: f.cameraAngle || null, shortKeep: yes(f.shortKeep),
     notes: [f.mainShot && `Main shot: ${f.mainShot}`, f.inserts && `Insert shots: ${f.inserts}`, f.duration && `Estimated duration: ${f.duration}`, f.anchors && `Planned image anchors: ${f.anchors}`, f.klingNote && `Kling grouping note: ${f.klingNote}`].filter(Boolean).join('\n') || null,
   };

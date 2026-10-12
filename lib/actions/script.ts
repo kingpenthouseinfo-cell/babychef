@@ -33,7 +33,7 @@ export async function setCurrentScript(fd: FormData) {
 export async function reopenScript(fd: FormData) { await db.scriptVersion.update({ where: { id: str(fd, 'id')! }, data: { status: 'DRAFT' } }); revalidatePath('/', 'layout'); }
 
 // ---- scenes
-const SCENE_TEXT = ['title','recipeStep','purpose','narrative','dialogue','babyReaction','mainAction','secondaryAction','ingredients','utensils','cookware','babyPosition','adultAssist','adultNotes','cameraAngle','cameraMovement','shotPriority','cropImportance','asmr','safetyNotes','foodBefore','foodDuring','foodAfter','continuity','notes','status'];
+const SCENE_TEXT = ['title','recipeStep','purpose','narrative','dialogue','babyReaction','mainAction','secondaryAction','ingredients','utensils','cookware','babyPosition','adultAssist','adultNotes','cameraAngle','cameraMovement','shotPriority','cropImportance','asmr','safetyNotes','foodBefore','foodDuring','foodAfter','continuity','notes','status','mainShot','insertShots','duration','anchors','klingNote'];
 
 export async function saveScene(fd: FormData) {
   const id = str(fd, 'id');
