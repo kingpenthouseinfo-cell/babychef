@@ -73,7 +73,7 @@ export function Stat({ label, value, href, tone }: { label: string; value: React
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
 export function ProgressBar({ pct }: { pct: number }) {
-  return <div className="h-1 w-full overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-btn-sage" style={{ width: `${pct}%` }} /></div>;
+  return <div className="h-[5px] w-full overflow-hidden rounded-full bg-[#F0EEF3]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} /></div>;
 }
 export function Warn({ children }: { children: React.ReactNode }) {
   return <div className="rounded-md border border-[#E7D3A0] bg-[#F8EFD9] px-3 py-2 text-[13px] text-[#8A6216]"><b>WARNING:</b> {children}</div>;

@@ -13,11 +13,12 @@ export default async function StartToFinish({ params, searchParams }: { params: 
   const s = j.summary;
   const word = (x: string) => (x === 'DONE' ? 'Done' : x === 'NOT STARTED' ? 'Not started' : x === 'IN PROGRESS' ? 'In progress' : x === 'NEEDS FIXING' ? 'Needs fixing' : 'Waiting');
   return (
-    <div className="space-y-5">
-      <div><h1 className="text-[26px]">Start to Finish</h1><div className="text-[14px] font-semibold uppercase tracking-wide text-ink-secondary">{p.title}</div></div>
-      <section className="rounded-xl border-2 border-ink bg-white p-5" aria-label="What should I do next?">
-        <div className="eyebrow text-ink-secondary">WHAT SHOULD I DO NEXT?</div>
-        {ns.next ? (<><h2 className="mt-1 text-[22px] font-semibold leading-tight">{ns.next.title}</h2>{ns.next.body && <p className="text-[13px] text-ink-secondary">{ns.next.body}</p>}<Link href={ns.next.href} className="btn btn-primary mt-3 min-h-[48px] px-6">CONTINUE</Link></>) : <h2 className="mt-1 text-[20px] font-semibold">Nothing needs you right now.</h2>}
+    <div className="max-w-[760px] space-y-5">
+      <div className="flex items-start justify-between gap-3"><div><h1 className="text-[34px] md:text-[40px]">Start to Finish</h1><p className="mt-1 text-[14px] text-ink-secondary">Updates itself from your pictures, clips and answers.</p></div>
+        <Link href={hide ? `/projects/${p.slug}/start` : `/projects/${p.slug}/start?hide=done`} className="btn btn-sm">{hide ? 'Show done' : 'Hide done'}</Link></div>
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-line bg-white p-5" style={{ boxShadow: '0 14px 30px -26px rgba(40,36,60,.5)' }} aria-label="What should I do next?">
+        <div className="min-w-0"><div className="eyebrow text-blue-deep">WHAT TO DO NEXT</div>{ns.next ? <div className="mt-1 font-serif text-[24px] leading-tight">{ns.next.title}</div> : <div className="mt-1 font-serif text-[22px]">Nothing needs you right now.</div>}{ns.next?.body && <div className="mt-0.5 text-[13px] text-ink-secondary">{ns.next.body}</div>}</div>
+        {ns.next && <Link href={ns.next.href} className="btn btn-primary min-h-[46px] px-6">Continue</Link>}
       </section>
       <section className="card" aria-label="Overall progress">
         <div className="eyebrow">OVERALL PROGRESS</div>
@@ -27,7 +28,6 @@ export default async function StartToFinish({ params, searchParams }: { params: 
           <li>Short / Reel {word(s.short)}</li><li>Posting {word(s.posting)}</li>
         </ul>
       </section>
-      <div className="flex justify-end"><Link href={hide ? `/projects/${p.slug}/start` : `/projects/${p.slug}/start?hide=done`} className="btn btn-sm btn-ghost">{hide ? 'SHOW DONE' : 'HIDE DONE'}</Link></div>
       <JourneyList sections={j.sections} hideDone={hide} />
     </div>
   );

@@ -6,11 +6,11 @@ import { backfillPositions, IMAGE_ORDER, SCENE_ORDER } from '@/lib/order';
 import { getNotices } from '@/lib/notices';
 import { imageCode, sceneCode } from '@/lib/util';
 import { statusWords } from '@/lib/words';
-import { Empty } from '@/components/ui';
-import { InsertPicture, InsertScene, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
+import { Empty, fileUrl } from '@/components/ui';
+import { InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 
-const ICON: Record<string, string> = { APPROVED: '✓', REVIEW: '●', REDO: '!', READY: '○', WAITING: '⏳', GENERATING: '●', PLANNED: '○', 'PROMPT DRAFT': '○', REJECTED: '✕', SKIPPED: '–' };
-const TONE: Record<string, string> = { APPROVED: 'text-[#3B6448]', REVIEW: 'text-[#33507A]', REDO: 'text-[#A8513F]', WAITING: 'text-[#8A6216]', READY: 'text-ink', GENERATING: 'text-[#33507A]' };
+const PILL: Record<string, string> = { APPROVED: 'bg-[#E6EEE3] text-[#46704F]', REVIEW: 'bg-[#E5EFFB] text-[#3E6290]', REDO: 'bg-[#F5E1DB] text-[#A5473A]', READY: 'bg-[#E3EAF2] text-[#46638A]', WAITING: 'bg-[#F4E8CF] text-[#8E6720]', GENERATING: 'bg-[#E3EAF2] text-[#46638A]' };
+const ICON: Record<string, string> = { APPROVED: '✓ ', REVIEW: '? ', REDO: '! ', WAITING: '◷ ', READY: '● ', GENERATING: '● ' };
 
 export default async function Story({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -18,67 +18,64 @@ export default async function Story({ params }: { params: { slug: string } }) {
   await backfillPositions();
   const [scenes, imgs, notices] = await Promise.all([
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { dependsOn: { select: { id: true, status: true } } } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { dependsOn: { select: { id: true, status: true } }, approvedAttempt: true, attempts: { orderBy: { number: 'desc' }, take: 1 } } }),
     getNotices(p.id),
   ]);
   const num = new Map(imgs.map((i, n) => [i.id, n + 1]));
   const b = `/projects/${p.slug}`;
   const done = imgs.filter(i => i.status === 'APPROVED').length;
-  const scenesDone = scenes.filter(s => { const l = imgs.filter(i => i.sceneId === s.id); return l.length > 0 && l.every(i => ['APPROVED', 'SKIPPED', 'REJECTED'].includes(i.status)); }).length;
+  const thumbOf = (i: (typeof imgs)[number]) => i.approvedAttempt?.assetId ?? i.attempts[0]?.assetId ?? null;
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div><h1 className="text-[26px]">Scenes & Pictures</h1><p className="text-[13px] text-ink-secondary">Scenes {scenesDone} of {scenes.length} · Pictures {done} of {imgs.length} look good</p></div>
-        <div className="flex gap-2"><Link href={`${b}/fill`} className="btn btn-sm btn-copy-secondary">FILL FROM TEXT</Link><Link href={`${b}/scenes`} className="btn btn-sm btn-ghost">Scene details</Link><Link href={`${b}/images`} className="btn btn-sm btn-ghost">Picture list</Link></div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div><h1 className="text-[34px] md:text-[40px]">Scenes & Pictures</h1><p className="mt-1 text-[14px] text-ink-secondary">{scenes.length} scenes · {imgs.length} pictures · {done} look good</p></div>
+        <div className="flex flex-wrap gap-2"><Link href={`${b}/fill`} className="btn btn-sm btn-copy-secondary">Fill from text</Link><Link href={`${b}/scenes`} className="btn btn-sm btn-ghost">Scene details</Link><Link href={`${b}/images`} className="btn btn-sm btn-ghost">Picture list</Link><Link href="/queue" className="btn">Pictures to make</Link></div>
       </div>
       {notices.map(n => <NoticeCard key={n.id} projectId={p.id} id={n.id} text={n.text} yes={n.kind === 'CLIP_ADD' ? 'ADD TO VIDEO CLIP' : 'YES'} no={n.kind === 'CLIP_ADD' ? 'NOT NOW' : 'KEEP CURRENT'} />)}
       {scenes.length === 0 ? <Empty title="No scenes yet." hint="Add the first scene to start planning your pictures."><InsertScene projectId={p.id} label="ADD FIRST SCENE" /></Empty> : (
         <>
-          <InsertScene projectId={p.id} beforeSceneId={scenes[0].id} label="+ ADD SCENE HERE" />
+          <div className="flex items-center gap-3"><span className="h-px flex-1 bg-line" /><InsertScene projectId={p.id} beforeSceneId={scenes[0].id} label="+ Add scene here" /><span className="h-px flex-1 bg-line" /></div>
           {scenes.map((s, si) => {
             const list = imgs.filter(i => i.sceneId === s.id);
             const ok = list.filter(i => i.status === 'APPROVED').length;
             const fixing = list.filter(i => i.status === 'REDO').length;
-            const state = list.length === 0 ? 'NOT STARTED' : ok === list.length ? 'DONE' : fixing ? 'NEEDS FIXING' : 'IN PROGRESS';
-            const sTone = { DONE: 'text-[#3B6448]', 'NEEDS FIXING': 'text-[#A8513F]', 'IN PROGRESS': 'text-[#33507A]', 'NOT STARTED': 'text-ink-muted' }[state];
+            const allDone = list.length > 0 && ok === list.length;
+            const pill = list.length === 0 ? 'bg-[#F0EEF3] text-[#6F6A75]' : allDone ? 'bg-[#E6EEE3] text-[#46704F]' : fixing ? 'bg-[#F5E1DB] text-[#A5473A]' : 'bg-[#F0EEF3] text-[#6F6A75]';
             return (
               <div key={s.id}>
-                <section id={`scene-${s.id}`} className="card scroll-mt-24">
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="eyebrow">SCENE {si + 1}</div>
-                      <h2 className="text-[18px]" title={sceneCode(s.order)}>{s.title}</h2>
-                      <div className={`text-[12px] font-semibold ${sTone}`}>{state === 'DONE' ? '✓ Done' : state === 'NEEDS FIXING' ? '! Needs fixing' : state === 'IN PROGRESS' ? `● ${ok} of ${list.length} pictures done` : '○ Not started'}</div>
-                    </div>
-                    <SceneMenu projectId={p.id} scene={{ id: s.id, title: s.title }} images={list.map(i => ({ id: i.id, label: `Picture ${num.get(i.id)} — ${i.title}` }))} first={si === 0} last={si === scenes.length - 1} />
-                  </div>
-                  <ul className="mt-3 divide-y divide-line">
-                    {list.map((i, k) => {
-                      const waitingFor = i.dependsOn && i.dependsOn.status !== 'APPROVED' && ['READY', 'PLANNED', 'PROMPT DRAFT'].includes(i.status) ? num.get(i.dependsOn.id) : null;
-                      const word = waitingFor ? 'Waiting' : statusWords(i.status);
-                      const icon = waitingFor ? '⏳' : ICON[i.status] ?? '○';
-                      const href = `${b}/images/${i.id}`;
-                      const act = waitingFor ? null : i.status === 'REVIEW' ? ['CHECK PICTURE', `${href}#review`, 'btn-accent'] : i.status === 'REDO' ? ['FIX IT', href, 'btn-danger'] : i.status === 'READY' ? ['MAKE THIS PICTURE', href, 'btn-copy'] : i.status === 'APPROVED' ? null : ['OPEN', href, ''];
-                      return (
-                        <li key={i.id} id={`pic-${i.id}`} className="scroll-mt-24 py-2">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className={`w-5 text-center text-[16px] ${waitingFor ? TONE.WAITING : TONE[i.status] ?? 'text-ink-muted'}`} aria-hidden>{icon}</span>
-                            <Link href={href} className="min-w-0 flex-1" title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`}>
-                              <span className="block text-[14px] font-semibold">Picture {num.get(i.id)}</span><span className="block truncate text-[13px] text-ink-secondary">{i.title}</span>
+                <section id={`scene-${s.id}`} className="relative scroll-mt-24 rounded-[18px] border border-line bg-white" style={{ boxShadow: '0 14px 30px -26px rgba(40,36,60,.5)' }}>
+                  <details open={!allDone}>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 pr-16">
+                      <div className="min-w-[200px] flex-1"><div className="eyebrow" title={sceneCode(s.order)}>SCENE {si + 1}</div><h2 className="mt-1.5 text-[22px]">{s.title}</h2>{(s.narrative || s.purpose) && <div className="mt-0.5 line-clamp-1 text-[13.5px] text-ink-secondary">{(s.narrative || s.purpose || '').split('\n')[0]}</div>}</div>
+                      <div className="flex items-center gap-1.5" aria-hidden>{list.slice(0, 4).map(i => { const t = thumbOf(i); return t ? <img key={i.id} src={fileUrl(t, 80)} alt="" className="h-7 w-9 rounded-md object-cover" /> : <span key={i.id} className="h-7 w-9 rounded-md border border-dashed border-line-strong" />; })}</div>
+                      <span className={`rounded-full px-3 py-1 text-[12.5px] font-semibold ${pill}`}>{list.length === 0 ? 'No pictures yet' : `${ok} of ${list.length} look good`}</span>
+                    </summary>
+                    <div className="grid grid-cols-2 gap-3 px-4 pb-4 md:grid-cols-3 xl:grid-cols-5">
+                      {list.map((i, k) => {
+                        const waitingFor = i.dependsOn && i.dependsOn.status !== 'APPROVED' && ['READY', 'PLANNED', 'PROMPT DRAFT'].includes(i.status) ? num.get(i.dependsOn.id) : null;
+                        const st = waitingFor ? 'WAITING' : i.status;
+                        const word = waitingFor ? `Waiting for Picture ${waitingFor}` : statusWords(i.status);
+                        const href = `${b}/images/${i.id}`;
+                        const act = waitingFor ? null : i.status === 'REVIEW' ? ['Check picture', `${href}#review`, 'btn-copy'] : i.status === 'REDO' ? ['Fix it', href, 'btn-danger'] : i.status === 'READY' ? ['Make picture', href, 'btn-accent'] : null;
+                        const t = thumbOf(i);
+                        return (
+                          <div key={i.id} id={`pic-${i.id}`} className="relative flex scroll-mt-24 flex-col rounded-[14px] border border-line p-2.5">
+                            <Link href={href} title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} className="block">
+                              <div className={`aspect-[4/3] overflow-hidden rounded-[10px] ${t ? (i.status === 'REDO' ? 'ring-2 ring-[#E9A99B]' : '') : 'border border-dashed border-line-strong bg-[#FAF9FC]'}`}>{t ? <img src={fileUrl(t, 400)} alt={i.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center font-serif text-[34px] text-[#C9C5D1]">{num.get(i.id)}</div>}</div>
+                              <div className="mt-2 text-[12px] text-ink-secondary">Picture {num.get(i.id)}</div>
+                              <div className="text-[14px] font-semibold leading-snug">{i.title}</div>
                             </Link>
-                            <span className={`text-[12px] font-semibold ${waitingFor ? TONE.WAITING : TONE[i.status] ?? 'text-ink-muted'}`}>{word}{waitingFor ? ` for Picture ${waitingFor}` : ''}</span>
-                            {act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}
-                            <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} />
+                            <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} /></div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}</div>
                           </div>
-                          <div className="ml-8 flex flex-wrap gap-2"><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={i.id} /><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={i.id} label="+ QUICK ADD" quick /></div>
-                        </li>
-                      );
-                    })}
-                    {list.length === 0 && <li className="py-3 text-[13px] text-ink-secondary">No pictures yet.</li>}
-                  </ul>
-                  <div className="mt-2 flex flex-wrap gap-2">{list.length === 0 && <InsertPicture projectId={p.id} sceneId={s.id} afterImageId="" label="+ ADD FIRST PICTURE" />}{list.length === 0 && <InsertPicture projectId={p.id} sceneId={s.id} afterImageId="" label="+ QUICK ADD" quick />}</div>
+                        );
+                      })}
+                      <InsertTile projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} />
+                    </div>
+                  </details>
+                  <div className="absolute right-3 top-3.5"><SceneMenu projectId={p.id} scene={{ id: s.id, title: s.title }} images={list.map(i => ({ id: i.id, label: `Picture ${num.get(i.id)} — ${i.title}` }))} first={si === 0} last={si === scenes.length - 1} /></div>
                 </section>
-                <InsertScene projectId={p.id} afterSceneId={s.id} label={si === scenes.length - 1 ? '+ ADD NEXT SCENE' : '+ ADD SCENE HERE'} />
+                <div className="my-3 flex items-center gap-3"><span className="h-px flex-1 bg-line" /><InsertScene projectId={p.id} afterSceneId={s.id} label={si === scenes.length - 1 ? '+ Add next scene' : '+ Add scene here'} /><span className="h-px flex-1 bg-line" /></div>
               </div>
             );
           })}

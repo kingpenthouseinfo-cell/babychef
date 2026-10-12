@@ -24,7 +24,7 @@ export function InsertPicture({ projectId, sceneId, afterImageId, label = '+ ADD
 export function InsertScene({ projectId, afterSceneId, beforeSceneId, label = '+ ADD SCENE HERE' }: { projectId: string; afterSceneId?: string; beforeSceneId?: string; label?: string }) {
   return (
     <details className="my-2">
-      <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-dashed border-line px-3 py-1 text-[12px] font-semibold text-ink-secondary hover:border-ink/40 hover:text-ink">{label}</summary>
+      <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-line-strong bg-white px-3.5 py-1 text-[12.5px] font-medium text-ink-secondary hover:border-ink/40 hover:text-ink">{label}</summary>
       <form action={addSceneHere} className="mt-2 grid gap-2 rounded-lg border border-line bg-surface p-3 sm:grid-cols-2">
         {hid('projectId', projectId)}{afterSceneId && hid('afterSceneId', afterSceneId)}{beforeSceneId && hid('beforeSceneId', beforeSceneId)}
         <label className="block sm:col-span-2"><span className="label">Scene name</span><input name="title" required className="input" placeholder="e.g. Roll the dough" /></label>
@@ -66,13 +66,14 @@ export function SceneMenu({ projectId, scene, images, first, last }: { projectId
   );
 }
 
-export function PictureMenu({ id, first, last, href, code }: { id: string; first: boolean; last: boolean; href: string; code?: string }) {
+export function PictureMenu({ id, first, last, href, code, projectId, sceneId }: { id: string; first: boolean; last: boolean; href: string; code?: string; projectId?: string; sceneId?: string }) {
   return (
     <details className="relative">
       <summary className="btn btn-sm btn-ghost list-none" aria-label="Picture menu">…</summary>
       <div className="absolute right-0 z-30 mt-1 w-48 rounded-lg border border-line bg-surface p-1.5 shadow-md">
         {code && <div className="px-3 py-1 font-mono text-[11px] text-ink-muted">{code}</div>}
         <Link className={menuBtn} href={href}>Open details</Link>
+        {projectId && sceneId && <><div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Add picture after" /></div><div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Quick add after" quick /></div></>}
         {!first && <form action={movePictureUpDown}>{hid('id', id)}{hid('dir', 'up')}<button className={menuBtn}>Move up</button></form>}
         {!last && <form action={movePictureUpDown}>{hid('id', id)}{hid('dir', 'down')}<button className={menuBtn}>Move down</button></form>}
         <form action={duplicatePicture}>{hid('id', id)}<button className={menuBtn}>Duplicate</button></form>
@@ -91,3 +92,18 @@ export function NoticeCard({ projectId, id, text, yes, no }: { projectId: string
   );
 }
 void Item;
+
+/** Dashed "Add picture here" tile at the end of a scene's pictures. */
+export function InsertTile({ projectId, sceneId, afterImageId }: { projectId: string; sceneId: string; afterImageId: string }) {
+  return (
+    <details className="group rounded-[14px] border border-dashed border-line-strong open:col-span-2 open:border-solid open:p-3">
+      <summary className="flex min-h-[150px] cursor-pointer list-none flex-col items-center justify-center gap-1 text-[13.5px] text-ink-secondary group-open:min-h-0 group-open:items-start"><span className="text-[18px] leading-none">+</span><span>Add picture here</span></summary>
+      <form action={addPictureHere} className="mt-2 space-y-2">
+        {hid('projectId', projectId)}{hid('sceneId', sceneId)}{hid('afterImageId', afterImageId)}
+        <label className="block"><span className="label">What picture do you need?</span><input name="title" required className="input" placeholder="e.g. Close-up of the butter being rubbed into the flour" /></label>
+        <label className="block"><span className="label">What should happen in the picture? (optional)</span><textarea name="what" rows={2} className="input" /></label>
+        <SubmitBtn className="btn-primary btn-sm" pendingText="Adding…">Add picture</SubmitBtn>
+      </form>
+    </details>
+  );
+}

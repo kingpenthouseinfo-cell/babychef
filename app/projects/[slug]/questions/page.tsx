@@ -20,14 +20,14 @@ export default async function Questions({ params }: { params: { slug: string } }
   const skipped = all.filter(q => q.status === 'NOT_NEEDED');
   const grouped = (list: typeof all) => GROUPS.map(g => [g, list.filter(q => q.group === g)] as const).filter(([, l]) => l.length > 0);
   return (
-    <div className="space-y-6">
-      <div><h1 className="text-[26px]">Missing Info</h1><p className="text-[13px] text-ink-secondary">Questions that still need answers before the video is fully planned.</p></div>
+    <div className="max-w-[860px] space-y-6">
+      <div><h1 className="text-[34px] md:text-[40px]">Missing Info</h1><p className="mt-1 text-[14px] text-ink-secondary">{open.length === 0 ? 'Nothing needed right now.' : `${open.length} thing${open.length > 1 ? 's' : ''} still need answers. Answers go straight into the recipe and prompts.`}</p></div>
       {open.length === 0 && later.length === 0 && <div className="rounded-lg border border-sage-mid bg-sage-tint p-4 text-[14px] text-sage-deep">✓ Nothing needed right now.</div>}
-      {soon.length > 0 && <section><h2 className="mb-2 text-[13px] font-semibold tracking-wide text-[#A8513F]">NEED THIS SOON</h2>
-        {grouped(soon).map(([g, l]) => <div key={g} className="mb-4"><div className="eyebrow mb-1.5">{g}</div><ul className="space-y-3">{l.map(q => <QuestionCard key={q.id} q={q} />)}</ul></div>)}</section>}
-      {later.length > 0 && <section><h2 className="mb-2 text-[13px] font-semibold tracking-wide text-ink-secondary">CAN ANSWER LATER</h2>
+      {soon.length > 0 && <section><h2 className="eyebrow mb-2 !font-sans text-[#8A6216]">NEED THIS SOON</h2>
+        {grouped(soon).map(([g, l]) => <div key={g} className="mb-4"><div className="eyebrow mb-1.5">{g}</div><ul className="space-y-3">{l.map(q => <QuestionCard key={q.id} q={q} soon />)}</ul></div>)}</section>}
+      {later.length > 0 && <section><h2 className="eyebrow mb-2 !font-sans">CAN ANSWER LATER</h2>
         {grouped(later).map(([g, l]) => <div key={g} className="mb-4"><div className="eyebrow mb-1.5">{g}</div><ul className="space-y-3">{l.map(q => <QuestionCard key={q.id} q={q} />)}</ul></div>)}</section>}
-      <details className="card"><summary className="cursor-pointer text-[14px] font-semibold">+ ADD QUESTION</summary>
+      <details className="card"><summary className="cursor-pointer text-[14px] font-semibold">+ Add question</summary>
         <form action={addQuestion} className="mt-3 space-y-2"><input type="hidden" name="projectId" value={p.id} />
           <label className="block"><span className="label">What do you need to find out?</span><input name="question" required className="input" placeholder="e.g. Ask Mom whether she uses breadcrumbs in the beef filling" /></label>
           <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" name="priority" value="SOON" className="accent-[#4C6B52]" /> I need this soon</label>

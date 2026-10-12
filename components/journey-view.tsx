@@ -1,28 +1,45 @@
 import Link from 'next/link';
 import type { JState, JStep } from '@/lib/journey';
 
-const ICON: Record<JState, string> = { DONE: '✓', 'IN PROGRESS': '●', 'NOT STARTED': '○', 'NEEDS FIXING': '!', WAITING: '⏳' };
-const CLS: Record<JState, string> = { DONE: 'text-[#3B6448]', 'IN PROGRESS': 'text-[#33507A]', 'NOT STARTED': 'text-ink-muted', 'NEEDS FIXING': 'text-[#A8513F]', WAITING: 'text-[#8A6216]' };
 const WORD: Record<JState, string> = { DONE: 'Done', 'IN PROGRESS': 'In progress', 'NOT STARTED': 'Not started', 'NEEDS FIXING': 'Needs fixing', WAITING: 'Waiting' };
+const BAND: Record<string, { bg: string; ink: string; bd: string }> = {
+  'GET READY': { bg: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', ink: '#4C6B52', bd: '#CFE3D3' },
+  'PLAN THE VIDEO': { bg: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', ink: '#4C6B52', bd: '#CFE3D3' },
+  'MAKE THE PICTURES': { bg: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', ink: '#9A4A64', bd: '#F0CDDA' },
+  'CHECK PICTURES': { bg: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', ink: '#9A4A64', bd: '#F0CDDA' },
+  'MAKE VIDEO CLIPS': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
+  'SHORT / REEL': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
+  'POST VIDEO': { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
+  FINISH: { bg: 'linear-gradient(135deg,#F0EAFB,#F7ECF4)', ink: '#6A55A2', bd: '#DDD0F2' },
+};
+
+function Icon({ state }: { state: JState }) {
+  const base = 'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[12px] font-bold';
+  if (state === 'DONE') return <span className={`${base} bg-[#E6EEE3] text-[#46704F]`} aria-label="Done">✓</span>;
+  if (state === 'NEEDS FIXING') return <span className={`${base} bg-[#F5E1DB] text-[#A5473A]`} aria-label="Needs fixing">!</span>;
+  if (state === 'WAITING') return <span className={`${base} bg-[#F4E8CF] text-[#8E6720]`} aria-label="Waiting">◷</span>;
+  if (state === 'IN PROGRESS') return <span className={`${base} bg-[#E3EAF2] text-[#46638A]`} aria-label="In progress">●</span>;
+  return <span className={`${base} border border-line-strong bg-white`} aria-label="Not started" />;
+}
 
 function Row({ s, hideDone, child = false }: { s: JStep; hideDone: boolean; child?: boolean }) {
   if (hideDone && s.state === 'DONE') return null;
   const body = (
     <>
-      <span className={`w-6 shrink-0 text-center text-[18px] ${CLS[s.state]}`} aria-label={WORD[s.state]}>{ICON[s.state]}</span>
-      <span className="min-w-0 flex-1"><span className={`block text-[15px] ${child ? '' : 'font-semibold'} ${s.state === 'NOT STARTED' ? 'text-ink-secondary' : ''}`}>{s.label}</span>{s.detail && <span className="block truncate text-[12px] text-ink-secondary">{s.detail}</span>}</span>
-      <span className={`hidden text-[12px] font-semibold sm:inline ${CLS[s.state]}`}>{WORD[s.state]}</span>
+      <Icon state={s.state} />
+      <span className="min-w-0 flex-1"><span className={`block text-[15px] ${child ? '' : 'font-medium'} ${s.state === 'NOT STARTED' ? 'text-ink-secondary' : ''}`}>{s.label}</span></span>
+      <span className="max-w-[45%] truncate text-right text-[13px] text-ink-secondary">{s.detail ?? (s.state === 'NOT STARTED' || s.state === 'DONE' ? '' : WORD[s.state])}</span>
     </>
   );
-  const row = 'flex min-h-[48px] items-center gap-3 px-3 py-2';
-  if (!s.children?.length) return <li><Link href={s.href} className={`${row} hover:bg-sunken`}>{body}</Link></li>;
+  const row = 'flex min-h-[48px] items-center gap-3 px-4 py-2';
+  if (!s.children?.length) return <li><Link href={s.href} className={`${row} hover:bg-sunken`}>{body}<span className="text-ink-muted" aria-hidden>›</span></Link></li>;
   return (
     <li>
       <details>
-        <summary className={`${row} cursor-pointer list-none hover:bg-sunken`}>{body}<span className="text-ink-muted" aria-hidden>▾</span></summary>
-        <ul className="ml-6 border-l border-line">
+        <summary className={`${row} cursor-pointer list-none hover:bg-sunken`}>{body}<span className="text-ink-muted" aria-hidden>▸</span></summary>
+        <ul className="border-t border-line bg-[#FAF9FC] px-3 py-1">
           {s.children.map((c, i) => <Row key={i} s={c} hideDone={false} child />)}
-          <li><Link href={s.href} className="block px-3 py-2 text-[12px] font-semibold text-blue-deep">Open this scene →</Link></li>
+          <li><Link href={s.href} className="block px-4 py-2 text-[12.5px] font-semibold text-blue-deep">Open this scene →</Link></li>
         </ul>
       </details>
     </li>
@@ -31,14 +48,16 @@ function Row({ s, hideDone, child = false }: { s: JStep; hideDone: boolean; chil
 
 export function JourneyList({ sections, hideDone }: { sections: { title: string; steps: JStep[] }[]; hideDone: boolean }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {sections.map(sec => {
         const visible = hideDone ? sec.steps.filter(s => s.state !== 'DONE') : sec.steps;
         if (!visible.length) return null;
+        const b = BAND[sec.title] ?? BAND['GET READY'];
+        const done = sec.steps.filter(s => s.state === 'DONE').length;
         return (
-          <section key={sec.title}>
-            <h2 className="mb-1.5 text-[12px] font-semibold tracking-[0.1em] text-ink-secondary">{sec.title}</h2>
-            <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">{sec.steps.map((s, i) => <Row key={i} s={s} hideDone={hideDone} />)}</ul>
+          <section key={sec.title} className="overflow-hidden rounded-[18px] border bg-white" style={{ borderColor: b.bd }}>
+            <h2 className="flex items-center justify-between px-4 py-2.5 font-sans text-[11.5px] font-bold uppercase tracking-[0.14em]" style={{ background: b.bg, color: b.ink }}><span>{sec.title}</span><span>{done} / {sec.steps.length}</span></h2>
+            <ul className="divide-y divide-line">{sec.steps.map((s, i) => <Row key={i} s={s} hideDone={hideDone} />)}</ul>
           </section>
         );
       })}

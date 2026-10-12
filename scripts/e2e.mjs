@@ -152,7 +152,7 @@ async function newImage(title) {
   return page.url();
 }
 const img1Url = await newImage('Oil in pan');
-ok('Image gets global ID IMG-001', (await page.locator('aside.zone-pink .font-mono').first().textContent()).includes('IMG-001'));
+ok('Image gets global ID IMG-001', (await page.locator('[data-testid=expected-filename]').first().textContent()).includes('IMG-001'));
 await page.fill('textarea[aria-label="Full prompt"]', 'FULL: cinematic frame of a pan with 2 tbsp oil.');
 await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
 await page.click('button[role=tab]:has-text("Continuation")');
@@ -166,8 +166,8 @@ await page.click('button:has-text("SAVE IMAGE DETAILS")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 // attach masters + product ref
 async function attach(label, role) {
-  if (!(await page.locator('aside details[open] summary:has-text("Edit & attach references")').count())) await page.click('summary:has-text("Edit & attach references")');
-  const sel = page.locator('aside details form:has(select[name=target])');
+  if (!(await page.locator('details[open] > summary:text-is("Change")').count())) await page.click('summary:text-is("Change")');
+  const sel = page.locator('details form:has(select[name=target])');
   const opts = await sel.locator('select[name=target] option').allTextContents();
   const idx = opts.findIndex(o => o.includes(label));
   if (idx < 0) return false;
@@ -215,10 +215,10 @@ await chip.click(); await chip.click(); await page.waitForTimeout(700);
 await page.reload({ waitUntil: 'networkidle' });
 ok('Review checklist cycles ✓→? and persists', (await page.locator('#review button[aria-label^="Same Baby Chef: unsure"]').count()) === 1);
 ok('Compare modes available', (await page.locator('#review button:has-text("Single")').count()) === 1);
-await page.locator('aside details:has(> summary:text-is("Fix this picture")) > summary').click();
-await page.fill('aside details:has(> summary:text-is("Fix this picture")) textarea[name=wrong]', 'Too much oil');
-await page.fill('aside details:has(> summary:text-is("Fix this picture")) textarea[name=change]', 'Only 2 tbsp small pool');
-await page.locator('aside details:has(> summary:text-is("Fix this picture")) button:has-text("SAVE FIX")').click();
+await page.locator('section details:has(> summary:text-is("Fix this picture")) > summary').click();
+await page.fill('section details:has(> summary:text-is("Fix this picture")) textarea[name=wrong]', 'Too much oil');
+await page.fill('section details:has(> summary:text-is("Fix this picture")) textarea[name=change]', 'Only 2 tbsp small pool');
+await page.locator('section details:has(> summary:text-is("Fix this picture")) button:has-text("SAVE FIX")').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 ok('Redo saved: correction history shows', (await page.locator('text=Too much oil').count()) > 0);
 ok('Attempt chip shows v1 Redo', (await page.locator('a:has-text("v1"):has-text("Needs fixing")').count()) > 0);
@@ -236,8 +236,8 @@ await page.waitForLoadState('networkidle');
 ok('Suggests previous approved IMG-001', (await page.locator('text=Suggested previous:').count()) > 0);
 await page.click('button:has-text("USE PREVIOUS PICTURE")');
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
-ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Picture').count()) > 0 && (await page.locator('aside img[src*="/api/files/"]').count()) > 0);
-await page.click('summary:has-text("Edit & attach references")').catch(() => {});
+ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Picture').count()) > 0 && (await page.locator('section img[src*="/api/files/"]').count()) > 0);
+await page.click('summary:text-is("Change")').catch(() => {});
 ok('Attach same Front Label to a 2nd image', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
 ok('Reference is linked, not copied (linked in 2 images, still 2 files on disk)', (await page.locator('text=linked in 2').count()) > 0 && walk(path.join(STORE, PROJ, '01 References', 'Products')).length === 2);
 // third image + approve quickly, 4th for kling
@@ -449,11 +449,12 @@ await page.fill('input[name=root]', '~/Documents/Baby Chef Studio'); await page.
 // ---- every screen at phone + tablet width: no page-level horizontal overflow
 // ---- Scenes & Pictures: insert anywhere, stable IDs
 await go(`/projects/${slug}/story`);
-const picNames = async () => page.locator('li[id^="pic-"] a[title]').evaluateAll(a => a.map(x => (x.getAttribute('title') || '') + '|' + (x.textContent || '').replace(/\s+/g, ' ').trim()));
+const picNames = async () => page.locator('[id^="pic-"] a[title]').evaluateAll(a => a.map(x => (x.getAttribute('title') || '') + '|' + (x.textContent || '').replace(/\s+/g, ' ').trim()));
 const picsBefore = await picNames();
 ok('Story: shows Picture 1.. with technical ID only in tooltip', picsBefore.length >= 2 && picsBefore[0].includes('Picture 1'), picsBefore.join(' ; '));
-const firstGap = page.locator('li[id^="pic-"]').first();
-await firstGap.locator('summary:text-is("+ QUICK ADD")').click();
+const firstGap = page.locator('[id^="pic-"]').first();
+await firstGap.locator('summary[aria-label="Picture menu"]').click();
+await firstGap.locator('summary:text-is("Quick add after")').click();
 await firstGap.locator('input[name=title]').last().fill('Close-up of butter being rubbed in');
 await firstGap.locator('button:has-text("ADD")').last().click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
@@ -463,12 +464,12 @@ ok('Insert between: new picture appears right after Picture 1 and numbers update
 const oldIds = picsBefore.map(x => x.split('|')[0]).join();
 ok('Stable internal IDs are unchanged by an insert', picsBefore.every((x, i) => picsAfter.map(y => y.split('|')[0]).includes(x.split('|')[0])) && oldIds.length > 0);
 await go(`/projects/${slug}/story`);
-await page.locator('li[id^="pic-"]').nth(1).locator('button[aria-label="Picture menu"], summary[aria-label="Picture menu"]').click();
-await page.locator('li[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+await page.locator('[id^="pic-"]').nth(1).locator('button[aria-label="Picture menu"], summary[aria-label="Picture menu"]').click();
+await page.locator('[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/story`);
 const picsMoved = await picNames();
 ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Close-up of butter') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
-await page.locator('summary:text-is("+ ADD SCENE HERE")').first().click();
+await page.locator('summary:text-is("+ Add scene here")').first().click();
 await page.locator('form:has(input[name=title]):visible input[name=title]').first().fill('Extra scene E2E');
 await page.locator('button:has-text("ADD SCENE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Add scene here: new scene is inserted at the top', (await page.locator('section[id^="scene-"] h2').first().textContent()) === 'Extra scene E2E');
@@ -476,10 +477,10 @@ ok('Add scene here: new scene is inserted at the top', (await page.locator('sect
 await go(`/projects/${slug}/questions`);
 ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);
 ok('Missing Info has no picture/photo tasks', (await page.locator('text=/Make Picture|product photo|Generate/i').count()) === 0);
-const yq = page.locator('li.card:has-text("How many does this recipe make?")');
+const yq = page.locator('li:has(form):has-text("How many does this recipe make?")');
 await yq.locator('input[name=answer]').fill('6 bowls'); await yq.locator('button:has-text("SAVE ANSWER")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 await go(`/projects/${slug}/questions`);
-ok('Answer is saved and moves to ANSWERED', (await page.locator('li.card:has-text("How many does this recipe make?")').count()) === 0 && (await page.locator('details:has(summary:has-text("ANSWERED")):has-text("6 bowls")').count()) > 0);
+ok('Answer is saved and moves to ANSWERED', (await page.locator('li:has(form):has-text("How many does this recipe make?")').count()) === 0 && (await page.locator('details:has(summary:has-text("ANSWERED")):has-text("6 bowls")').count()) > 0);
 await go(`/projects/${slug}/recipe`);
 ok('Answer was written to the recipe yield field', (await page.locator('input[name=recipeYield]').inputValue()) === '6 bowls');
 await go(`/projects/${slug}/questions`);
@@ -487,7 +488,7 @@ await page.locator('summary:has-text("+ ADD QUESTION")').click(); await page.fil
 ok('Add my own question', (await page.locator('text=Ask Mom about breadcrumbs').count()) > 0);
 // ---- Start to Finish
 await go(`/projects/${slug}/start`);
-ok('Start to Finish shows the whole project in order', ['GET READY', 'PLAN THE VIDEO', 'MAKE THE PICTURES', 'CHECK PICTURES', 'MAKE VIDEO CLIPS', 'SHORT / REEL', 'POST VIDEO', 'FINISH'].every(h => true) && (await page.locator('h2:text-is("GET READY")').count()) === 1 && (await page.locator('h2:text-is("FINISH")').count()) === 1);
+ok('Start to Finish shows the whole project in order', ['GET READY', 'PLAN THE VIDEO', 'MAKE THE PICTURES', 'CHECK PICTURES', 'MAKE VIDEO CLIPS', 'SHORT / REEL', 'POST VIDEO', 'FINISH'].every(h => true) && (await page.locator('h2:has-text("GET READY")').count()) === 1 && (await page.locator('h2:has-text("FINISH")').count()) === 1);
 ok('Start to Finish: recipe is DONE and has a next step + CONTINUE', (await page.locator('[aria-label="Done"]').count()) > 0 && (await page.locator('a:has-text("CONTINUE")').count()) > 0);
 ok('Start to Finish: the extra scene is included automatically', (await page.locator('text=Extra scene E2E').count()) > 0);
 await page.click('a:has-text("HIDE DONE")'); await page.waitForURL(/hide=done/); await page.waitForLoadState('networkidle');

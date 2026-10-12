@@ -6,12 +6,13 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Schibsted Grotesk"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['"DM Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        serif: ['Newsreader', 'Georgia', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       colors: {
-        bg: '#FCFBF9', paper: '#FCFBF9', surface: '#FFFFFF', sunken: '#F4F2EF',
-        line: { DEFAULT: '#EEEBE7', strong: '#E0DCD7' },
+        bg: '#FFFFFF', paper: '#FFFFFF', surface: '#FFFFFF', sunken: '#F4F3F7',
+        line: { DEFAULT: '#ECEAF0', strong: '#E7E4EC' },
         ink: { DEFAULT: '#1E1D22', 2: '#2A2830', secondary: '#6F6A75', muted: '#8C8792' },
         sage: { tint: '#EAF1E9', mid: '#BFD5C2', deep: '#4C6B52' },
         pink: { tint: '#F9ECEF', mid: '#EDBFCB', deep: '#9A4A60' },
@@ -21,15 +22,15 @@ const config: Config = {
         accent: '#3E6290',
       },
       backgroundImage: {
-        'grad-sage': 'linear-gradient(165deg,#E4F0E4 0%,#EFF5EC 50%,#FBFCFA 100%)',
-        'grad-pink': 'linear-gradient(195deg,#FBE3EB 0%,#F7EAF5 50%,#FDFBFC 100%)',
+        'grad-sage': 'linear-gradient(135deg,#EAF4EC 0%,#F1F7E8 100%)',
+        'grad-pink': 'linear-gradient(135deg,#FDECF1 0%,#F9EEF7 100%)',
         'grad-blue': 'linear-gradient(135deg,#E5EFFB 0%,#ECEBFB 100%)',
-        'grad-purple': 'linear-gradient(135deg,#EFE8FB 0%,#F9E8F1 100%)',
+        'grad-purple': 'linear-gradient(135deg,#F0EAFB 0%,#F7ECF4 100%)',
         'btn-blue': 'linear-gradient(135deg,#4670A8 0%,#6A55A2 100%)',
         'btn-sage': 'linear-gradient(135deg,#4C6B52 0%,#5E8C7E 100%)',
         logo: 'conic-gradient(from 200deg,#EDBFCB,#BACFE8,#CFC2EA,#BFD5C2,#EDBFCB)',
       },
-      borderRadius: { xs: '4px', sm: '8px', md: '10px', lg: '12px', xl: '16px' },
+      borderRadius: { xs: '4px', sm: '8px', md: '10px', lg: '14px', xl: '18px' },
       boxShadow: { sm: '0 1px 2px rgba(30,29,34,.05)', md: '0 1px 2px rgba(30,29,34,.06), 0 12px 40px rgba(30,29,34,.10)' },
       maxWidth: { text: '760px' },
     },

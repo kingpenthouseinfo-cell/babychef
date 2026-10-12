@@ -4,24 +4,22 @@ import { WatcherNotice } from './watcher-notice';
 
 /** Top nav (64px). No sidebar. Task colours: sage = references, blue = prompts. */
 export function Shell({ name, queueCount, unmatchedCount, children }: { name: string; queueCount: number; unmatchedCount: number; children: React.ReactNode }) {
-  const [first, ...rest] = name.split(' ');
   return (
     <div className="min-h-screen pb-[72px] md:pb-0">
-      <header className="sticky top-0 z-30 border-b border-line bg-surface">
-        <div className="mx-auto flex h-14 max-w-[1680px] items-center gap-4 px-4 md:h-16 md:gap-6 md:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[17px] tracking-[-0.02em]">
-            <span className="h-4 w-4 rounded-full bg-logo" aria-hidden />
-            <span><b className="font-bold">{first}</b> <span className="text-ink-secondary">{rest.join(' ')}</span></span>
+      <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex min-h-[56px] max-w-[1320px] items-center gap-3 px-4 md:min-h-[64px] md:gap-7 md:px-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] font-serif text-[18px] italic text-white" style={{ background: 'linear-gradient(135deg,#F2AFC4,#A991DA)' }} aria-hidden>b</span>
+            <span className="whitespace-nowrap font-serif text-[20px] font-medium tracking-[-0.01em]">{name}</span>
           </Link>
           <TopNavLinks queueCount={queueCount} unmatchedCount={unmatchedCount} />
           <div className="ml-auto flex items-center gap-4">
             <NavSearch />
-            <span className="hidden items-center gap-1.5 font-mono text-[12px] text-ink-muted lg:inline-flex" title="Files are stored on this computer"><span className="h-1.5 w-1.5 rounded-full bg-sage-deep" />On this Mac</span>
-            <Link href="/settings" className="hidden text-[14px] text-ink-secondary hover:text-ink md:inline">Settings</Link>
+            <span className="hidden items-center gap-1.5 whitespace-nowrap text-[12.5px] text-ink-secondary lg:inline-flex" title="Files are stored on this computer"><span className="h-[7px] w-[7px] rounded-full bg-[#6E9A76]" />On this Mac</span>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[1680px] px-4 py-5 md:px-6 md:py-7">{children}</main>
+      <main className="mx-auto max-w-[1320px] px-4 py-6 md:px-8 md:py-8">{children}</main>
       <BottomNav queueCount={queueCount} unmatchedCount={unmatchedCount} />
       <WatcherNotice />
     </div>

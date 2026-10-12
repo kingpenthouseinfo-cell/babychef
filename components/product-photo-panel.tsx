@@ -7,13 +7,13 @@ import { INGREDIENT_IMPORTANCE, INGREDIENT_REF_TYPES } from '@/lib/constants';
 export type IngOpt = { id: string; label: string; brand: string; product: string; packageSize: string; importance: string; packageVisible: boolean; photos: number };
 
 /** One place to give a product's brand, label details and photo: choose any ingredient from the recipe first. */
-export function ProductPhotoPanel({ projectId, ings, initial }: { projectId: string; ings: IngOpt[]; initial?: string }) {
+export function ProductPhotoPanel({ projectId, ings, initial, fixed = false }: { projectId: string; ings: IngOpt[]; initial?: string; fixed?: boolean }) {
   const [id, setId] = useState(initial || '');
   const cur = ings.find(i => i.id === id);
   return (
     <form action={addProductPhoto} className="space-y-3" key={id}>
       <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="ingredientId" value={id} /><input type="hidden" name="_pv" value="1" />
-      <label className="block"><span className="label">Which ingredient?</span>
+      <label className={`block ${fixed ? 'hidden' : ''}`}><span className="label">Which ingredient?</span>
         <select className="input" value={id} onChange={e => setId(e.target.value)} aria-label="Which ingredient?">
           <option value="">— choose an ingredient from your recipe —</option>
           {ings.map(i => <option key={i.id} value={i.id}>{i.label}{i.photos ? ` ✓ ${i.photos} photo${i.photos > 1 ? 's' : ''}` : ''}</option>)}

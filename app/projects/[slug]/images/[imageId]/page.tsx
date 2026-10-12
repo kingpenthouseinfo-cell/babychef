@@ -43,6 +43,8 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const sc = sceneCode(img.scene.order);
   const checklist = buildChecklist(img);
   const idx = siblings.findIndex(s => s.id === img.id);
+  const pictureNo = idx + 1;
+  const sceneNo = 1 + (await db.scene.findMany({ where: { projectId: p.id }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], select: { id: true } })).findIndex(x => x.id === img.sceneId);
   const attached = new Set(img.refs.map(r => r.sourceImageId).filter(Boolean));
   const prevSuggest = prev && !attached.has(prev.id) ? prev : null;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
@@ -72,13 +74,12 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
     <div className="space-y-5 pb-16 md:pb-0">
       <AddResultDialog currentId={img.id} images={imgOpts} downloads={downloads} folderLabel={folder} />
 
-      {/* header: back + prev/next navigator */}
+      {/* breadcrumb + previous / next picture */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
-        <Link href={base} className="text-ink-secondary underline">← All images</Link>
-        <div className="flex items-center gap-2 font-mono text-[12px]">
-          {idx > 0 ? <Link className="text-ink-secondary hover:text-ink" href={`${base}/${siblings[idx - 1].id}`}>← {imageCode(siblings[idx - 1].seq)}</Link> : <span />}
-          <b>{code}</b>
-          {idx < siblings.length - 1 ? <Link className="text-ink-secondary hover:text-ink" href={`${base}/${siblings[idx + 1].id}`}>{imageCode(siblings[idx + 1].seq)} →</Link> : <span />}
+        <Link href={`/projects/${p.slug}/story`} className="text-ink-secondary hover:text-ink">← Scenes & Pictures · Scene {sceneNo} · {img.scene.title}</Link>
+        <div className="flex items-center gap-2">
+          {idx > 0 && <Link className="btn btn-sm" href={`${base}/${siblings[idx - 1].id}`}>‹ Picture {pictureNo - 1}</Link>}
+          {idx < siblings.length - 1 && <Link className="btn btn-sm" href={`${base}/${siblings[idx + 1].id}`}>Picture {pictureNo + 1} ›</Link>}
         </div>
       </div>
 
@@ -90,42 +91,91 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
       {pkgAttached.length > 0 && <div className="rounded-md border border-gold-border bg-gold-bg px-3 py-2 text-[13px] text-gold-text"><b>PACKAGE CRITICAL</b> — {pkgAttached.map(c => c.label).join('; ')}. Add this label reference to ChatGPT.</div>}
       {pkgMissing.map(i => <div key={i.id} className="rounded-md border border-gold-border bg-gold-bg px-3 py-2 text-[13px] text-gold-text"><b>PACKAGE CRITICAL:</b> {i.name}{i.brand ? ` (${i.brand})` : ''} appears in this image but no brand reference is attached.</div>)}
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_312px] xl:grid-cols-[272px_minmax(0,1fr)_312px]">
-        {/* LEFT — references (sage zone) */}
-        <aside className="zone-sage order-2 space-y-3.5 rounded-lg border p-5 lg:order-1 lg:col-span-2 xl:col-span-1">
-          <div className="eyebrow text-sage-deep">REFERENCES FOR {code}</div>
-          <p className="text-[13px] text-ink-secondary">Linked from <span className="font-mono text-[12px]">01 References</span> · attach to ChatGPT in this order</p>
+      {/* title */}
+      <div>
+        <div className="text-[14px] text-ink-secondary" title={`{code} · {sc}`}>Picture {pictureNo}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-3"><h1 className="break-words text-[32px] md:text-[40px]">{img.title}</h1><Chip tone={img.status}>{img.status}</Chip></div>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        {/* LEFT — the picture */}
+        <div className="min-w-0 space-y-3.5">
+          <div className="order-3 flex flex-wrap items-center justify-between gap-2 lg:order-none">
+            <div className="min-w-0 truncate font-mono text-[12px] text-ink-secondary" title={selected?.asset.relPath}>{selected ? selected.asset.relPath.split('/').slice(-2).join(' / ') : `${folder} / 02 Images`}</div>
+            <div className="flex items-center gap-3 text-[12px]">
+              {compareCode && selected && <a href="#compare" className="font-medium text-blue-deep underline">Compare with {compareCode}</a>}
+              {selected && <RevealButton assetId={selected.assetId} className="text-[12px] font-medium text-blue-deep underline" />}
+            </div>
+          </div>
+
+          <div className="order-3 lg:order-none">{selected ? (
+            <BigImage id={selected.assetId} alt={`${code} attempt ${selected.number}`} imgClass="mx-auto max-h-[min(46vh,420px)] w-full object-contain" wrapClass="bg-[#F1EFF1]" w={1200} />
+          ) : (
+            <div className="flex aspect-video max-h-[270px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-pink-mid bg-pink-tint/50 text-center">
+              <div className="text-[15px] font-semibold">No result yet</div>
+              <p className="text-[13px] text-ink-secondary">Drop a generated image anywhere on this page, or</p>
+              <AddResultButton label="Add finished picture" className="btn btn-primary" />
+            </div>
+          )}</div>
+
+          {img.attempts.length > 0 && (
+            <div className="order-4 flex flex-wrap items-center gap-2 lg:order-none" aria-label="Attempts">
+              {img.attempts.map(a => (
+                <Link key={a.id} href={`${base}/${img.id}?attempt=${a.id}`} scroll={false} aria-current={selected?.id === a.id}
+                  className={`flex items-center gap-2 rounded-md border bg-purple-tint p-1.5 pr-3 transition hover:border-purple-deep ${selected?.id === a.id ? 'border-purple-deep' : 'border-purple-mid'}`}>
+                  <img src={fileUrl(a.assetId, 120)} alt="" className="h-[26px] w-[44px] rounded-sm object-cover" />
+                  <span className="font-mono text-[12px]">v{a.number}</span>
+                  <span className={`text-[12px] ${attemptColor(a.status)}`}>{attemptLabel(a.status)}{a.status === 'REDO' && a.wrong ? ` · ${a.wrong.slice(0, 28)}${a.wrong.length > 28 ? '…' : ''}` : ''}</span>
+                </Link>
+              ))}
+              <AddResultButton label="+ Add finished picture" className="btn btn-sm" />
+            </div>
+          )}
+
+          <div className="rounded-[18px] border border-line bg-white p-4 text-[13px]">
+          <div className="rounded-md border border-pink-mid bg-surface p-3 text-[13px]">
+            <div className="eyebrow mb-1.5 text-pink-deep">Food state</div>
+            <div><span className="text-ink-secondary">Before</span> — {img.scene.foodBefore || '—'}</div>
+            <div className="mt-1"><span className="text-ink-secondary">After</span> — {img.ingredientState || img.scene.foodAfter || '—'}</div>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="text-ink-secondary">Shot</dt><dd>{img.shotType}</dd>
+            <dt className="text-ink-secondary">Aspect</dt><dd>{img.aspectRatio || p.aspectRatio}</dd>
+            <dt className="text-ink-secondary">Vertical crop</dt><dd>{img.cropImportance}</dd>
+            <dt className="text-ink-secondary">Attempts</dt><dd className="font-mono">{img.attemptCount}</dd>
+            <dt className="text-ink-secondary">Depends on</dt><dd>{img.dependsOn ? <span><span className="font-mono">{imageCode(img.dependsOn.seq)}</span> · <span className={img.dependsOn.status === 'APPROVED' ? 'text-[#3B6448]' : 'text-[#8A6216]'}>{img.dependsOn.status === 'APPROVED' ? 'approved' : 'not approved'}</span></span> : '—'}</dd>
+            <dt className="text-ink-secondary">Unblocks</dt><dd className="font-mono">{dependents.length ? dependents.map(d => imageCode(d.seq)).join(', ') : '—'}</dd>
+          </dl>
+
+
+          </div>
+        </div>
+
+        {/* RIGHT — what to give ChatGPT, the prompt, the file name */}
+        <div className="min-w-0 space-y-4">
+          <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
+            <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><span className="text-[12px] text-ink-secondary">attach these in this order</span></div>
           {prevSuggest && (
             <form action={usePreviousApproved} className="rounded-md border border-sage-mid bg-surface p-2.5"><input type="hidden" name="imageId" value={img.id} /><input type="hidden" name="sourceId" value={prevSuggest.id} />
               <div className="mb-2 flex items-center gap-2.5 text-[12px]"><img src={fileUrl(prevSuggest.approvedAttempt!.assetId, 160)} alt="" className="h-[44px] w-[60px] rounded-sm border border-line object-cover" /><span>Suggested previous: <b className="font-mono">{imageCode(prevSuggest.seq)}</b> {prevSuggest.title}</span></div>
               <SubmitBtn className="btn-approve btn-sm w-full" pendingText="…">USE PREVIOUS PICTURE</SubmitBtn></form>
           )}
           {!prevSuggest && !prev && <p className="text-[12px] text-ink-secondary">No earlier approved image yet — approve one to use it as the Previous Picture.</p>}
-          <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1">
-            {checklist.length === 0 && <p className="text-[13px] text-ink-secondary md:col-span-full">No references attached. Attach at least the Baby Chef master and the kitchen master.</p>}
-            {img.refs.map((r, i) => {
-              const c = checklist[i];
-              const cat = r.reference?.category ?? 'Previous frame';
-              return (
-                <div key={r.id} className={`flex items-center gap-2.5 rounded-md p-2 ${c.required ? 'border border-sage-mid bg-surface' : 'border border-dashed border-sage-mid bg-transparent'}`}>
-                  <div className="h-[60px] w-[60px] shrink-0">{c.assetId ? <BigImage id={c.assetId} alt={c.label} imgClass="h-[60px] w-[60px] object-cover" w={160} /> : <div className="flex h-[60px] w-[60px] items-center justify-center rounded-sm bg-[#F8EFD9] text-center text-[9px] font-bold text-[#8A6216]">NOT APPROVED</div>}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="line-clamp-2 text-[13px] font-medium leading-tight">{c.label}</div>
-                    <div className="mt-0.5 text-[11px] text-ink-secondary">{c.required ? '' : 'Optional · '}{cat} · linked in {linkedIn(r)}</div>
-                    {c.packageCritical && <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-text">PACKAGE CRITICAL</div>}
-                    {r.reference?.isGold && <div className="mt-0.5"><GoldBadge /></div>}
-                  </div>
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] text-white ${c.required ? 'bg-sage-deep' : 'border border-sage-mid bg-transparent'}`} aria-label={c.required ? 'Required' : 'Optional'}>{c.required ? '✓' : ''}</span>
-                </div>
-              );
-            })}
-          </div>
-          <details className="rounded-md border border-sage-mid bg-surface/70 p-3">
-            <summary className="cursor-pointer text-[13px] font-semibold text-sage-deep">Edit & attach references</summary>
+
+            <div className="flex flex-wrap gap-2">
+              {img.refs.map((r, i) => { const c = checklist[i]; return (
+                <div key={r.id} className={`flex items-center gap-2 rounded-xl border bg-white p-1.5 pr-3 ${c.required ? 'border-line' : 'border-dashed border-line-strong'}`}>
+                  <div className="h-[34px] w-[34px] shrink-0 overflow-hidden rounded-lg bg-sunken">{c.assetId ? <BigImage id={c.assetId} alt={c.label} imgClass="h-[34px] w-[34px] object-cover" w={120} /> : null}</div>
+                  <div className="min-w-0 text-[13px] leading-tight"><span className="text-[#46704F]">{c.required ? '✓ ' : ''}</span>{c.label}{c.packageCritical && <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-text">PACKAGE CRITICAL</div>}</div>
+                </div>); })}
+              {checklist.length === 0 && <p className="text-[13px] text-ink-secondary">Nothing attached yet — choose the Baby Chef, the kitchen and any product photo.</p>}
+            </div>
+          <details className="mt-3 rounded-xl border border-line bg-white/80 p-3">
+            <summary className="cursor-pointer text-[13px] font-semibold text-blue-deep">Change</summary>
             <div className="mt-3 space-y-3">
               {img.refs.map((r, i) => (
                 <div key={r.id} className="rounded-md border border-line bg-surface p-2 text-[12px]">
-                  <div className="font-medium">{checklist[i].label}</div>
+                  <div className="font-medium">{checklist[i].label}</div><div className="text-[11px] text-ink-secondary">linked in {linkedIn(r)} image{linkedIn(r) === 1 ? '' : 's'} · one stored file, never copied</div>
                   <form action={updateRef} className="mt-1 space-y-1"><input type="hidden" name="id" value={r.id} /><Sel name="role" label="Role" v={r.role} options={IMAGE_REF_ROLES} /><Text name="notes" label="Notes" v={r.notes} /><Check name="required" label="Required" v={r.required} /><SubmitBtn className="btn-sm">Save</SubmitBtn></form>
                   <div className="mt-1 flex gap-1">
                     <form action={moveRef}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="dir" value="up" /><button className="btn btn-sm" aria-label="Move up">↑</button></form>
@@ -141,81 +191,22 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               <p className="text-[11px] text-ink-secondary">Masters establish identity/kitchen. The Previous Picture establishes current food, cookware and composition. A reference is one stored file linked to many images — never copied.</p>
             </div>
           </details>
-          <RevealButton projectFolder={`${folder}/01 References`} className="btn btn-sm w-full" />
-        </aside>
 
-        {/* CENTER — image, attempts, prompt (blue zone) */}
-        <div className="contents min-w-0 lg:order-2 lg:flex lg:flex-col lg:gap-3.5">
-          <div className="order-3 flex flex-wrap items-center justify-between gap-2 lg:order-none">
-            <div className="min-w-0 truncate font-mono text-[12px] text-ink-secondary" title={selected?.asset.relPath}>{selected ? selected.asset.relPath.split('/').slice(-2).join(' / ') : `${folder} / 02 Images`}</div>
-            <div className="flex items-center gap-3 text-[12px]">
-              {compareCode && selected && <a href="#compare" className="font-medium text-blue-deep underline">Compare with {compareCode}</a>}
-              {selected && <RevealButton assetId={selected.assetId} className="text-[12px] font-medium text-blue-deep underline" />}
-            </div>
+          <RevealButton projectFolder={`${folder}/01 References`} className="btn btn-sm mt-3" />
+
+          </section>
+          <div className="space-y-3.5">
+            <PromptEditor filename={expected} imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} />
           </div>
-          <div className="order-3 lg:order-none">{selected ? (
-            <BigImage id={selected.assetId} alt={`${code} attempt ${selected.number}`} imgClass="mx-auto max-h-[min(46vh,420px)] w-full object-contain" wrapClass="bg-[#F1EFF1]" w={1200} />
-          ) : (
-            <div className="flex aspect-video max-h-[270px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-pink-mid bg-pink-tint/50 text-center">
-              <div className="text-[15px] font-semibold">No result yet</div>
-              <p className="text-[13px] text-ink-secondary">Drop a generated image anywhere on this page, or</p>
-              <AddResultButton label="Add finished picture" className="btn btn-primary" />
-            </div>
-          )}</div>
-          {img.attempts.length > 0 && (
-            <div className="order-4 flex flex-wrap items-center gap-2 lg:order-none" aria-label="Attempts">
-              {img.attempts.map(a => (
-                <Link key={a.id} href={`${base}/${img.id}?attempt=${a.id}`} scroll={false} aria-current={selected?.id === a.id}
-                  className={`flex items-center gap-2 rounded-md border bg-purple-tint p-1.5 pr-3 transition hover:border-purple-deep ${selected?.id === a.id ? 'border-purple-deep' : 'border-purple-mid'}`}>
-                  <img src={fileUrl(a.assetId, 120)} alt="" className="h-[26px] w-[44px] rounded-sm object-cover" />
-                  <span className="font-mono text-[12px]">v{a.number}</span>
-                  <span className={`text-[12px] ${attemptColor(a.status)}`}>{attemptLabel(a.status)}{a.status === 'REDO' && a.wrong ? ` · ${a.wrong.slice(0, 28)}${a.wrong.length > 28 ? '…' : ''}` : ''}</span>
-                </Link>
-              ))}
-              <AddResultButton label="+ Add finished picture" className="btn btn-sm" />
-            </div>
-          )}
-          <div className="order-1 space-y-3.5 lg:order-none">
-            <div className="rounded-lg border border-purple-mid bg-grad-purple p-4" aria-label="Save this picture as">
+            <div className="rounded-[18px] border border-line bg-white p-4" aria-label="Save this picture as">
               <div className="eyebrow text-purple-deep">SAVE THIS PICTURE AS</div>
               <div className="mt-2 flex flex-wrap items-center gap-3"><code className="min-w-0 flex-1 break-all font-mono text-[14px] font-medium leading-snug" data-testid="expected-filename">{expected}</code><CopyButton text={expected} label="COPY FILENAME" variant="secondary" className="min-w-[160px]" /></div>
               <p className="mt-2 text-[12px] text-ink-secondary">Save the generated image into <span className="font-mono">{folder}/02 Images</span> with exactly this name — Baby Chef Studio detects it automatically and adds it to {code} for review. COPY PROMPT adds a FILE ORGANIZATION section with this filename.</p>
               <div className="mt-2"><RevealButton projectFolder={`${folder}/02 Images`} label="Show folder in Finder" /></div>
             </div>
-            <PromptEditor filename={expected} imageId={img.id} full={img.fullPrompt} cont={img.contPrompt} fullVersion={fullV} contVersion={contV} updatedAt={img.updatedAt.getTime()} /></div>
-          <div className="order-5 rounded-lg border border-blue-mid bg-blue-tint/60 p-3 lg:order-none">
-            <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/projects/${p.slug}/builder?type=image-full&image=${img.id}`} className="btn btn-sm btn-copy-secondary">PREPARE FULL IMAGE PROMPT</Link>
-              <Link href={`/projects/${p.slug}/builder?type=image-cont&image=${img.id}`} className="btn btn-sm btn-copy-secondary">MAKE NEXT IMAGE PROMPT</Link>
-              {img.attempts.length > 0 && <Link href={`/projects/${p.slug}/builder?type=image-redo&image=${img.id}${selected ? `&attempt=${selected.id}` : ''}`} className="btn btn-sm btn-copy-secondary">PREPARE REDO PROMPT</Link>}
-              <Link href={`/projects/${p.slug}/prompts?cat=IMAGE GENERATION&image=${img.id}`} className="btn btn-sm btn-ghost">Assemble from fields</Link>
-            </div>
-          </div>
-        </div>
 
-        {/* RIGHT — production details (pink zone) */}
-        <aside className="zone-pink order-6 flex flex-col gap-[18px] rounded-lg border p-5 lg:order-3">
-          <div>
-            <div className="flex items-center gap-3"><span className="font-mono text-[26px] font-medium leading-none">{code}</span><Chip>{img.status}</Chip></div>
-            <h1 className="mt-3 break-words text-[24px] md:text-[28px]">{img.title}</h1>
-            <div className="mt-1 font-mono text-[12px] text-ink-secondary">{sc} · {img.scene.title}</div>
-          </div>
-          <div className="rounded-md border border-pink-mid bg-surface p-3 text-[13px]">
-            <div className="eyebrow mb-1.5 text-pink-deep">Food state</div>
-            <div><span className="text-ink-secondary">Before</span> — {img.scene.foodBefore || '—'}</div>
-            <div className="mt-1"><span className="text-ink-secondary">After</span> — {img.ingredientState || img.scene.foodAfter || '—'}</div>
-          </div>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
-            <dt className="text-ink-secondary">Shot</dt><dd>{img.shotType}</dd>
-            <dt className="text-ink-secondary">Aspect</dt><dd>{img.aspectRatio || p.aspectRatio}</dd>
-            <dt className="text-ink-secondary">Vertical crop</dt><dd>{img.cropImportance}</dd>
-            <dt className="text-ink-secondary">Attempts</dt><dd className="font-mono">{img.attemptCount}</dd>
-            <dt className="text-ink-secondary">Depends on</dt><dd>{img.dependsOn ? <span><span className="font-mono">{imageCode(img.dependsOn.seq)}</span> · <span className={img.dependsOn.status === 'APPROVED' ? 'text-[#3B6448]' : 'text-[#8A6216]'}>{img.dependsOn.status === 'APPROVED' ? 'approved' : 'not approved'}</span></span> : '—'}</dd>
-            <dt className="text-ink-secondary">Unblocks</dt><dd className="font-mono">{dependents.length ? dependents.map(d => imageCode(d.seq)).join(', ') : '—'}</dd>
-          </dl>
-
-          <div className="mt-auto flex flex-col gap-2.5">
+          <section className="rounded-[18px] border border-line bg-white p-4"><div className="eyebrow mb-3">ACTIONS</div><a href="https://chatgpt.com/" target="_blank" rel="noreferrer" className="btn mb-2.5 w-full">Open ChatGPT ↗</a>
+          <div className="flex flex-col gap-2.5">
             <CopyButton text={fullCopy} label="COPY IMAGE PROMPT" className="min-h-[40px] w-full" />
             <CopyButton text={contCopy} label="COPY NEXT IMAGE PROMPT" variant="secondary" className="w-full" />
             <div className="flex gap-2">
@@ -250,7 +241,21 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
               </>
             ) : <p className="text-[12px] text-ink-secondary">Add a result to review, redo or approve it.</p>}
           </div>
-        </aside>
+
+          </section>
+          <details className="rounded-[18px] border border-line bg-white p-4"><summary className="cursor-pointer text-[14px] font-semibold text-ink-secondary">More details</summary><div className="mt-3 space-y-3.5">
+          <div className="order-5 rounded-lg border border-blue-mid bg-blue-tint/60 p-3 lg:order-none">
+            <div className="eyebrow mb-2 text-blue-deep">Production Brain — have ChatGPT / Claude WRITE the prompt</div>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/projects/${p.slug}/builder?type=image-full&image=${img.id}`} className="btn btn-sm btn-copy-secondary">PREPARE FULL IMAGE PROMPT</Link>
+              <Link href={`/projects/${p.slug}/builder?type=image-cont&image=${img.id}`} className="btn btn-sm btn-copy-secondary">MAKE NEXT IMAGE PROMPT</Link>
+              {img.attempts.length > 0 && <Link href={`/projects/${p.slug}/builder?type=image-redo&image=${img.id}${selected ? `&attempt=${selected.id}` : ''}`} className="btn btn-sm btn-copy-secondary">PREPARE REDO PROMPT</Link>}
+              <Link href={`/projects/${p.slug}/prompts?cat=IMAGE GENERATION&image=${img.id}`} className="btn btn-sm btn-ghost">Assemble from fields</Link>
+            </div>
+          </div>
+
+          </div></details>
+        </div>
       </div>
 
       {/* sticky copy bar for phones */}

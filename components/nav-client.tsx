@@ -14,16 +14,15 @@ const isActive = (path: string, href: string) => (href === '/' ? path === '/' : 
 export function TopNavLinks({ queueCount, unmatchedCount }: { queueCount: number; unmatchedCount: number }) {
   const path = usePathname();
   return (
-    <nav className="hidden items-center gap-4 md:flex lg:gap-5" aria-label="Primary">
+    <nav className="hidden items-center gap-0.5 md:flex" aria-label="Primary">
       {MAIN.map(i => (
-        <Link key={i.href} href={i.href} className={`flex items-center gap-1.5 text-[14px] transition ${isActive(path, i.href) ? 'font-semibold text-ink' : 'text-ink-secondary hover:text-ink'}`} aria-current={isActive(path, i.href) ? 'page' : undefined}>
-          {i.dot && <span className="h-1.5 w-1.5 rounded-full" style={{ background: i.dot }} aria-hidden />}
+        <Link key={i.href} href={i.href} className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-[9px] border px-3.5 text-[14px] transition ${isActive(path, i.href) ? 'border-line-strong bg-white font-semibold text-ink' : 'border-transparent font-medium text-ink-secondary hover:bg-[#F1EFF5] hover:text-ink'}`} aria-current={isActive(path, i.href) ? 'page' : undefined}>
           {i.label}
         </Link>
       ))}
       <details className="relative">
-        <summary className="cursor-pointer list-none text-[14px] text-ink-secondary hover:text-ink">More ▾{queueCount > 0 && <span className="ml-1 font-mono text-[12px] text-blue-deep">{queueCount}</span>}</summary>
-        <div className="absolute right-0 top-full z-50 mt-2 min-w-[200px] rounded-lg border border-line bg-surface p-1.5 shadow-md">
+        <summary className="flex h-9 cursor-pointer list-none items-center rounded-[9px] px-3.5 text-[14px] font-medium text-ink-secondary hover:bg-[#F1EFF5] hover:text-ink">More ▾{queueCount > 0 && <span className="ml-1 font-mono text-[12px] text-blue-deep">{queueCount}</span>}</summary>
+        <div className="absolute right-0 top-full z-50 mt-2 min-w-[210px] rounded-[14px] border border-line bg-white p-1.5 shadow-md">
           {MORE.filter(m => m.href !== '/search').map(m => <Link key={m.href} href={m.href} className="flex min-h-[36px] items-center justify-between rounded-md px-3 text-[13px] hover:bg-sunken">{m.label}{m.href === '/queue' && queueCount > 0 && <span className="font-mono text-[12px] text-blue-deep">{queueCount}</span>}</Link>)}
         </div>
       </details>
@@ -42,8 +41,8 @@ export function NavSearch() {
   }, []);
   return (
     <form className="relative hidden lg:block" onSubmit={e => { e.preventDefault(); const q = ref.current?.value.trim(); if (q) router.push(`/search?q=${encodeURIComponent(q)}`); }} role="search">
-      <input ref={ref} aria-label="Search" placeholder="Search" className="w-[220px] border-0 border-b border-line-strong bg-transparent py-1.5 pr-10 text-[14px] outline-none placeholder:text-ink-muted focus:border-ink" />
-      <kbd className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[11px] text-ink-muted">⌘K</kbd>
+      <input ref={ref} aria-label="Search" placeholder="Search pictures, scenes, recipes" className="h-9 w-[260px] rounded-[9px] border border-line-strong bg-white pl-8 pr-10 text-[13.5px] outline-none placeholder:text-[#8A8592] focus:border-blue-deep" />
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#8A8592]" aria-hidden>⌕</span><kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[11px] text-ink-muted">⌘K</kbd>
     </form>
   );
 }
@@ -57,7 +56,7 @@ export function BottomNav({ queueCount, unmatchedCount }: { queueCount: number; 
     <div className="md:hidden">
       {more && (
         <div className="fixed inset-x-0 bottom-14 z-40 border-t border-line bg-surface p-3 shadow-md" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          <form action="/search" className="mb-2"><input name="q" placeholder="Search" aria-label="Search" className="input" /></form>
+          <form action="/search" className="mb-2"><input name="q" placeholder="Search pictures, scenes, recipes" aria-label="Search" className="input" /></form>
           {[{ href: '/babychefs', label: 'Baby Chefs' }, { href: '/settings', label: 'Settings' }, { href: '/unmatched', label: `Unmatched files${unmatchedCount ? ` (${unmatchedCount})` : ''}` }, ...MORE.filter(m => m.href !== '/search')].map(m => <Link key={m.href} href={m.href} className="flex min-h-[44px] items-center px-2 text-[15px]">{m.label}</Link>)}
         </div>
       )}
