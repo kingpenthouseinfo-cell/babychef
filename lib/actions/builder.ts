@@ -33,9 +33,8 @@ export async function saveResult(fd: FormData) {
 export async function deleteSavedPrompt(fd: FormData) { await db.projectPrompt.delete({ where: { id: str(fd, 'id')! } }); touch(); }
 
 /** Use the pasted-back AI result where it belongs (image prompt, Kling prompt, new script version). */
-export async function applyResult(fd: FormData) {
+export async function applyResult(to: string, fd: FormData) {
   const sp = await db.projectPrompt.findUniqueOrThrow({ where: { id: str(fd, 'id')! }, include: { project: true } });
-  const to = str(fd, 'to')!;
   const meta = parseJson<Record<string, any>>(sp.meta, {});
   const result = (sp.result || '').trim();
   if (!result) throw new Error('Paste the AI result first.');

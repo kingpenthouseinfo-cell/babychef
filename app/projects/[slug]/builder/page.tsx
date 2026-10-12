@@ -145,7 +145,7 @@ export default async function BuilderPage({ params, searchParams }: { params: { 
               <form action={saveResult} className="mt-2 space-y-2"><input type="hidden" name="id" value={s.id} />
                 <label className="block"><span className="label">PASTE RESULT from ChatGPT / Claude</span><textarea name="result" defaultValue={s.result ?? ''} rows={6} className="input mono" /></label>
                 <div className="flex flex-wrap gap-2"><SubmitBtn className="btn-sm" pendingText="…">SAVE RESULT</SubmitBtn>
-                  {applyTo.map(([to, lab]) => <button key={to} type="submit" formAction={applyResult} name="to" value={to} className="btn btn-sm btn-accent">{lab}</button>)}
+                  {applyTo.map(([to, lab]) => <button key={to} type="submit" formAction={applyResult.bind(null, to)} className="btn btn-sm btn-accent">{lab}</button>)}
                   {s.result && <CopyButton text={s.result} label="COPY RESULT" className="btn-sm" />}
                   {(type === 'plan' || type === 'scenes') && s.result && <Link href={`/projects/${p.slug}/import?from=${s.id}`} className="btn btn-sm">IMPORT SCENES FROM RESULT</Link>}</div></form>
               <ConfirmForm action={deleteSavedPrompt} message="Delete this saved version?" className="mt-2"><input type="hidden" name="id" value={s.id} /><button className="btn btn-sm btn-danger">Delete</button></ConfirmForm>

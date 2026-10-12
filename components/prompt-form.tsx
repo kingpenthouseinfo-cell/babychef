@@ -13,13 +13,11 @@ export function LivePromptForm({ projectId, templateId, category, initial, name,
         <CopyButton text={t} label="COPY PROMPT" />
         <input name="name" defaultValue={name} className="input max-w-xs" aria-label="Name for saved prompt" />
         <SubmitBtn className="" pendingText="Saving…">SAVE AS PROJECT PROMPT</SubmitBtn>
-        {imageId && <>
-          <button type="submit" formAction={applyPrompt} name="target" value="image-full" className="btn"><input type="hidden" name="targetId" value={imageId} />SAVE AS IMAGE FULL PROMPT</button>
-        </>}
-        {klingId && <button type="submit" formAction={applyPrompt} name="target" value="kling" className="btn">SAVE AS KLING PROMPT</button>}
+        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-full')} className="btn">SAVE AS IMAGE FULL PROMPT</button>}
+        {imageId && <button type="submit" formAction={applyPrompt.bind(null, 'image-cont')} className="btn">SAVE AS IMAGE CONTINUATION PROMPT</button>}
+        {klingId && !imageId && <button type="submit" formAction={applyPrompt.bind(null, 'kling')} className="btn">SAVE AS KLING PROMPT</button>}
       </div>
-      {imageId && <input type="hidden" name="targetId" value={imageId} />}
-      {klingId && !imageId && <input type="hidden" name="targetId" value={klingId} />}
+      <input type="hidden" name="targetId" value={imageId || klingId || ''} />
     </form>
   );
 }

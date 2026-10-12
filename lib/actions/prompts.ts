@@ -44,8 +44,8 @@ export async function saveProjectPrompt(fd: FormData) {
 }
 export async function deleteProjectPrompt(fd: FormData) { await db.projectPrompt.delete({ where: { id: str(fd, 'id')! } }); touch(); }
 
-export async function applyPrompt(fd: FormData) {
-  const target = str(fd, 'target')!, id = str(fd, 'targetId')!, text = strRaw(fd, 'text');
+export async function applyPrompt(target: string, fd: FormData) {
+  const id = str(fd, 'targetId')!, text = strRaw(fd, 'text');
   if (target === 'image-full' || target === 'image-cont') {
     const img = await db.plannedImage.findUniqueOrThrow({ where: { id }, include: { project: true } });
     const field = target === 'image-full' ? 'fullPrompt' : 'contPrompt';
