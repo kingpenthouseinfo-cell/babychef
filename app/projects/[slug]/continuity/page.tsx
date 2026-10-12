@@ -7,6 +7,7 @@ import { Area, Section, Thumb, Chip, GoldBadge } from '@/components/ui';
 import { saveDoc, copyDefaultsToContinuity } from '@/lib/actions/project';
 import { CONTINUITY_FIELDS, INGREDIENT_IMPORTANCE } from '@/lib/constants';
 import { parseJson, sceneCode, imageCode } from '@/lib/util';
+import { fileUrl } from '@/components/ui';
 
 export default async function Continuity({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -21,9 +22,22 @@ export default async function Continuity({ params }: { params: { slug: string } 
   ]);
   const data = parseJson<Record<string, string>>(doc?.data, {});
   const b = p.babyChef;
+  const pick = (...keys: string[]) => keys.map(k => data[k]).filter(Boolean).join(' · ') || null;
+  const cards: [string, string | null, string, string, string | null][] = [
+    ['Baby', pick('Baby identity', 'Hair', 'Outfit') || [b?.appearance, b?.hair, b?.outfit].filter(Boolean).join(' · ') || null, '#E9C9A2', '#A8774C', masters[0]?.assetId ?? null],
+    ['Kitchen', pick('Kitchen', 'Counter') || b?.kitchen || null, '#BFD8D2', '#6E9C96', masters.find(r => /kitchen/i.test(r.category))?.assetId ?? null],
+    ['Cookware', pick('Cookware', 'Main utensils'), '#C9C2B4', '#6F675C', null], ['Food', pick('Ingredient appearance', 'Food progression'), '#F0D6A2', '#C2913D', ings.find(i => i.references[0])?.references[0].assetId ?? null],
+    ['Lighting', pick('Lighting', 'Color temperature') || b?.lighting || null, '#F6E7C8', '#D8B27A', null], ['Voice', pick('Voice', 'Accent') || b?.voiceInstruction || null, '#E9D3C8', '#A8806A', null],
+    ['Important Rules', pick('Safety', 'Adult-assistance rules'), '#E4DFD5', '#A39A8A', null],
+  ];
   return (
     <div className="space-y-5">
-      <Section title="Keep It Consistent">
+      <div><h1 className="text-[34px] md:text-[40px]">Keep It Consistent</h1><p className="mt-1 text-[14px] text-ink-secondary">What must look the same in every picture of this video.</p></div>
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">{cards.map(([t, fact, c1, c2, asset]) => (
+        <a key={t} href="#edit" className="overflow-hidden rounded-[16px] border border-line bg-white"><div className="aspect-[16/10]" style={{ background: `linear-gradient(135deg,${c1},${c2})` }}>{asset && <img src={fileUrl(asset, 480)} alt="" className="h-full w-full object-cover" />}</div>
+          <div className="p-4"><div className="flex items-center justify-between"><b className="text-[15px]">{t}</b><span className="text-[13px] text-ink-secondary">Edit</span></div><p className="mt-1.5 line-clamp-2 text-[13.5px] text-ink-secondary">{fact || 'Not filled in yet.'}</p></div></a>))}</div>
+      <div id="edit" className="scroll-mt-24" />
+      <Section title="Everything to keep the same">
         <DirtyForm action={saveDoc} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="key" value="continuity" />
           {CONTINUITY_FIELDS.map(f => <Area key={f} name={`f:${f}`} label={f} v={data[f]} rows={2} />)}
