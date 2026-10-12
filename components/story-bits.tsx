@@ -60,7 +60,7 @@ export function SceneMenu({ projectId, scene, images, first, last }: { projectId
               {images.map(i => <label key={i.id} className="flex items-center gap-2"><input type="checkbox" name="img" value={i.id} className="accent-[#4C6B52]" />{i.label}</label>)}
               <SubmitBtn className="btn-sm" pendingText="Splitting…">SPLIT SCENE HERE</SubmitBtn></form></details>
         )}
-        <ConfirmForm action={deleteSceneHere} message={`Delete scene "${scene.title}"? (It must have no pictures.)`}>{hid('id', scene.id)}<button className={`${menuBtn} text-[#A8513F]`}>Delete</button></ConfirmForm>
+        <ConfirmForm action={deleteSceneHere} message={`Delete scene "${scene.title}"${images.length ? ` and its ${images.length} picture${images.length > 1 ? 's' : ''}` : ''}? Files already saved in the folder stay there.`}>{hid('id', scene.id)}<button className={`${menuBtn} text-[#A8513F]`}>Delete</button></ConfirmForm>
       </div>
     </details>
   );

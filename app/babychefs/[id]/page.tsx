@@ -102,7 +102,7 @@ export default async function BabyChefPage({ params, searchParams }: { params: {
             </div>
           )}
           <div className="mt-8 border-t border-line pt-4 text-[13px] text-ink-secondary">Projects using this chef: {b.projects.length ? b.projects.map((p, i) => <span key={p.id}>{i > 0 && ', '}<Link className="underline" href={`/projects/${p.slug}`}>{p.title}</Link></span>) : 'none'}</div>
-          <ConfirmForm action={deleteBabyChef} message={`Delete Baby Chef "${b.displayName}"? (It is soft-deleted; projects using it block deletion.)`} className="mt-3"><input type="hidden" name="id" value={b.id} /><button className="btn btn-danger btn-sm">Delete Baby Chef…</button></ConfirmForm>
+          <ConfirmForm action={deleteBabyChef} message={`Delete Baby Chef "${b.displayName}"? Recipe videos that used it will show “No Baby Chef yet”. Nothing else is deleted.`} className="mt-3"><input type="hidden" name="id" value={b.id} /><button className="btn btn-danger btn-sm">Delete Baby Chef…</button></ConfirmForm>
         </div>
       </div>
     </>

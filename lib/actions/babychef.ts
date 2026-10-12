@@ -36,8 +36,8 @@ export async function saveBabyChef(fd: FormData) {
 
 export async function deleteBabyChef(fd: FormData) {
   const id = str(fd, 'id')!;
-  const n = await db.project.count({ where: { babyChefId: id, deletedAt: null } });
-  if (n > 0) throw new Error('This Baby Chef is used by projects. Archive (deactivate) it instead.');
+  // recipe videos that used this Baby Chef simply become "no Baby Chef yet"; nothing else is touched
+  await db.project.updateMany({ where: { babyChefId: id }, data: { babyChefId: null } });
   await db.babyChef.update({ where: { id }, data: { deletedAt: new Date(), active: false } });
   revalidatePath('/babychefs');
   redirect('/babychefs');

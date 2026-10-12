@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { db } from '@/lib/db';
 import { Empty, fileUrl } from '@/components/ui';
+import { ConfirmForm } from '@/components/client';
+import { deleteBabyChef } from '@/lib/actions/babychef';
 
 const GRADS = ['#E9C9A2,#A8774C', '#EBD2B4,#9E6E45', '#F1DECB,#B88E6B'];
 const grad = (i: number) => `linear-gradient(135deg,${GRADS[i % GRADS.length].replace(',', ' 0%,')} 100%)`;
@@ -38,7 +40,7 @@ export default async function BabyChefs({ searchParams }: { searchParams: { chef
           <div className="min-w-0 pb-2"><h1 className="text-[34px] md:text-[44px]">{sel.displayName}</h1>
             <div className="mt-3 text-[15px] text-ink-secondary">{[sel.cuisine && `${sel.cuisine} cooking`, sel.seriesName && `${sel.seriesName} series`].filter(Boolean).join(' · ') || ' '}</div>
             <div className="mt-2 text-[13.5px] text-ink-secondary">Used in {sel._count.projects} recipe video{sel._count.projects === 1 ? '' : 's'}</div>
-            <div className="mt-3 flex gap-2"><Link href={edit('details')} className="btn btn-sm">Edit everything</Link></div></div>
+            <div className="mt-3 flex gap-2"><Link href={edit('details')} className="btn btn-sm">Edit everything</Link><ConfirmForm action={deleteBabyChef} message={`Delete Baby Chef "${sel.displayName}"? Recipe videos that used it will show “No Baby Chef yet”. Nothing else is deleted.`}><input type="hidden" name="id" value={sel.id} /><button className="btn btn-sm btn-danger">Delete Baby Chef</button></ConfirmForm></div></div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {cards.map(([t, v, tab]) => (

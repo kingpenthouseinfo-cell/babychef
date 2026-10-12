@@ -7,7 +7,8 @@ import { saveRecipe } from '@/lib/actions/project';
 import { fmtDate } from '@/lib/util';
 import Link from 'next/link';
 import { fileUrl } from '@/components/ui';
-import { quickAddIngredients } from '@/lib/actions/project';
+import { quickAddIngredients, deleteIngredient } from '@/lib/actions/project';
+import { ConfirmForm } from '@/components/client';
 import { ProductPhotoPanel } from '@/components/product-photo-panel';
 
 export default async function Recipe({ params }: { params: { slug: string } }) {
@@ -40,7 +41,7 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
                   {i.references.length > 0 && <span className="hidden rounded-full bg-[#E6EEE3] px-2.5 py-0.5 text-[12px] font-semibold text-[#46704F] sm:inline">{i.brand ? `${i.brand} · ` : ''}photo ✓</span>}
                   <span className="shrink-0 text-[13px] font-semibold text-blue-deep">Brand / product info</span>
                 </summary>
-                <div className="mt-3 rounded-2xl border border-line bg-[#FAF9FC] p-4"><ProductPhotoPanel projectId={p.id} ings={[opts[n]]} initial={i.id} fixed /></div>
+                <div className="mt-3 rounded-2xl border border-line bg-[#FAF9FC] p-4"><ProductPhotoPanel projectId={p.id} ings={[opts[n]]} initial={i.id} fixed /><ConfirmForm action={deleteIngredient} message={`Delete ingredient "${i.name}"? Its product photos are unlinked, not erased.`} className="mt-3"><input type="hidden" name="id" value={i.id} /><button className="btn btn-sm btn-danger">Delete ingredient</button></ConfirmForm></div>
               </details>
             </li>
           ))}

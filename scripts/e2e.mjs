@@ -234,9 +234,8 @@ ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.
 // ---- Previous approved frame for IMG-002
 const img2Url = await newImage('Cumin in oil');
 await page.waitForLoadState('networkidle');
-ok('Suggests previous approved IMG-001', (await page.locator('text=Suggested previous:').count()) > 0);
-await page.click('button:has-text("USE PREVIOUS PICTURE")');
-await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+ok('Previous approved picture is picked automatically for IMG-002', (await page.locator('text=IMG-001 Previous Picture').count()) > 0);
+await page.waitForLoadState('networkidle'); await page.waitForTimeout(300);
 ok('IMG-002 uses IMG-001 as PREVIOUS APPROVED FRAME w/ thumbnail', (await page.locator('text=IMG-001 Previous Picture').count()) > 0 && (await page.locator('section img[src*="/api/files/"]').count()) > 0);
 await page.click('summary:text-is("Change")').catch(() => {});
 ok('Attach same Front Label to a 2nd image', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
@@ -549,6 +548,19 @@ await form.locator('select').nth(2).selectOption({ index: 1 });
 await form.locator('button:has-text("Assign")').click(); await page.waitForTimeout(2000);
 await go('/unmatched');
 ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.locator('text=random-download.png').count()) === 0 && fs.readdirSync(imgDir).some(f => new RegExp(`_${scCode}_IMG-001.*_v4\\.png$`).test(f)));
+// ---- one-click Make picture
+const mpUrl = await newImage('One click test');
+await page.fill('textarea[aria-label="Full prompt"]', 'One click prompt: tiny test picture.'); await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
+await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+const popupP = page.waitForEvent('popup', { timeout: 6000 }).catch(() => null);
+await page.locator('button:has-text("Make picture"):visible').first().click();
+const popup = await popupP; if (popup) await popup.close().catch(() => {});
+await page.waitForTimeout(1200);
+const mpClip = await clip();
+ok('Make picture: prompt copied with the exact file name', mpClip.includes('One click prompt') && mpClip.includes('FILE ORGANIZATION') && /_v1\.png/.test(mpClip), mpClip.slice(0, 80));
+ok('Make picture: shows confirmation and opens ChatGPT in a new tab', (await page.locator('text=Prompt copied. ChatGPT opened.').count()) > 0 && !!popup);
+await page.reload({ waitUntil: 'networkidle' });
+ok('Make picture: picture moves to Making', (await page.locator('.chip:has-text("Making")').count()) > 0);
 // ---- final design: Home, menus, compact list, video clips
 await go('/');
 await page.locator('summary:has-text("Show next steps")').first().click();

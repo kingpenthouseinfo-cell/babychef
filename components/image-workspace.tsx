@@ -62,7 +62,7 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
           ))}
         </div>
         <span className="font-mono text-[11px] text-ink-secondary">{ver ? `v${ver}` : 'no version yet'} · {words(cur)} words · {pending ? 'saving…' : label ? `saved ${label}` : 'saved'}</span>
-        <div className="ml-auto"><CopyButton text={withFilename(cur, filename)} label={tab === 'full' ? 'COPY IMAGE PROMPT' : 'COPY NEXT IMAGE PROMPT'} className="min-w-[190px]" /></div>
+        <div className="ml-auto"><CopyButton text={withFilename(cur, filename)} label={tab === 'full' ? 'Copy prompt only' : 'Copy next prompt only'} variant="secondary" className="min-w-[190px]" /></div>
       </div>
       <textarea value={cur} onChange={e => change(e.target.value)} onBlur={flush} aria-label={tab === 'full' ? 'Full prompt' : 'Continuation prompt'}
         placeholder={tab === 'full' ? 'Full prompt — complete visual context for ChatGPT…' : 'Continuation prompt — only what changes from the previous frame…'}

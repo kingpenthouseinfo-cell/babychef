@@ -45,3 +45,9 @@ export async function setWatchFolders(fd: FormData) {
   await setSetting('watchProjectFolders', String(fd.get('watch') === 'on'));
   revalidatePath('/', 'layout');
 }
+
+export async function backupNow() {
+  const { backupDatabase } = await import('../backup');
+  await backupDatabase('manual');
+  revalidatePath('/settings');
+}

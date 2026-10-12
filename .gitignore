@@ -8,3 +8,5 @@ prisma/*.db
 prisma/*.db-journal
 storage/*
 !storage/.gitkeep
+
+prisma/backups

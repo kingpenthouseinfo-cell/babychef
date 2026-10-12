@@ -61,3 +61,11 @@ export async function deleteScene(fd: FormData) {
   revalidatePath('/', 'layout');
 }
 void pickText;
+
+export async function deleteScriptVersion(fd: FormData) {
+  const v = await db.scriptVersion.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
+  await db.scriptVersion.delete({ where: { id: v.id } });
+  const left = await db.scriptVersion.findMany({ where: { projectId: v.projectId }, orderBy: { version: 'desc' } });
+  if (left.length && !left.some(x => x.isCurrent)) await db.scriptVersion.update({ where: { id: left[0].id }, data: { isCurrent: true } });
+  revalidatePath('/', 'layout');
+}

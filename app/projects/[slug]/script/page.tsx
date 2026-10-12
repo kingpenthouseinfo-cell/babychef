@@ -3,7 +3,8 @@ import { db } from '@/lib/db';
 import { getProjectBySlug } from '@/lib/queries';
 import { DirtyForm, SubmitBtn, CopyButton, MarkerToolbar } from '@/components/client';
 import { Area, Chip, Empty, Section, Sel, Text } from '@/components/ui';
-import { createScript, saveScript, setCurrentScript, reopenScript } from '@/lib/actions/script';
+import { createScript, saveScript, setCurrentScript, reopenScript, deleteScriptVersion } from '@/lib/actions/script';
+import { ConfirmForm } from '@/components/client';
 import { SCRIPT_MARKERS, SCRIPT_STATUSES } from '@/lib/constants';
 import { fmtDate, wordCount } from '@/lib/util';
 import Link from 'next/link';
@@ -38,7 +39,7 @@ export default async function Script({ params, searchParams }: { params: { slug:
                 <a className="btn" href={`/api/export/text?type=script&id=${sel.id}`}>DOWNLOAD</a></div>
             </DirtyForm>
             <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-              {!sel.isCurrent && <form action={setCurrentScript}><input type="hidden" name="id" value={sel.id} /><SubmitBtn className="" pendingText="…">Make this version CURRENT</SubmitBtn></form>}
+              {<ConfirmForm action={deleteScriptVersion} message={`Delete script version ${sel.version}? The other versions stay.`}><input type="hidden" name="id" value={sel.id} /><button className="btn btn-sm btn-danger">Delete this version</button></ConfirmForm>}{!sel.isCurrent && <form action={setCurrentScript}><input type="hidden" name="id" value={sel.id} /><SubmitBtn className="" pendingText="…">Make this version CURRENT</SubmitBtn></form>}
               <form action={createScript}><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="from" value={sel.id} /><input type="hidden" name="notes" value={`Duplicated from v${sel.version}`} /><SubmitBtn className="" pendingText="…">Duplicate as new version</SubmitBtn></form>
               {sel.status === 'LOCKED' && <form action={reopenScript}><input type="hidden" name="id" value={sel.id} /><SubmitBtn className="" pendingText="…">Reopen (unlock)</SubmitBtn></form>}
             </div>

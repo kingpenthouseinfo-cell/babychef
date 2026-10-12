@@ -11,6 +11,8 @@ import { saveSettings } from '@/lib/actions/settings';
 import { PROJECT_STATUSES, TOOL_NAMES } from '@/lib/constants';
 import { SettingsNav } from '@/components/settings-nav';
 import { WatchToggle } from '@/components/watch-toggle';
+import { listBackups, dbPaths } from '@/lib/backup';
+import { backupNow } from '@/lib/actions/settings';
 import { RevealButton } from '@/components/image-workspace';
 
 export default async function Settings() {
@@ -36,7 +38,11 @@ export default async function Settings() {
           <div className="mt-4 rounded-xl bg-[#FAF9FC] px-4 py-3 font-mono text-[13px]">jamaican-beef-patties_SC04_IMG-014_scotch-bonnet-close-up_v1.png</div>
           <p className="mt-2 text-[13px] text-ink-secondary">Made automatically. Video · scene · picture · name · version.</p>
         </section>
-        <section className="card flex flex-wrap items-center justify-between gap-3 !p-6"><div><h2 className="text-[24px]">Backups & exports</h2><p className="mt-1 text-[13.5px] text-ink-secondary">Everything is stored on this Mac. Nothing is uploaded.</p></div><a href="/api/export/all" className="btn">Export everything</a></section>
+        <section className="card !p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[24px]">Backups & exports</h2><p className="mt-1 text-[13.5px] text-ink-secondary">Everything is stored on this Mac. Nothing is uploaded. A dated backup of your data is made every day and when the app starts (the newest 30 are kept).</p></div>
+          <div className="flex gap-2"><form action={backupNow}><button className="btn">Back up now</button></form><a href="/api/export/all" className="btn">Export everything</a></div></div>
+          <dl className="mt-4 grid gap-3 text-[13px] sm:grid-cols-2"><div><dt className="text-ink-secondary">Your data file</dt><dd className="break-all font-mono">{dbPaths().file.replace(/^\/Users\/[^/]+/, '~')}</dd></div><div><dt className="text-ink-secondary">Backups folder</dt><dd className="break-all font-mono">{dbPaths().backups.replace(/^\/Users\/[^/]+/, '~')}</dd></div></dl>
+          <ul className="mt-3 divide-y divide-line text-[13px]" aria-label="Recent backups">{listBackups().slice(0, 5).map(b => <li key={b.name} className="flex justify-between py-1.5"><span className="font-mono">{b.name}</span><span className="text-ink-secondary">{(b.size / 1024).toFixed(0)} KB · {new Date(b.mtime).toLocaleString()}</span></li>)}{listBackups().length === 0 && <li className="py-1.5 text-ink-secondary">No backups yet.</li>}</ul>
+        </section>
       </div>
       <h2 className="mb-3 text-[24px]">All settings</h2>
       <SettingsNav active="General" />

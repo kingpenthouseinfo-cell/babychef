@@ -37,7 +37,7 @@ npm install                 # also generates the Prisma client
 cp .env.example .env        # DATABASE_URL="file:./dev.db"
 npx prisma db push          # creates the SQLite database (prisma/dev.db)
 npm run db:seed             # OPTIONAL: demo project "Jamaican Beef Patties" with placeholder images
-npm run dev                 # http://localhost:3000
+npm run dev                 # http://localhost:3000 (hot reload; your data is kept in ~/Documents/Baby Chef Studio/Data)
 ```
 
 Production build: `npm run build && npm start`.
@@ -45,11 +45,17 @@ Other scripts: `npm run typecheck`, `npm run lint`, `npm run db:reset` (⚠ wipe
 
 Smoke test (needs a running server): `BASE=http://localhost:3000 STORAGE_DIR=/some/test/dir node scripts/e2e.mjs`.
 
+## Starting it like an app (macOS)
+
+* Double-click **Start Baby Chef Studio.command** (opens http://localhost:3000; leave the window open while you work), and **Stop Baby Chef Studio.command** to stop.
+* Or run `npm run make-app` once: it creates **Baby Chef Studio.app** in `~/Applications` (drag it to the Dock). Opening it starts the app in the background and opens your browser. Updating the code never touches your data.
+
 ## Where your files and data live
 
 | What | Where |
 |---|---|
-| Metadata, prompts, statuses, versions, file paths | SQLite database `prisma/dev.db` |
+| Metadata, prompts, statuses, versions, file paths | SQLite database `~/Documents/Baby Chef Studio/Data/baby-chef-studio.db` (moved there automatically from `prisma/dev.db` the first time you run `npm start` or `npm run dev`; the code folder holds no data) |
+| Dated database backups (daily + at start, newest 30 kept) | `~/Documents/Baby Chef Studio/Backups/baby-chef-studio_YYYY-MM-DD.db` (Settings → Backups & exports → Back up now) |
 | Images, product photos, videos, exported text | **Storage root** — default `~/Documents/Baby Chef Studio/` (change it in **Settings → Storage**, or set `STORAGE_DIR`) |
 | Thumbnail cache (safe to delete) | `.cache/thumbs/` inside the app folder |
 
@@ -76,7 +82,7 @@ Baby Chef Studio/
 
 ### Backing up
 
-Back up **two things**: the storage root folder (`~/Documents/Baby Chef Studio/`) **and** `prisma/dev.db`. Copy both while the app is stopped (or use Time Machine). To move to a new Mac, copy both and keep the same relative layout; paths in the database are relative to the storage root, so you can change the root in Settings afterwards. Backups are not automatic.
+Everything lives in one folder, `~/Documents/Baby Chef Studio/` (your data in `Data/`, backups in `Backups/`, pictures in each video's folder), so a normal Time Machine / folder copy backs up all of it. Copy both while the app is stopped (or use Time Machine). To move to a new Mac, copy both and keep the same relative layout; paths in the database are relative to the storage root, so you can change the root in Settings afterwards. Backups are not automatic.
 
 ## Version 1 limitations
 

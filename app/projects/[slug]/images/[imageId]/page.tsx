@@ -8,7 +8,9 @@ import { Area, BigImage, Check, Chip, Field, GoldBadge, Section, Sel, Text, Warn
 import { ConfirmForm, CopyButton, DirtyForm, SubmitBtn } from '@/components/client';
 import { AddResultButton, AddResultDialog, HoldApprove, PromptEditor, RevealButton } from '@/components/image-workspace';
 import { ReviewPanel } from '@/components/review-panel';
-import { pickReferencesForMe, makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
+import { MakePictureButton } from '@/components/make-picture';
+import { getSettings } from '@/lib/settings';
+import { deleteAttempt, pickReferencesForMe, makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
 import { imagePromptWarnings } from '@/lib/prompt-quality';
@@ -72,6 +74,10 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const nextV = nextVersion(img.attempts.map(a => a.number));
   const expected = expectedFilename({ slug: p.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextV });
   const fullCopy = withFilename(img.fullPrompt, expected), contCopy = withFilename(img.contPrompt, expected);
+  const settings = await getSettings();
+  const chatgptUrl = settings.url_ChatGPT || 'https://chatgpt.com/';
+  const hasPrev = img.refs.some(r => r.role === 'PREVIOUS APPROVED FRAME');
+  const makeText = hasPrev && img.contPrompt?.trim() ? contCopy : img.fullPrompt?.trim() ? fullCopy : contCopy;
   const rawChecklist = parseJson<unknown>(selected?.checklist, {});
   const reviewState: Record<string, 'pass' | 'unsure' | 'fail'> = Array.isArray(rawChecklist) ? Object.fromEntries((rawChecklist as string[]).map(k => [k, 'pass' as const])) : (rawChecklist as Record<string, 'pass' | 'unsure' | 'fail'>);
 
@@ -134,6 +140,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
                 </Link>
               ))}
               <AddResultButton label="+ Add finished picture" className="btn btn-sm" />
+              {selected && <ConfirmForm action={deleteAttempt} message={`Delete version ${selected.number} of this picture? The file already saved in the folder stays there.`}><input type="hidden" name="attemptId" value={selected.id} /><button className="btn btn-sm btn-ghost text-[#A5473A]">Delete this version</button></ConfirmForm>}
             </div>
           )}
 
@@ -189,6 +196,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
             </>
           ) : (
             <>
+          <section className="rounded-[16px] border p-4" style={{ background: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', borderColor: '#F0CDDA' }} aria-label="Make this picture"><MakePictureButton imageId={img.id} text={makeText} chatgpt={chatgptUrl} mark={img.status === 'READY'} /><p className="text-[12.5px] text-ink-secondary">Copies the prompt (with the file name) and opens ChatGPT. Then paste, generate, and save the picture.</p></section>
           <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
             <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><form action={pickReferencesForMe}><input type="hidden" name="imageId" value={img.id} /><button className="text-[12.5px] font-semibold text-blue-deep hover:underline">Pick the obvious ones for me</button></form></div>
           {prevSuggest && (
@@ -247,8 +255,8 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
 
           <section className="rounded-[18px] border border-line bg-white p-4"><div className="eyebrow mb-3">ACTIONS</div><a href="https://chatgpt.com/" target="_blank" rel="noreferrer" className="btn mb-2.5 w-full">Open ChatGPT ↗</a>
           <div className="flex flex-col gap-2.5">
-            <CopyButton text={fullCopy} label="COPY IMAGE PROMPT" className="min-h-[40px] w-full" />
-            <CopyButton text={contCopy} label="COPY NEXT IMAGE PROMPT" variant="secondary" className="w-full" />
+            <CopyButton text={makeText} label="Copy prompt only" variant="secondary" className="w-full" />
+            <CopyButton text={makeText === fullCopy ? contCopy : fullCopy} label={makeText === fullCopy ? 'Copy next-image prompt only' : 'Copy full prompt only'} variant="secondary" className="w-full" />
             <div className="flex gap-2">
               <AddResultButton label="Add finished picture" className="btn flex-1" />
               <details className="relative flex-1">
@@ -284,7 +292,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
 
       {/* sticky copy bar for phones */}
       <div className="fixed inset-x-0 bottom-14 z-40 flex gap-2 border-t border-line bg-surface p-2 md:hidden" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom) * 0)' }}>
-        <CopyButton text={fullCopy} label="Copy image prompt" className="flex-1" /><AddResultButton label="Add finished picture" className="btn flex-1" />
+        <MakePictureButton imageId={img.id} text={makeText} chatgpt={chatgptUrl} mark={img.status === 'READY'} label="Make picture" className="btn btn-accent min-h-[44px] w-full" /><AddResultButton label="Add finished picture" className="btn flex-1" />
       </div>
 
       {/* REVIEW / REDO */}

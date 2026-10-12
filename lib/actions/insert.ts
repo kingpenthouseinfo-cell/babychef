@@ -83,8 +83,8 @@ export async function duplicatePicture(fd: FormData) {
 }
 export async function deleteSceneHere(fd: FormData) {
   const sc = await db.scene.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
-  const n = await db.plannedImage.count({ where: { sceneId: sc.id } });
-  if (n > 0) throw new Error('This scene still has pictures. Move or delete them first.');
+  // deleting a scene also deletes its picture plan (results already saved in the folder are left alone)
+  await db.plannedImage.deleteMany({ where: { sceneId: sc.id } });
   await db.scene.delete({ where: { id: sc.id } });
   await closeGaps(sc.projectId);
   touch(); redirect(await storyUrl(sc.projectId));

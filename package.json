@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/start.mjs dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start.mjs start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "dev:raw": "next dev",
+    "start:raw": "next start",
+    "make-app": "bash scripts/make-mac-app.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -3,6 +3,7 @@ import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CopyButton } from './client';
+import { MakePictureButton } from './make-picture';
 import { startGenerating, markWaitingById } from '@/lib/actions/image';
 import { WAITING_REASONS } from '@/lib/constants';
 import { withFilename } from '@/lib/naming';
@@ -72,6 +73,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
         <div className="mt-2 max-h-36 overflow-auto rounded-lg border border-line bg-surface px-4 py-3 text-[14px] leading-[1.6] text-ink-2">{shown.trim() || <span className="text-[#A8513F]">This image has no {pref === 'FULL' ? 'full' : 'continuation'} prompt yet.</span>}</div>
         <div className="mt-3 rounded-lg border border-purple-mid bg-grad-purple p-3"><div className="eyebrow text-purple-deep">NEXT RESULT FILE</div><div className="mt-1 flex flex-wrap items-center gap-2"><code className="min-w-0 flex-1 break-all font-mono text-[13px] font-medium">{cur.filename}</code><CopyButton text={cur.filename} label="COPY FILENAME" variant="secondary" className="btn-sm" /></div></div>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
+        <div className="mb-3"><MakePictureButton imageId={cur.id} text={text} chatgpt={chatgpt} /></div>
           <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy hidden min-h-[48px] min-w-[240px] px-6 text-[15px] md:inline-flex" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : 'Copy Next Prompt'}</button>
           <CopyButton text={withFilename(pref === 'CONT' ? cur.full : cur.cont, cur.filename)} label={pref === 'CONT' ? 'Copy full prompt' : 'Copy continuation'} variant="secondary" />
           <a href={chatgpt} target="_blank" rel="noopener noreferrer" className="btn">Open ChatGPT ↗</a>
@@ -89,7 +91,7 @@ export function QueueNext({ items, chatgpt }: { items: QItem[]; chatgpt: string 
       </section>
 
       <div className="fixed inset-x-0 bottom-14 z-40 border-t border-line bg-surface p-2 md:hidden">
-        <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy min-h-[48px] w-full text-[15px]" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : `Copy Next Prompt · ${cur.code}`}</button>
+        <button type="button" onClick={copyNext} disabled={!text.trim() || pending} className="btn btn-copy-secondary min-h-[44px] w-full text-[14px]" style={copied ? { background: 'linear-gradient(180deg,#7FAE93 0%,#4E7A5C 100%)', boxShadow: 'var(--btn-shadow-sage)' } : undefined}>{copied ? '✓ Copied, paste into ChatGPT' : `Copy Next Prompt · ${cur.code}`}</button>
       </div>
       <aside className="space-y-3 pb-16 md:pb-0">
         <div className="flex items-center justify-between"><div className="eyebrow">UPCOMING</div><div className="flex items-center gap-2 text-[12px] text-ink-secondary">This session <span className="h-1.5 w-20 overflow-hidden rounded-full bg-sunken"><span className="block h-full bg-btn-blue" style={{ width: `${Math.min(100, (done / TARGET) * 100)}%` }} /></span><span className="font-mono">{done} / {TARGET}</span></div></div>

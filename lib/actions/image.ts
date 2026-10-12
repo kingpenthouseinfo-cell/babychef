@@ -294,3 +294,16 @@ export async function pickReferencesForMe(fd: FormData) {
   await autoAttachReferences(str(fd, 'imageId')!);
   touch();
 }
+
+/** Delete one version (result) of a picture. The picture goes back to Ready if no other version is waiting or approved. */
+export async function deleteAttempt(fd: FormData) {
+  const a = await db.attempt.findUniqueOrThrow({ where: { id: str(fd, 'attemptId')! }, include: { image: true } });
+  const wasApproved = a.image.approvedAttemptId === a.id;
+  if (wasApproved) await db.plannedImage.update({ where: { id: a.imageId }, data: { approvedAttemptId: null } });
+  await db.attempt.delete({ where: { id: a.id } });
+  const left = await db.attempt.findMany({ where: { imageId: a.imageId }, orderBy: { number: 'desc' } });
+  const status = left.some(x => x.status === 'APPROVED') ? 'APPROVED' : left.some(x => x.status === 'REVIEW') ? 'REVIEW' : left.length ? 'REDO' : 'READY';
+  await db.plannedImage.update({ where: { id: a.imageId }, data: { status, attemptCount: left.length } });
+  await logActivity(`Version ${a.number} of ${imageCode(a.image.seq)} deleted`, null, a.image.projectId);
+  touch();
+}
