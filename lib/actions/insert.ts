@@ -1,4 +1,5 @@
 'use server';
+import { fillFromScene } from '../image-gen';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -35,6 +36,7 @@ export async function addPictureHere(fd: FormData) {
     if (usedPrev) await addNotice(projectId, { kind: 'PREV_PICTURE', imageId: next.id, targetId: img.id, text: `Use the new picture as the Previous Picture for Picture ${next.n}?` });
   }
   await autoAttachReferences(img.id);
+  await fillFromScene(img.id);
   // video clips already planned for this section
   const clips = await db.klingClip.findMany({ where: { projectId, OR: [{ scenes: { some: { sceneId } } }, { refs: { some: { imageId: { in: [prev?.id, next?.id].filter(Boolean) as string[] } } } }] }, select: { id: true } });
   for (const c of clips) await addNotice(projectId, { kind: 'CLIP_ADD', imageId: img.id, targetId: c.id, text: 'You added a new picture to this section. Do you want to include it in the video clip?' });

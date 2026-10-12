@@ -1,4 +1,5 @@
 'use server';
+import { planProjectImages } from '../image-gen';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -77,6 +78,7 @@ export async function importScenes(fd: FormData) {
     const s = all[i]; if (!s) continue;
     await db.scene.create({ data: { ...toSceneData(s), projectId, order: ++order, pos: ++pos } as any });
   }
+  await planProjectImages(projectId);
   const p = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await logActivity(`${picked.length} scene(s) imported from text`, `/projects/${p.slug}/scenes`, projectId);
   touch();

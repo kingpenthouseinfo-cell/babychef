@@ -1,4 +1,5 @@
 'use server';
+import { planProjectImages } from '../image-gen';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -96,6 +97,7 @@ export async function applyImport(input: ApplyInput) {
       created.push(`Picture “${im.title}”`);
     }
   }
+  if (scenesIn.length) { const n = await planProjectImages(pid); if (n) created.push(`${n} picture${n === 1 ? '' : 's'} planned automatically`); }
   if (parsed.recipeStructured?.sections.length) { await saveMethod(pid, parsed.recipeStructured.sections); created.push(`Method (${parsed.recipeStructured.counts.sections} sections)`); }
   if (parsed.publishing) { await db.projectNote.create({ data: { projectId: pid, category: 'Publishing', content: parsed.publishing } }); created.push('Publishing notes'); }
   // ---- history + follow-up questions for blanks

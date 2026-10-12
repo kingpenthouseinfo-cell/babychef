@@ -1,4 +1,5 @@
 'use server';
+import { fillFromScene } from '../image-gen';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -31,6 +32,7 @@ export async function createImage(fd: FormData) {
   const pos = await openImagePos(sceneId, str(fd, 'afterImageId'));
   const img = await db.plannedImage.create({ data: { projectId, sceneId, seq: (max._max.seq ?? 0) + 1, pos, title, shotType: str(fd, 'shotType') || 'MAIN NARRATIVE SHOT', priority: str(fd, 'priority') || 'NORMAL', purpose: what } });
   await autoAttachReferences(img.id);
+  await fillFromScene(img.id);
   const proj = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await logActivity(`${imageCode(img.seq)} planned: ${title}`, `/projects/${proj.slug}/images/${img.id}`, projectId);
   touch();

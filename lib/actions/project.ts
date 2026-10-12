@@ -28,6 +28,14 @@ export async function createProject(fd: FormData) {
   await ensureChecklist(p.id);
   await db.projectDoc.create({ data: { projectId: p.id, key: 'continuity', data: '{}' } });
   if ((p.recipeOriginal ?? '').trim()) await applyRecipeText(p.id, p.recipeOriginal!);
+  // fill what the Baby Chef already knows (everything stays editable)
+  if (p.babyChefId) {
+    const chef = await db.babyChef.findUnique({ where: { id: p.babyChefId } });
+    const fill: any = {};
+    if (chef?.cuisine && !(p.cuisine ?? '').trim()) fill.cuisine = chef.cuisine;
+    if (chef?.kitchen && !(p.recipeNotes ?? '').trim()) fill.recipeNotes = `Kitchen: ${chef.kitchen}`;
+    if (Object.keys(fill).length) await db.project.update({ where: { id: p.id }, data: fill });
+  }
   await logActivity(`Project "${p.title}" created`, `/projects/${p.slug}`, p.id);
   redirect(`/projects/${p.slug}`);
 }
