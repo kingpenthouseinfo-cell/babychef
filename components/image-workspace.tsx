@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CopyButton } from './client';
 import { autosavePrompt, savePromptVersionAction, uploadResult } from '@/lib/actions/image';
@@ -13,6 +14,7 @@ const words = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0);
 
 /** Blue prompt zone: Full / Continuation tabs, autosave, pinned Copy button. */
 export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, updatedAt, filename }: { imageId: string; full: string; cont: string; fullVersion: number; contVersion: number; updatedAt: number; filename: string }) {
+  const router = useRouter();
   const [tab, setTab] = useState<'full' | 'cont'>('full');
   const [text, setText] = useState({ full, cont });
   const [saved, setSaved] = useState<number | null>(updatedAt);
@@ -28,8 +30,8 @@ export function PromptEditor({ imageId, full, cont, fullVersion, contVersion, up
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
     const fields = [...dirty.current]; dirty.current.clear();
     for (const f of fields) await autosavePrompt(imageId, f === 'full' ? 'fullPrompt' : 'contPrompt', latest.current[f]);
-    if (fields.length) { setSaved(Date.now()); setPending(false); }
-  }, [imageId]);
+    if (fields.length) { setSaved(Date.now()); setPending(false); router.refresh(); } // refresh so Make picture / Copy always use the saved text
+  }, [imageId, router]);
 
   function change(v: string) {
     setText(t => ({ ...t, [tab]: v }));
