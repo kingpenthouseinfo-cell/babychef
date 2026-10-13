@@ -466,7 +466,8 @@ const oldIds = picsBefore.map(x => x.split('|')[0]).join();
 ok('Stable internal IDs are unchanged by an insert', picsBefore.every((x, i) => picsAfter.map(y => y.split('|')[0]).includes(x.split('|')[0])) && oldIds.length > 0);
 await go(`/projects/${slug}/story`);
 await page.locator('[id^="pic-"]').nth(1).locator('button[aria-label="Picture menu"], summary[aria-label="Picture menu"]').click();
-await page.locator('[id^="pic-"]').nth(1).locator('button:has-text("Move down")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+{ const mv = page.locator('[id^="pic-"]').nth(1).locator('button:has-text("Move down")');
+  if (await mv.count()) { await mv.click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800); } else ok('Move down is offered on the second picture', false, (await picNames()).join(' ; ')); }
 await go(`/projects/${slug}/story`);
 const picsMoved = await picNames();
 ok('Move down reorders pictures without changing IDs', picsMoved[2].includes('Butter Being Rubbed') && picsMoved.length === picsAfter.length, picsMoved.join(' ; '));
