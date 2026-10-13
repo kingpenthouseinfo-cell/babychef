@@ -28,7 +28,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
   const num = new Map(imgs.map((i, n) => [i.id, n + 1]));
   const lab = sceneLabels(scenes);
   const nextSeq = imgs.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
-  const ctxOf = (s: { order: number }) => ({ slug: p.slug, sceneOrder: s.order, nextSeq });
+  const ctxOf = (s: { order: number }) => ({ slug: p.slug, code: p.code, sceneOrder: s.order, nextSeq });
   const b = `/projects/${p.slug}`;
   const done = imgs.filter(i => i.status === 'APPROVED').length;
   const thumbOf = (i: (typeof imgs)[number]) => i.approvedAttempt?.assetId ?? i.attempts[0]?.assetId ?? null;

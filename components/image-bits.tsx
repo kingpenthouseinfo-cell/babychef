@@ -35,12 +35,12 @@ export function ChecklistText({ list }: { list: ChecklistEntry[] }) {
   );
 }
 
-export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug: string; checklist: ChecklistEntry[]; selectable?: boolean }) {
+export function ImageCard({ img, slug, pcode, checklist, selectable }: { img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
   const code = imageCode(img.seq);
   const thumb = img.approvedAttempt?.assetId ?? img.attempts?.[img.attempts.length - 1]?.assetId;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
   const href = `/projects/${slug}/images/${img.id}`;
-  const expected = expectedFilename({ slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextVersion((img.attempts ?? []).map((a: any) => a.number)) });
+  const expected = expectedFilename({ slug, code: pcode, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextVersion((img.attempts ?? []).map((a: any) => a.number)) });
   return (
     <div className="card flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">

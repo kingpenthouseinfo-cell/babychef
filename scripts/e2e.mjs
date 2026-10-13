@@ -153,7 +153,7 @@ async function newImage(title) {
   return page.url();
 }
 const img1Url = await newImage('Oil in pan');
-ok('Image gets global ID IMG-001', (await page.locator('[data-testid=expected-filename]').first().textContent()).includes('IMG-001'));
+ok('Image gets global ID IMG-001', (await page.locator('[data-testid=expected-filename]').first().textContent()).includes('IMG001'));
 await page.fill('textarea[aria-label="Full prompt"]', 'FULL: cinematic frame of a pan with 2 tbsp oil.');
 await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
 await page.click('button[role=tab]:has-text("Continuation")');
@@ -230,7 +230,7 @@ await page.locator('#approve-form button').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Approve works: THE ONE TO USE badge', (await page.locator('text=THE ONE TO USE').count()) > 0);
 const genFiles = walk(path.join(STORE, PROJ));
-ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/e2e-soup-\w+_SC01_IMG-001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
+ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
 
 // ---- Previous approved frame for IMG-002
 const img2Url = await newImage('Cumin in oil');
@@ -522,19 +522,20 @@ ok('Fill from text creates a whole new recipe video', (await page.locator('h1, h
 const projDirName = fs.readdirSync(STORE).find(d => d.startsWith('E2E Soup') && fs.existsSync(path.join(STORE, d, '02 Images')));
 const imgDir = path.join(STORE, projDirName, '02 Images');
 await go(img1Url.replace(BASE, ''));
-const scCode = (await page.locator('[data-testid=expected-filename]').first().textContent()).match(/_(SC\d+)_IMG/)[1];
+const nameParts = (await page.locator('[data-testid=expected-filename]').first().textContent()).match(/([A-Z0-9]{2,5})-(S\d+)-IMG/);
+const pCode = nameParts[1], scCode = nameParts[2];
 const okFile = await fixture('w-ok.png', 640, 360, '#336699');
-fs.copyFileSync(okFile, path.join(imgDir, `${slug}_${scCode}_IMG-001_v3.png`));
-fs.copyFileSync(okFile, path.join(imgDir, `${slug}_${scCode}_IMG-001_v1.png.dupe.png`));
+fs.copyFileSync(okFile, path.join(imgDir, `${pCode}-${scCode}-IMG001_v3.png`));
+fs.copyFileSync(okFile, path.join(imgDir, `${pCode}-${scCode}-IMG001_v1.png.dupe.png`));
 fs.copyFileSync(okFile, path.join(imgDir, 'random-download.png'));
-fs.writeFileSync(path.join(imgDir, `${slug}_${scCode}_IMG-001_v9.png.crdownload`), 'partial');
+fs.writeFileSync(path.join(imgDir, `${pCode}-${scCode}-IMG001_v9.png.crdownload`), 'partial');
 await go('/unmatched');
 await page.click('button:has-text("Scan folders now")'); await page.waitForTimeout(3000); await go('/unmatched');
 await page.click('button:has-text("Scan folders now")'); await page.waitForTimeout(3000); await go('/unmatched');
 ok('Unmatched: bad-name file listed with reason', (await page.locator('text=random-download.png').count()) > 0 && (await page.locator('text=Why it is unmatched').count()) > 0);
 ok('Unmatched: partial download ignored', (await page.locator('text=crdownload').count()) === 0);
 await go(img1Url.replace(BASE, ''));
-ok('Watcher: correctly named v3 file added as an attempt in place', (await page.locator('text=/v3/').count()) > 0 && fs.existsSync(path.join(imgDir, `${slug}_${scCode}_IMG-001_v3.png`)));
+ok('Watcher: correctly named v3 file added as an attempt in place', (await page.locator('text=/v3/').count()) > 0 && fs.existsSync(path.join(imgDir, `${pCode}-${scCode}-IMG001_v3.png`)));
 const expTxt = await page.locator('[data-testid=expected-filename]').first().textContent();
 ok('Expected next filename shows v4', /_v4\.png$/.test(expTxt || ''), expTxt);
 await go('/unmatched');
@@ -549,7 +550,7 @@ const nScenes = await form.locator('select').nth(1).locator('option').count();
 for (let i = 1; i < nScenes; i++) { await form.locator('select').nth(1).selectOption({ index: i }); const opts = await form.locator('select').nth(2).locator('option').allTextContents(); const k = opts.findIndex(t => t.includes('IMG-001')); if (k > -1) { await form.locator('select').nth(2).selectOption({ index: k }); break; } }
 await form.locator('button:has-text("Assign")').click(); await page.waitForTimeout(2000);
 await go('/unmatched');
-ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.locator('text=random-download.png').count()) === 0 && fs.readdirSync(imgDir).some(f => new RegExp(`_${scCode}_IMG-001.*_v4\\.png$`).test(f)));
+ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.locator('text=random-download.png').count()) === 0 && fs.readdirSync(imgDir).some(f => new RegExp(`${pCode}-${scCode}-IMG001.*_v4\\.png$`).test(f)));
 // ---- one-click Make picture
 const mpUrl = await newImage('One click test');
 await page.fill('textarea[aria-label="Full prompt"]', 'One click prompt: tiny test picture.'); await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
@@ -592,7 +593,7 @@ const eyebrows = (await page.locator('section[id^="scene-"] .eyebrow').allTextCo
 ok('Inserted scene is labelled 1A and later scenes are not renumbered', eyebrows[0].trim() === 'SCENE 1' && eyebrows[1].trim() === 'SCENE 1A' && eyebrows[2].trim() === 'SCENE 2', eyebrows.join(' | '));
 await go(`/projects/${slug}/images`);
 await page.fill('#add textarea[name=what]', 'Close-up of Baby Chef rubbing the butter into the flour.');
-ok('Add picture: live preview shows auto title + file name', (await page.locator('[data-testid=will-be-added]').textContent()).includes('Butter Rubbed Into Flour') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_IMG-') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_v1.png'));
+ok('Add picture: live preview shows auto title + file name', (await page.locator('[data-testid=will-be-added]').textContent()).includes('Butter Rubbed Into Flour') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('-IMG') && (await page.locator('[data-testid=will-be-added]').textContent()).includes('_v1.png'));
 await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 ok('Add picture: title was made automatically', (await page.locator('body').textContent()).includes('Butter Rubbed Into Flour'));
 await go(`/projects/${slug}/images`);
@@ -671,7 +672,7 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   await page.locator('input[type=file]').first().setInputFiles('/tmp/claude-0/card-upload.png');
   await page.waitForTimeout(2500);
   const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
-  const saved = walk(STORE).filter(f => /generate-plan-test_SC\d+_IMG-\d+.*_v\d+\.png$/.test(f));
+  const saved = walk(STORE).filter(f => /GPT-S\d+-IMG\d+.*_v\d+\.png$/.test(f));
   ok('Uploaded photo is saved in the project folder with the generated file name', saved.length >= 2, saved.map(f => path.basename(f)).join(' | '));
   await go('/projects/generate-plan-test/kling');
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);

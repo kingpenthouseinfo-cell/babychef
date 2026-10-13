@@ -139,6 +139,7 @@ model Correction {
 model Project {
   id               String    @id @default(cuid())
   slug             String    @unique
+  code             String?   // 3-letter short name used in file names, e.g. JBP
   folderName       String?
   title            String
   recipeName       String?

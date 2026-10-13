@@ -39,7 +39,7 @@ export default async function Settings() {
           <a href="#general" className="mt-3 inline-block text-[13px] font-semibold text-blue-deep">Change defaults ↓</a>
         </section>
         <section className="card !p-6"><h2 className="text-[24px]">File names</h2>
-          <div className="mt-4 rounded-xl bg-[#FAF9FC] px-4 py-3 font-mono text-[13px]">jamaican-beef-patties_SC04_IMG-014_scotch-bonnet-close-up_v1.png</div>
+          <div className="mt-4 rounded-xl bg-[#FAF9FC] px-4 py-3 font-mono text-[13px]">JBP-S04-IMG014_scotch-bonnet-close-up_v1.png</div>
           <p className="mt-2 text-[13px] text-ink-secondary">Made automatically. Video · scene · picture · name · version.</p>
         </section>
         <section className="card !p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[24px]">Backups & exports</h2><p className="mt-1 text-[13.5px] text-ink-secondary">Everything is stored on this Mac. Nothing is uploaded. A dated backup of your data is made every day and when the app starts (the newest 30 are kept).</p></div>
@@ -72,7 +72,7 @@ export default async function Settings() {
               <Text name="defaultShortDuration" label="Default short duration" v={s.defaultShortDuration} /><Text name="defaultLongDuration" label="Default long-form duration" v={s.defaultLongDuration} />
               <Sel name="defaultProjectStatus" label="Default project status" v={s.defaultProjectStatus} options={PROJECT_STATUSES} />
               <div className="flex items-end"><Check name="defaultVerticalCrop" label="Vertical crop required by default" v={s.defaultVerticalCrop === 'true'} /></div>
-              <div className="sm:col-span-2"><Check name="watchProjectFolders" label="Watch project folders and add new result images automatically (files named like project-slug_SC12_IMG-024_v1.png in 02 Images)" v={s.watchProjectFolders !== 'false'} /></div>
+              <div className="sm:col-span-2"><Check name="watchProjectFolders" label="Watch project folders and add new result images automatically (files named like JBP-S12-IMG024_v1.png in 02 Images)" v={s.watchProjectFolders !== 'false'} /></div>
             </div>
           </Section></div>
           <div id="defaults" className="scroll-mt-24"><Section title="Production defaults"><Area name="principles" label="Default Baby Chef production principles (one per line)" v={s.principles} rows={14} hint="Also available as {{principles}} in prompt templates." /></Section></div>
@@ -84,10 +84,10 @@ export default async function Settings() {
         </DirtyForm>
         <div id="naming" className="scroll-mt-24"><Section title="File naming conventions">
           <ul className="mono space-y-1 text-xs leading-6">
-            <li>Scene: SC## (SC01, SC02…) · Image: IMG-### (global, IMG-001…) · Kling: KLING-## · Correction: COR-###</li>
+            <li>Scene: S## (S01, S02…) · Image: IMG### (global, IMG001…) · Project: 3-letter code (JBP) · Kling: KLING-## · Correction: COR-###</li>
             <li>Reference: REF-BABY-001_name_category.jpg · REF-KITCHEN-001… · REF-PRODUCT-001_grace-coconut-milk_front-label.jpg</li>
-            <li>Generated results: &lt;project-slug&gt;_SC12_IMG-024_&lt;short-description&gt;_v1.png — the app always shows the exact NEXT filename (v1, then v2, …) and puts it in your ChatGPT prompt. Files saved in the project’s 02 Images folder with this name are detected automatically.</li>
-            <li>Prompts: &lt;project-slug&gt;_SC12_IMG-024_full-prompt_v2.txt · &lt;project-slug&gt;_KLING-07_prompt_v1.txt</li>
+            <li>Generated results: &lt;CODE&gt;-S12-IMG024_&lt;short-description&gt;_v1.png — the app always shows the exact NEXT filename (v1, then v2, …) and puts it in your ChatGPT prompt. Files saved in the project’s 02 Images folder with this name are detected automatically.</li>
+            <li>Prompts: &lt;CODE&gt;-S12-IMG024_full-prompt_v2.txt · &lt;CODE&gt;-KLING07_prompt_v1.txt</li>
             <li>Files are never overwritten: a changed file becomes _v2, a name clash becomes _dup2.</li>
           </ul>
         </Section></div>

@@ -11,6 +11,7 @@ import { quickAddIngredients, deleteIngredient } from '@/lib/actions/project';
 import { ConfirmForm } from '@/components/client';
 import { ProductPhotoPanel } from '@/components/product-photo-panel';
 import { loadMethod } from '@/lib/recipe-store';
+import { effectiveCode } from '@/lib/project-code';
 
 export default async function Recipe({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
@@ -69,6 +70,7 @@ export default async function Recipe({ params }: { params: { slug: string } }) {
         <DirtyForm action={saveRecipe} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="id" value={p.id} />
           <Text name="recipeName" label="Recipe title" v={p.recipeName} />
+          <Text name="code" label="Short code for file names (2–5 letters)" v={effectiveCode(p)} />
           <Text name="cuisine" label="Cuisine" v={p.cuisine} />
           <Text name="recipeSource" label="Source" v={p.recipeSource} />
           <Text name="recipeYield" label="Yield / servings" v={p.recipeYield} />

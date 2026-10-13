@@ -64,7 +64,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const contV = versions.find(v => v.type === 'CONTINUATION' && v.active)?.version ?? versions.find(v => v.type === 'CONTINUATION')?.version ?? 0;
   const attemptLabel = (s: string) => s === 'REDO' ? 'Needs fixing' : s === 'REVIEW' ? 'Check this' : s === 'APPROVED' ? 'Looks good' : s === 'REJECTED' ? "Don't use" : 'Replaced';
   const attemptColor = (s: string) => s === 'REDO' ? 'text-[#A8513F]' : s === 'REVIEW' ? 'text-[#33507A]' : s === 'APPROVED' ? 'text-[#3B6448]' : 'text-ink-muted';
-  const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, next: s.attemptCount + 1, seq: s.seq, sceneOrder: s.scene.order }));
+  const imgOpts = siblings.map(s => ({ id: s.id, code: imageCode(s.seq), title: s.title, scene: sceneCode(s.scene.order), slug: p.slug, pcode: p.code, next: s.attemptCount + 1, seq: s.seq, sceneOrder: s.scene.order }));
   const fixMode = searchParams.fix === '1';
   const foundState = !fixMode && !!selected && selected.status === 'REVIEW' && img.status !== 'APPROVED';
   const goodState = !fixMode && img.status === 'APPROVED' && !!img.approvedAttemptId;
@@ -73,7 +73,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const approveConfirm = img.approvedAttemptId && selected && selected.id !== img.approvedAttemptId ? `${code} already has an approved result (attempt ${img.attempts.find(x => x.id === img.approvedAttemptId)?.number}). Replace it with attempt ${selected.number}? The old one stays in history.` : undefined;
   const base = `/projects/${p.slug}/images`;
   const nextV = nextVersion(img.attempts.map(a => a.number));
-  const expected = expectedFilename({ slug: p.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextV });
+  const expected = expectedFilename({ slug: p.slug, code: p.code, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextV });
   const fullCopy = withFilename(img.fullPrompt, expected), contCopy = withFilename(img.contPrompt, expected);
   const settings = await getSettings();
   const chatgptUrl = settings.url_ChatGPT || 'https://chatgpt.com/';

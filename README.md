@@ -38,6 +38,7 @@ It puts the app in `~/Baby Chef Studio App`, builds it, and makes a **Baby Chef 
 - **Images to Generate** (project tab): press *Plan images for my scenes* and every scene without pictures gets its pictures from the scene breakdown (planned image anchors, food states, shots). Each card has a ready ChatGPT Image prompt in the Baby Chef style, *Copy prompt*, *Open ChatGPT + copy prompt*, *Upload generated image* (goes straight onto that picture), *Mark approved* / *Needs revision*, filters and progress. Existing pictures are never touched or overwritten.
 - **Scene-specific negative states**: each prompt says what must NOT be visible yet (for example "No liquid has been added yet", "No raw pink beef remains"), worked out from the food-state timeline and the ingredients that appear later in the video.
 - **Recipes**: pasted recipes are split into title, yield, ingredient groups (with one ingredient record per line, original line kept) and method sections. If a recipe was saved before this existed, open its Recipe page and press *Re-parse recipe*.
+- **Short file names**: pictures are named `JBP-S04-IMG014_butter-rubbed-into-flour_v1.png` — a 3-letter code made from the recipe (Jamaican Beef Patties → JBP, Traditional Sri Lankan Wattalappam → WAT), scene, picture number and version. You can change a video's code under Recipe → Edit the recipe. Older files with long names are still recognised.
 - **Format help**: every importer has "How should I format this?" with copy-ready ChatGPT instructions, a blank template and an example. ChatGPT is optional; everything is read locally.
 
 ## The Simple Studio design
@@ -84,7 +85,7 @@ Baby Chef Studio/
   00 Baby Chefs/<Chef name>/References/{Baby,Kitchen,Food}/REF-BABY-001_master-face_….png
   Jamaican Beef Patties/
     01 References/{Baby,Kitchen,Products,Food,Actions,Corrections}/REF-PRODUCT-001_coconut-milk_example-brand_front-label.png
-    02 Images/   jamaican-beef-patties_SC12_IMG-024_v2.png
+    02 Images/   JBP-S12-IMG024_v2.png
     03 Redos/    superseded / rejected attempts
     04 Kling/    generated videos (optional)
     05 Prompts/  scripts, image prompts, Kling prompts (.txt)
@@ -93,8 +94,8 @@ Baby Chef Studio/
 
 * **Add result** copies a file you choose (or the newest image in `~/Downloads`, or one you drag onto the page) into `02 Images` under an organized name. Files are never overwritten (`_v2`, `_dup2`).
 * A reference photo is stored **once** and *linked* to every image that uses it — it is never copied per image.
-* **Expected result filename**: every planned image shows the exact filename its result should have (`<slug>_SC12_IMG-024_v1.png`, next version after each attempt). Image prompts you copy end with a *FILE ORGANIZATION* block telling ChatGPT to use it (ChatGPT may ignore this — then use Add result or **Unmatched Files**).
-* **Folder watcher** (Settings → toggle): while the app runs it scans `<Project>/02 Images/` every few seconds (and on startup). A file whose name carries the project slug, scene, image and version, and agrees with your planned image, is indexed **in place** as a new attempt in Review. Anything else (bad name, duplicate version, unknown image) goes to **Unmatched Files**, where you assign it (it is then renamed/moved) or ignore it. Files are never guessed at, copied, deleted or overwritten; partial downloads (`.crdownload`, `.tmp`, …) are skipped.
+* **Expected result filename**: every planned image shows the exact filename its result should have (`JBP-S12-IMG024_v1.png` (3-letter project code, scene, image number, version), next version after each attempt). Image prompts you copy end with a *FILE ORGANIZATION* block telling ChatGPT to use it (ChatGPT may ignore this — then use Add result or **Unmatched Files**).
+* **Folder watcher** (Settings → toggle): while the app runs it scans `<Project>/02 Images/` every few seconds (and on startup). A file whose name carries the project code, scene, image and version, and agrees with your planned image, is indexed **in place** as a new attempt in Review. Anything else (bad name, duplicate version, unknown image) goes to **Unmatched Files**, where you assign it (it is then renamed/moved) or ignore it. Files are never guessed at, copied, deleted or overwritten; partial downloads (`.crdownload`, `.tmp`, …) are skipped.
 * **Show in Finder** (macOS) reveals a file via the local server; elsewhere the path is copied.
 * **Files → "Write text files to project folder"** saves scripts, prompts, scenes and publishing copy as `.txt` next to your images so the folder is understandable even without the database.
 

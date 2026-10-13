@@ -96,7 +96,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                   const st = cardStatus(i);
                   const idx = all.findIndex(x => x.id === i.id) + 1;
                   const nextV = nextVersion(i.attempts.map(a => a.number));
-                  const filename = expectedFilename({ slug: p.slug, sceneOrder: s.order, seq: i.seq, title: i.title, version: nextV });
+                  const filename = expectedFilename({ slug: p.slug, code: p.code, sceneOrder: s.order, seq: i.seq, title: i.title, version: nextV });
                   const text = withFilename(i.fullPrompt ?? '', filename);
                   const shown = i.approvedAttempt ?? i.attempts[0] ?? null;
                   return (
@@ -131,7 +131,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                     </article>
                   );
                 })}
-                <InsertTile projectId={p.id} sceneId={s.id} afterImageId={all.length ? all[all.length - 1].id : ''} ctx={{ slug: p.slug, sceneOrder: s.order, nextSeq: imgs.reduce((m, i) => Math.max(m, i.seq), 0) + 1 }} />
+                <InsertTile projectId={p.id} sceneId={s.id} afterImageId={all.length ? all[all.length - 1].id : ''} ctx={{ slug: p.slug, code: p.code, sceneOrder: s.order, nextSeq: imgs.reduce((m, i) => Math.max(m, i.seq), 0) + 1 }} />
               </div>
             </details>
           </section>

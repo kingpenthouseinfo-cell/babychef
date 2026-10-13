@@ -29,7 +29,7 @@ export default async function Unmatched() {
       </PageHeader>
       <div className="mb-5 rounded-lg border border-line bg-surface p-4 text-[13px]">
         <b>Folder watcher:</b> {on ? <span className="text-sage-deep">ON</span> : <span className="text-[#8A6216]">OFF</span>} · watching <span className="font-mono">{root.replace(/^\/Users\/[^/]+/, '~')}/&lt;Project&gt;/02 Images</span> · last scan {w.lastScan ? fmtDate(new Date(w.lastScan)) : 'not yet'} · <Link href="/settings#general" className="underline">change in Settings</Link>
-        <p className="mt-1 text-ink-secondary">A file is matched automatically only when its name contains the project slug, scene, image and version — e.g. <span className="font-mono">jamaican-beef-patties_SC12_IMG-024_v1.png</span> — and those IDs agree with the folder and your planned image. Files are indexed in place and never copied, deleted or overwritten.</p>
+        <p className="mt-1 text-ink-secondary">A file is matched automatically only when its name contains the project code, scene, image and version — e.g. <span className="font-mono">JBP-S12-IMG024_v1.png</span> — and those IDs agree with the folder and your planned image. Files are indexed in place and never copied, deleted or overwritten.</p>
       </div>
       {open.length === 0 ? <Empty title="No unmatched files." hint={`Every image in your project folders is matched${ignored ? ` (${ignored} ignored)` : ''}.`} /> : (
         <div className="space-y-4">

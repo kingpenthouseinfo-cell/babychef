@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { autoTitle } from '@/lib/auto-title';
 import { expectedFilename } from '@/lib/naming';
 
-export type PicCtx = { slug: string; sceneOrder: number; nextSeq: number };
+export type PicCtx = { slug: string; code?: string | null; sceneOrder: number; nextSeq: number };
 
 /** "What picture do you need?" + live "WILL BE ADDED AS" preview. Title, number, filename and version are automatic. */
 export function AddPictureFields({ ctx, scenes, sceneId, big = false, extra }: { ctx: PicCtx; scenes?: { id: string; order: number }[]; sceneId?: string; big?: boolean; extra?: React.ReactNode }) {
@@ -12,7 +12,7 @@ export function AddPictureFields({ ctx, scenes, sceneId, big = false, extra }: {
   const [sc, setSc] = useState(sceneId ?? '');
   const order = scenes?.find(s => s.id === sc)?.order ?? ctx.sceneOrder;
   const shown = (title.trim() || autoTitle(what, ctx.nextSeq));
-  const file = expectedFilename({ slug: ctx.slug, sceneOrder: order, seq: ctx.nextSeq, title: shown, version: 1 });
+  const file = expectedFilename({ slug: ctx.slug, code: ctx.code, sceneOrder: order, seq: ctx.nextSeq, title: shown, version: 1 });
   return (
     <>
       <label className="block"><span className="label">What picture do you need?</span>

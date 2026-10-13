@@ -107,7 +107,7 @@ export function RevealButton({ assetId, projectFolder, label = 'Show in Finder',
 }
 
 export type DlItem = { name: string; size: number; mtime: number };
-export type ImgOpt = { id: string; code: string; title: string; scene: string; slug: string; next: number; seq: number; sceneOrder: number };
+export type ImgOpt = { id: string; code: string; title: string; scene: string; slug: string; pcode?: string | null; next: number; seq: number; sceneOrder: number };
 
 export function AddResultButton({ label = 'Add finished picture', className = 'btn' }: { label?: string; className?: string }) {
   return <button type="button" className={className} onClick={() => window.dispatchEvent(new CustomEvent('bcs:add-result'))}>{label}</button>;
@@ -124,7 +124,7 @@ export function AddResultDialog({ currentId, images, downloads, folderLabel }: {
   const fileRef = useRef<HTMLInputElement>(null);
   const cur = images.find(i => i.id === assigned) ?? images[0];
   const ext = (source === 'download' ? dl : fileName).split('.').pop()?.toLowerCase() || 'png';
-  const saveAs = expectedFilename({ slug: cur.slug, sceneOrder: cur.sceneOrder, seq: cur.seq, title: cur.title, version: cur.next, ext: ext === 'jpeg' ? 'jpg' : ext });
+  const saveAs = expectedFilename({ slug: cur.slug, code: cur.pcode, sceneOrder: cur.sceneOrder, seq: cur.seq, title: cur.title, version: cur.next, ext: ext === 'jpeg' ? 'jpg' : ext });
 
   const openWith = useCallback((f?: File) => {
     if (f && /\.(heic|heif)$/i.test(f.name)) { window.alert('HEIC/HEIF images are not supported yet. Export it as JPG or PNG first (Preview → File → Export…).'); return; }

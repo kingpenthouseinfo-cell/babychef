@@ -32,7 +32,7 @@ export async function assignUnmatched(fd: FormData) {
   const asset = await db.asset.findUniqueOrThrow({ where: { id: uf.assetId } });
   const ext = (uf.name.split('.').pop() || 'png').toLowerCase().replace('jpeg', 'jpg');
   const folder = await projectFolder(img.projectId);
-  const canonical = expectedFilename({ slug: img.project.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: number, ext });
+  const canonical = expectedFilename({ slug: img.project.slug, code: img.project.code, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: number, ext });
   let target = `${folder}/02 Images/${canonical}`;
   let n = 1;
   while (target !== asset.relPath && (await storage.exists(target))) target = `${folder}/02 Images/${canonical.replace(/(\.[a-z0-9]+)$/i, `_${++n}$1`)}`;

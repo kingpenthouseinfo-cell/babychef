@@ -11,6 +11,7 @@ import { openImagePos, openScenePos, backfillPositions } from '../order';
 import { syncQuestions } from '../questions';
 import { autoAttachReferences } from '../auto-refs';
 import { saveMethod } from '../recipe-store';
+import { newProjectCode } from '../project-codes';
 
 export type Choice = 'KEEP' | 'REPLACE' | 'MERGE';
 export type ApplyInput = { text: string; slug: string | null; choices: Record<string, Choice>; chef: string }; // chef: existing id | 'NEW' | ''
@@ -35,7 +36,7 @@ export async function applyImport(input: ApplyInput) {
     const s = await getSettings();
     let slug = slugify(title), n = 1;
     while (await db.project.findUnique({ where: { slug } })) slug = `${slugify(title)}-${++n}`;
-    project = await db.project.create({ data: { title, slug, recipeName: parsed.fields.recipeName || title, babyChefId: chefId, aspectRatio: s.defaultAspect, verticalCrop: s.defaultVerticalCrop === 'true', status: s.defaultProjectStatus } as any });
+    project = await db.project.create({ data: { title, slug, code: await newProjectCode(parsed.fields.recipeName || title), recipeName: parsed.fields.recipeName || title, babyChefId: chefId, aspectRatio: s.defaultAspect, verticalCrop: s.defaultVerticalCrop === 'true', status: s.defaultProjectStatus } as any });
     await ensureChecklist(project.id);
     await db.projectDoc.create({ data: { projectId: project.id, key: 'continuity', data: '{}' } });
     created.push(`Recipe video “${title}”`);

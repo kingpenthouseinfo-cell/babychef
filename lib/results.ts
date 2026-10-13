@@ -20,5 +20,5 @@ export async function registerAttempt(o: { imageId: string; assetId: string; num
 export async function expectedFor(imageId: string, ext = 'png') {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId }, include: { project: true, scene: true, attempts: { select: { number: true } } } });
   const version = nextVersion(img.attempts.map(a => a.number));
-  return { filename: expectedFilename({ slug: img.project.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version, ext }), version, sceneCode: sceneCode(img.scene.order) };
+  return { filename: expectedFilename({ slug: img.project.slug, code: img.project.code, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version, ext }), version, sceneCode: sceneCode(img.scene.order) };
 }

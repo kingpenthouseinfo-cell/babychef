@@ -166,8 +166,8 @@ export async function uploadResult(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId }, include: { scene: true, project: true, attempts: { select: { number: true } } } });
   const number = nextVersion(img.attempts.map(a => a.number));
   await snapshotPrompts(imageId, 'Snapshot when result was added'); // so the attempt can point at the exact prompt version used
-  // Same naming as the EXPECTED RESULT FILENAME shown before generating: {slug}_{SC}_{IMG}_{desc}_v{n}.ext
-  const expected = expectedFilename({ slug: img.project.slug, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: number, ext: (file.name.split('.').pop() || 'png').toLowerCase().replace('jpeg', 'jpg') });
+  // Same naming as the EXPECTED RESULT FILENAME shown before generating: {CODE}-S{##}-IMG{###}_{desc}_v{n}.ext
+  const expected = expectedFilename({ slug: img.project.slug, code: img.project.code, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: number, ext: (file.name.split('.').pop() || 'png').toLowerCase().replace('jpeg', 'jpg') });
   const asset = await importFile(file, { rootFolder: await projectFolder(img.projectId), folder: '02 Images', fileBase: expected.replace(/\.[^.]+$/, ''), kind: 'GENERATED', version: number, projectSlug: img.project.slug });
   if (downloadPath && bool(fd, 'moveOriginal')) await removeDownload(downloadPath);
   await registerAttempt({ imageId, assetId: asset.id, number, sourceTool: str(fd, 'sourceTool') || 'ChatGPT', promptType: str(fd, 'promptType') || 'FULL', notes: str(fd, 'notes') });

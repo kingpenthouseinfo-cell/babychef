@@ -1,5 +1,6 @@
 'use server';
 import { applyRecipeText } from '../recipe-store';
+import { newProjectCode } from '../project-codes';
 import { parseRecipeText, titleCase } from '../recipe-parse';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -19,7 +20,7 @@ export async function createProject(fd: FormData) {
   while (await db.project.findUnique({ where: { slug } })) slug = `${slugify(str(fd, 'slug') || title)}-${++n}`;
   const p = await db.project.create({
     data: {
-      title, slug, recipeName: str(fd, 'recipeName') || title, ...pickText(fd, ['cuisine', 'description', 'mainHook', 'finishedFood', 'ctaCustom', 'babyChefId', 'longDuration', 'shortDuration', 'recipeSource', 'recipeNotes', 'recipeOriginal']),
+      title, slug, code: await newProjectCode(str(fd, 'recipeName') || title), recipeName: str(fd, 'recipeName') || title, ...pickText(fd, ['cuisine', 'description', 'mainHook', 'finishedFood', 'ctaCustom', 'babyChefId', 'longDuration', 'shortDuration', 'recipeSource', 'recipeNotes', 'recipeOriginal']),
       ...(str(fd, 'kitchen') ? { recipeNotes: `Kitchen: ${str(fd, 'kitchen')}` } : {}),
       aspectRatio: str(fd, 'aspectRatio') || s.defaultAspect, verticalCrop: fd.has('verticalCrop') ? bool(fd, 'verticalCrop') : s.defaultVerticalCrop === 'true',
       status: str(fd, 'status') || s.defaultProjectStatus,
@@ -107,6 +108,12 @@ export async function saveRecipe(fd: FormData) {
   if (changed && (old.recipeOriginal || old.recipeAdapted)) await db.recipeVersion.create({ data: { projectId: id, version: old.recipeVersion, original: old.recipeOriginal, adapted: old.recipeAdapted, notes: old.recipeNotes } });
   await db.project.update({ where: { id }, data: { ...pickText(fd, ['recipeName', 'cuisine', 'recipeSource', 'recipeYield', 'prepTime', 'cookTime', 'recipeNotes']), recipeOriginal: orig || null, recipeAdapted: adapted || null, recipeVersion: version } as any });
   if (changed && (orig ?? '').trim()) await applyRecipeText(id, orig!);
+  const rawCode = (str(fd, 'code') ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (rawCode && rawCode !== (old as any).code) {
+    if (rawCode.length < 2 || rawCode.length > 5) throw new Error('The short code needs 2 to 5 letters or numbers');
+    if (await db.project.findFirst({ where: { code: rawCode, id: { not: id } } })) throw new Error(`Another video already uses the code ${rawCode}`);
+    await db.project.update({ where: { id }, data: { code: rawCode } as any });
+  }
   await logActivity('Recipe saved', null, id);
   revalidatePath('/', 'layout');
 }

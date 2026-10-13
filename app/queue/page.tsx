@@ -25,7 +25,7 @@ export default async function Queue({ searchParams }: { searchParams: { project?
   const projIds = [...new Set(eligible.map((i: any) => i.projectId))] as string[];
   const noMap = new Map<string, number>();
   for (const pj of projIds) for (const x of await orderedPictures(pj)) noMap.set(x.id, x.n);
-  const fname = (i: any) => expectedFilename({ slug: i.project.slug, sceneOrder: i.scene.order, seq: i.seq, title: i.title, version: nextVersion((i.attempts ?? []).map((a: any) => a.number)) });
+  const fname = (i: any) => expectedFilename({ slug: i.project.slug, code: i.project.code, sceneOrder: i.scene.order, seq: i.seq, title: i.title, version: nextVersion((i.attempts ?? []).map((a: any) => a.number)) });
   const nextItems = eligible.map((i: any) => ({ filename: fname(i), id: i.id, slug: i.project.slug, code: imageCode(i.seq), no: noMap.get(i.id) ?? 0, title: i.title, project: i.project.title, scene: sceneCode(i.scene.order), shot: i.shotType, aspect: i.aspectRatio || i.project.aspectRatio, priority: i.priority, full: i.fullPrompt, cont: i.contPrompt, refs: buildChecklist(i).map(c => ({ label: c.label, assetId: c.assetId, required: c.required })) }));
   const q = (o: Record<string, string>) => '/queue?' + new URLSearchParams({ ...(pid ? { project: pid } : {}), ...(searchParams.sort ? { sort: searchParams.sort } : {}), show, ...o }).toString();
   return (

@@ -3,7 +3,7 @@
  *
  * Watches `<storage root>/<Project>/02 Images/` (and the project folder itself) for new image files.
  * Files are INDEXED IN PLACE (never copied). A file is matched only when its name carries the stable IDs:
- *   {project-slug}_{SC##}_{IMG-###}[_description]_v{n}.png|jpg|jpeg|webp
+ *   {CODE}-S{##}-IMG{###}[_description]_v{n}.png|jpg|jpeg|webp  (older {project-slug}_SC##_IMG-###… names still work)
  * and those IDs are consistent with the folder's project, an existing planned image, that image's scene,
  * and a version that does not exist yet. Anything else goes to UNMATCHED FILES — the watcher never guesses,
  * never deletes, never overwrites, and ignores partial downloads. It rescans on startup.
@@ -13,6 +13,7 @@ import path from 'path';
 import { db } from './db';
 import { getStorageRoot } from './storage';
 import { parseResultFilename, RESULT_EXTS } from './naming';
+import { effectiveCode } from './project-code';
 import { exifAwareSize } from './files';
 import { orientationOf, imageCode, sceneCode } from './util';
 import { registerAttempt } from './results';
@@ -39,7 +40,7 @@ async function enabled(): Promise<boolean> {
   return v !== 'false';
 }
 
-type Proj = { id: string; slug: string; title: string; folderName: string | null };
+type Proj = { id: string; slug: string; code?: string | null; title: string; folderName: string | null };
 
 async function handleFile(p: Proj, sub: string, name: string, rel: string, size: number) {
   const unmatched = async (reason: string) => {
@@ -54,7 +55,8 @@ async function handleFile(p: Proj, sub: string, name: string, rel: string, size:
 
   const parsed = parseResultFilename(name);
   if (!parsed) return unmatched('The filename does not contain the project, scene, image and version IDs.');
-  if (parsed.slug !== p.slug) return unmatched(`The filename says project “${parsed.slug}” but it is in the “${p.slug}” folder.`);
+  if (parsed.slug && parsed.slug !== p.slug) return unmatched(`The filename says project “${parsed.slug}” but it is in the “${p.slug}” folder.`);
+  if (parsed.code && parsed.code !== effectiveCode(p)) return unmatched(`The filename says project “${parsed.code}” but this folder's project code is “${effectiveCode(p)}”.`);
   const img = await db.plannedImage.findFirst({ where: { projectId: p.id, seq: parsed.seq }, include: { scene: true, attempts: { select: { number: true } } } });
   if (!img) return unmatched(`This project has no planned image ${imageCode(parsed.seq)}.`);
   if (img.scene.order !== parsed.sceneOrder) return unmatched(`The filename says ${sceneCode(parsed.sceneOrder)} but ${imageCode(img.seq)} is in ${sceneCode(img.scene.order)}.`);
@@ -78,7 +80,7 @@ export async function scanProjectFolders(): Promise<{ matched: number; unmatched
   try {
     if (!(await enabled())) return { matched: 0, unmatched: 0, skipped: true };
     const root = await getStorageRoot();
-    const projects = await db.project.findMany({ where: { deletedAt: null, folderName: { not: null } }, select: { id: true, slug: true, title: true, folderName: true } });
+    const projects = await db.project.findMany({ where: { deletedAt: null, folderName: { not: null } }, select: { id: true, slug: true, code: true, title: true, folderName: true } });
     for (const p of projects) {
       for (const sub of ['02 Images', '']) {
         const dir = path.join(root, p.folderName!, sub);

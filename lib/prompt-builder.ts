@@ -217,7 +217,7 @@ const BLOCKS: Record<string, (c: Ctx, o: { bibleKeys?: string[]; type: BuilderTy
     const i = c.img;
     if (!i) return null;
     const sc = c.project.scenes.find(s => s.id === i.sceneId);
-    const name = expectedFilename({ slug: c.project.slug, sceneOrder: sc?.order ?? 1, seq: i.seq, title: i.title, version: nextVersion(i.attempts.map(a => a.number)) });
+    const name = expectedFilename({ slug: c.project.slug, code: c.project.code, sceneOrder: sc?.order ?? 1, seq: i.seq, title: i.title, version: nextVersion(i.attempts.map(a => a.number)) });
     return { text: H('REQUIRED RESULT FILENAME (must appear in the prompt you write)', `The final prompt you write MUST end with the following section, copied verbatim (do not change the filename):\n\n${fileBlock(name)}`), detail: name };
   },
   attempt: c => {

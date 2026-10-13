@@ -57,7 +57,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
                 <Sel name="role" label="Role" options={IMAGE_REF_ROLES} /><div className="flex gap-2"><button name="op" value="addRef" className="btn btn-sm">Add reference</button><button name="op" value="removeRef" className="btn btn-sm btn-danger" onClick={undefined}>Remove reference</button></div></div>
               <div className="flex items-end"><CopyButton text={list.map(i => imageCode(i.seq)).join(', ')} label="COPY IMAGE IDS (filtered)" className="btn-sm" /></div>
             </div></details>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} checklist={buildChecklist(i)} selectable />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable />)}</div>
         </form>
       )}
 
@@ -67,7 +67,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
           <form action={createImage} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="projectId" value={p.id} />
             <div className="space-y-3 sm:col-span-2">
-              <AddPictureFields ctx={{ slug: p.slug, sceneOrder: (scenes.find(s => s.id === (searchParams.scene || scenes[0].id)) ?? scenes[0]).order, nextSeq }} sceneId={searchParams.scene || scenes[0].id}
+              <AddPictureFields ctx={{ slug: p.slug, code: p.code, sceneOrder: (scenes.find(s => s.id === (searchParams.scene || scenes[0].id)) ?? scenes[0]).order, nextSeq }} sceneId={searchParams.scene || scenes[0].id}
                 scenes={scenes.map(s => ({ id: s.id, order: s.order, label: `Scene ${lab.get(s.id)} · ${s.title}` }))}
                 extra={<><Sel name="shotType" label="Shot type" options={SHOT_TYPES} /><Sel name="priority" label="Priority" v="NORMAL" options={PRIORITIES} /></>} />
             </div>
