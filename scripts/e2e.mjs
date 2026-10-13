@@ -683,9 +683,9 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
 }
 // ---- project tabs: Picture List follows Images to Generate
 await go('/projects/generate-plan-test');
-{ const tabs = await page.locator('nav[aria-label="Recipe video sections"] a').allTextContents(); const t = tabs.map(x => x.trim());
+{ const tabs = await page.locator('[aria-label="Recipe video sections"] a').allTextContents(); const t = tabs.map(x => x.trim());
   ok('Tabs: Picture List comes right after Images to Generate', t.indexOf('Picture List') === t.indexOf('Images to Generate') + 1 && t.indexOf('Picture List') > 0, t.join(' | '));
-  await page.locator('nav[aria-label="Recipe video sections"] a:has-text("Picture List")').click(); await page.waitForURL(/\/images$/);
+  await page.locator('[aria-label="Recipe video sections"] a:has-text("Picture List")').click(); await page.waitForURL(/\/images$/);
   ok('Picture List tab opens the picture list', (await page.locator('[aria-current=page]:has-text("Picture List")').count()) === 1); }
 // ---- Settings: update / quit controls live inside the app
 await go('/settings');
