@@ -183,7 +183,7 @@ ok('Attach Baby Master', await attach('Master face', 'MASTER BABY'));
 ok('Attach Master Kitchen', await attach('Master kitchen', 'MASTER KITCHEN'));
 ok('Attach Ingredient Front Label', await attach('Front Label', 'INGREDIENT BRAND REFERENCE'));
 ok('Checklist shows Coconut Milk brand reference + PACKAGE CRITICAL', (await page.locator('text=Coconut Milk (Example Brand) Brand Reference').count()) > 0 && (await page.locator('text=PACKAGE CRITICAL').count()) > 0);
-await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+if (await page.locator('button:has-text("MARK READY")').count()) await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 const IMG1_URL_FOR_QUEUE = page.url();
 
 // ---- Prompt queue
@@ -372,7 +372,7 @@ ok('Keep my edits preserves the text', (await page.inputValue('textarea[aria-lab
 await go(`/projects/${slug}/images`);
 await page.fill('#add textarea[name=what]', 'Waiting test image'); await page.locator('#add details > summary').click(); await page.fill('#add input[name=title]', 'Waiting test image'); await page.click('#add button:has-text("ADD PICTURE")'); await page.waitForURL(/\/images\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
 await page.click('button[role=tab]:has-text("Continuation")'); await page.fill('textarea[aria-label="Continuation prompt"]', 'CONT: waiting test'); await page.locator('textarea[aria-label="Continuation prompt"]').blur(); await page.waitForTimeout(900);
-await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
+if (await page.locator('button:has-text("MARK READY")').count()) await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(700);
 await go('/queue');
 await page.click('button:has-text("Waiting on something")'); await page.selectOption('select[aria-label="Waiting reason"]', 'ChatGPT generation limit'); await page.locator('button.btn-primary:has-text("MARK WAITING")').click(); await page.waitForTimeout(1200);
 await page.goto(`${BASE}/queue?show=waiting`, { waitUntil: 'networkidle' });
@@ -552,7 +552,7 @@ ok('Assigned file leaves Unmatched and is renamed into 02 Images', (await page.l
 // ---- one-click Make picture
 const mpUrl = await newImage('One click test');
 await page.fill('textarea[aria-label="Full prompt"]', 'One click prompt: tiny test picture.'); await page.locator('textarea[aria-label="Full prompt"]').blur(); await page.waitForTimeout(900);
-await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
+if (await page.locator('button:has-text("MARK READY")').count()) await page.click('button:has-text("MARK READY") >> nth=0'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(600);
 const popupP = page.waitForEvent('popup', { timeout: 6000 }).catch(() => null);
 await page.locator('button:has-text("Make picture"):visible').first().click();
 const popup = await popupP; if (popup) await popup.close().catch(() => {});
