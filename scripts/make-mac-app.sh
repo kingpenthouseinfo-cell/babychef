@@ -15,7 +15,6 @@ cat > "$OUT/Contents/Info.plist" <<PLIST
 <key>CFBundleExecutable</key><string>BabyChefStudio</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1</string>
-<key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
 cat > "$OUT/Contents/MacOS/BabyChefStudio" <<LAUNCH
@@ -25,10 +24,10 @@ LOG="\$HOME/Library/Logs/BabyChefStudio.log"
 mkdir -p "\$HOME/Library/Logs"
 if ! /usr/sbin/lsof -ti:3000 >/dev/null 2>&1; then
   /bin/zsh -lc "cd '\$APP_DIR' && npm start" >> "\$LOG" 2>&1 &
-  for i in \$(seq 1 240); do /usr/bin/curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
+  for i in \$(seq 1 300); do /usr/bin/curl -s -o /dev/null http://localhost:3000 && break; sleep 1; done
 fi
-/usr/bin/open http://localhost:3000
+if /usr/bin/curl -s -o /dev/null http://localhost:3000; then /usr/bin/open http://localhost:3000; else /usr/bin/osascript -e 'display dialog "Baby Chef Studio did not start. The log will open so you can send it to me." buttons {"OK"}' >/dev/null 2>&1; /usr/bin/open -a TextEdit "\$LOG"; fi
 LAUNCH
 chmod +x "$OUT/Contents/MacOS/BabyChefStudio"
 echo "Made: $OUT"
-echo "Double-click it to start Baby Chef Studio (it opens in your browser). To stop it, double-click 'Stop Baby Chef Studio.command' in the app folder."
+echo "Double-click it to start Baby Chef Studio (it opens in your browser). To stop it use Settings > Quit in the app."

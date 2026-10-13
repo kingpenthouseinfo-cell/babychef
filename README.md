@@ -22,6 +22,16 @@ Open a **Recipe Video** and the first thing you see is **What do I do next?** wi
 * **Fill from text** (New Recipe Video, Overview, Recipe, Ingredients, Scenes & Pictures): paste labelled text, check it, then fill in. Nothing is saved until you confirm; existing answers are kept unless you choose Replace/Merge.
 * Technical names (Planned Image, Prompt Queue, Production Brain…) remain in code and the database only.
 
+## Simple start (no zip, no Terminal)
+
+One-time install on your Mac (needs Node.js from nodejs.org). Paste this into Terminal once:
+
+```
+curl -fsSL https://raw.githubusercontent.com/kingpenthouseinfo-cell/babychef/claude/baby-chef-studio-spec-i8do7s/scripts/install.sh | bash
+```
+
+It puts the app in `~/Baby Chef Studio App`, builds it, and makes a **Baby Chef Studio** icon on your Desktop and in Applications. Click the icon to start the app (it opens in your browser). In the app, **Settings → Baby Chef Studio app** has **Update now** (pulls the newest version from GitHub, rebuilds, restarts) and **Quit**. Your recipes and pictures stay in `~/Documents/Baby Chef Studio` and are never touched by updates.
+
 ## Automatic picture planning, names and prompts
 
 - **Add Picture** starts with "What picture do you need?". The title, picture number (IMG-nnn), file name and version are made for you; a live "Will be added as" box shows them as you type. Scenes added between others show as Scene 4A, 4B (stable SC codes in file names never change).

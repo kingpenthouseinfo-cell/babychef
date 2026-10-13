@@ -14,6 +14,7 @@ import { WatchToggle } from '@/components/watch-toggle';
 import { listBackups, dbPaths } from '@/lib/backup';
 import { backupNow } from '@/lib/actions/settings';
 import { RevealButton } from '@/components/image-workspace';
+import { AppControls } from '@/components/app-controls';
 
 export default async function Settings() {
   const s = await getSettings();
@@ -26,6 +27,9 @@ export default async function Settings() {
     <>
       <h1 className="mb-6 text-[34px] md:text-[40px]">Settings</h1>
       <div className="mb-8 max-w-[860px] space-y-4">
+        <section className="card !p-6" aria-label="Baby Chef Studio app"><h2 className="text-[24px]">Baby Chef Studio app</h2>
+          <p className="mt-1 text-[13.5px] text-ink-secondary">Update to the newest version, or quit the app. Your recipes, pictures and backups are never touched.</p>
+          <AppControls /></section>
         <section className="card !p-6"><h2 className="text-[24px]">Folders on this Mac</h2>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><div className="text-[13px] text-ink-secondary">Main folder</div><div className="break-all font-mono text-[13px]">{root.replace(/^\/Users\/[^/]+/, '~')}</div></div><div className="flex gap-2"><a href="#storage" className="btn btn-sm">Change</a><RevealButton projectFolder="." label="Show in folder" className="btn btn-sm" /></div></div>
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4 text-[14.5px]"><span>Watch folders for new pictures and clips</span><WatchToggle on={s.watchProjectFolders !== 'false'} /></div>

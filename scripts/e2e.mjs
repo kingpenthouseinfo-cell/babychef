@@ -676,6 +676,9 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   await go('/projects/generate-plan-test/kling');
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
 }
+// ---- Settings: update / quit controls live inside the app
+await go('/settings');
+ok('Settings: app section has Update now, Check again and Quit (not clicked: it would stop the test server)', (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("UPDATE NOW")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("QUIT")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("Check again")').count()) === 1);
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
