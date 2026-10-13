@@ -478,6 +478,7 @@ ok('Add scene here: new scene is inserted at the top', (await page.locator('sect
 // ---- Missing info
 await go(`/projects/${slug}/questions`);
 ok('Missing Info lists plain-language questions', (await page.locator('text=How many does this recipe make?').count()) > 0);
+ok('Missing Info has a Copy all questions button', (await page.locator('button:has-text("COPY ALL")').count()) === 1);
 ok('Missing Info has no picture/photo tasks', (await page.locator('main').locator('text=/Make Picture|product photo|Generate (a |the )?(picture|image)/i').count()) === 0);
 const yq = page.locator('li:has(form):has-text("How many does this recipe make?")');
 await yq.locator('input[name=answer]').fill('6 bowls'); await yq.locator('button:has-text("SAVE ANSWER")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);

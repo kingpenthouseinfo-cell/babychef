@@ -4,7 +4,7 @@ import { getProjectBySlug } from '@/lib/queries';
 import { syncQuestions } from '@/lib/questions';
 import { addQuestion, setQuestionStatus } from '@/lib/actions/questions';
 import { QuestionCard } from '@/components/question-card';
-import { SubmitBtn } from '@/components/client';
+import { SubmitBtn, CopyButton } from '@/components/client';
 
 const GROUPS = ['RECIPE', 'BABY CHEF', 'VIDEO STYLE', 'SCENES', 'OTHER'];
 
@@ -19,9 +19,13 @@ export default async function Questions({ params }: { params: { slug: string } }
   const answered = all.filter(q => q.status === 'ANSWERED');
   const skipped = all.filter(q => q.status === 'NOT_NEEDED');
   const grouped = (list: typeof all) => GROUPS.map(g => [g, list.filter(q => q.group === g)] as const).filter(([, l]) => l.length > 0);
+  // one block of text with every open question, grouped and numbered, ready to paste into ChatGPT or send to someone
+  let n = 0;
+  const copyAll = [`Questions for my recipe video “${p.title}”. Please answer each one by its number. If you can't tell, write [MISSING].`, ...grouped([...soon, ...later.filter(q => q.status === 'OPEN')]).map(([g, l]) => `${g}\n${l.map(q => `${++n}. ${q.question}${q.hint ? ` (${q.hint})` : ''}${q.blocksText ? ` — ${q.blocksText}` : ''}`).join('\n')}`)].join('\n\n');
   return (
     <div className="max-w-[860px] space-y-6">
       <div><h1 className="text-[34px] md:text-[40px]">Missing Info</h1><p className="mt-1 text-[14px] text-ink-secondary">{open.length === 0 ? 'Nothing needed right now.' : `${open.length} thing${open.length > 1 ? 's' : ''} still need answers. Answers go straight into the recipe and prompts.`}</p></div>
+      {n > 0 && <div className="flex flex-wrap items-center gap-2"><CopyButton text={copyAll} label={`COPY ALL ${n} QUESTIONS`} variant="secondary" /><span className="text-[12.5px] text-ink-secondary">Copies every question, numbered, so you can paste them into ChatGPT or send them to someone.</span></div>}
       {open.length === 0 && later.length === 0 && <div className="flex items-center gap-4 rounded-[16px] border p-6" style={{ background: 'linear-gradient(135deg,#EAF4EC,#F1F7E8)', borderColor: '#CFE3D3' }}><span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[20px] text-[#46704F]">✓</span><div><div className="font-serif text-[22px]">No missing info</div><div className="text-[14px] text-ink-secondary">Nothing needed right now.</div></div></div>}
       {soon.length > 0 && <section><h2 className="eyebrow mb-2 !font-sans text-[#8A6216]">NEED THIS SOON</h2>
         {grouped(soon).map(([g, l]) => <div key={g} className="mb-4"><div className="eyebrow mb-1.5">{g}</div><ul className="space-y-3">{l.map(q => <QuestionCard key={q.id} q={q} soon />)}</ul></div>)}</section>}
