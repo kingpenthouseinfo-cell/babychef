@@ -58,6 +58,7 @@ export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug
         <CopyButton text={withFilename(img.contPrompt || img.fullPrompt, expected)} label="Copy prompt" className="btn-sm" />
         <CopyButton text={expected} label="Copy filename" variant="secondary" className="btn-sm" />
         <CardUpload imageId={img.id} label={img.attempts?.length ? 'Replace photo' : 'Upload photo'} className="btn btn-sm btn-copy" />
+        <Link href={`${href}#results`} className="btn btn-sm">Import</Link>
         {img.status === 'REVIEW' && <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link>}
       </div>
     </div>
