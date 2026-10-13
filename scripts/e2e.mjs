@@ -666,6 +666,14 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   ok('Mark approved updates the card and the progress', (await page.locator('[data-testid=gen-card]').nth(1).textContent()).includes('APPROVED') && (await page.locator('[aria-label="Image progress"]').textContent()).includes('Images approved1'));
   await go('/projects/generate-plan-test/generate?f=APPROVED&x=all');
   ok('Filter APPROVED shows only the approved card', (await page.locator('[data-testid=gen-card]').count()) === 1);
+  // Picture list cards: Upload photo saves into the project folder with the correct generated name
+  await go('/projects/generate-plan-test/images');
+  ok('Picture list: every card has an Upload photo button', (await page.locator('button:has-text("Upload photo")').count()) >= 3);
+  await page.locator('input[type=file]').first().setInputFiles('/tmp/claude-0/card-upload.png');
+  await page.waitForTimeout(2500);
+  const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+  const saved = walk(STORE).filter(f => /generate-plan-test_SC\d+_IMG-\d+.*_v\d+\.png$/.test(f));
+  ok('Uploaded photo is saved in the project folder with the generated file name', saved.length >= 2, saved.map(f => path.basename(f)).join(' | '));
   await go('/projects/generate-plan-test/kling');
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
 }

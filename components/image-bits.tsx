@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Chip, Thumb, fileUrl } from './ui';
 import { CopyButton } from './client';
+import { CardUpload } from './card-upload';
 import { imageCode, sceneCode } from '@/lib/util';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 import type { ChecklistEntry } from '@/lib/queries';
@@ -56,7 +57,8 @@ export function ImageCard({ img, slug, checklist, selectable }: { img: any; slug
         <Link href={href} className="btn btn-sm">Open</Link>
         <CopyButton text={withFilename(img.contPrompt || img.fullPrompt, expected)} label="Copy prompt" className="btn-sm" />
         <CopyButton text={expected} label="Copy filename" variant="secondary" className="btn-sm" />
-        {img.status === 'REVIEW' ? <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link> : <Link href={`${href}#results`} className="btn btn-sm">Import</Link>}
+        <CardUpload imageId={img.id} label={img.attempts?.length ? 'Replace photo' : 'Upload photo'} className="btn btn-sm btn-copy" />
+        {img.status === 'REVIEW' && <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link>}
       </div>
     </div>
   );
