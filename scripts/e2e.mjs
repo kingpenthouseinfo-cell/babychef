@@ -681,6 +681,12 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   ok('Clip page: video upload form lists the pictures and the video file name', (await page.locator('[data-testid=clip-uses]').textContent()).includes('GPT-S01-IMG002') && /GPT-S01-CLIP\d+_v1\.mp4/.test(await page.locator('[data-testid=clip-uses]').textContent()));
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
 }
+// ---- project tabs: Picture List follows Images to Generate
+await go('/projects/generate-plan-test');
+{ const tabs = await page.locator('nav[aria-label="Recipe video sections"] a').allTextContents(); const t = tabs.map(x => x.trim());
+  ok('Tabs: Picture List comes right after Images to Generate', t.indexOf('Picture List') === t.indexOf('Images to Generate') + 1 && t.indexOf('Picture List') > 0, t.join(' | '));
+  await page.locator('nav[aria-label="Recipe video sections"] a:has-text("Picture List")').click(); await page.waitForURL(/\/images$/);
+  ok('Picture List tab opens the picture list', (await page.locator('[aria-current=page]:has-text("Picture List")').count()) === 1); }
 // ---- Settings: update / quit controls live inside the app
 await go('/settings');
 ok('Settings: app section has Update now, Check again and Quit (not clicked: it would stop the test server)', (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("UPDATE NOW")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("QUIT")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("Check again")').count()) === 1);

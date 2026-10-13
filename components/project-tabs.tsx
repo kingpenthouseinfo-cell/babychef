@@ -2,17 +2,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/generate', 'Images to Generate'], ['/kling', 'Video Clips'], ['/publishing', 'Post Video']];
+const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/generate', 'Images to Generate'], ['/images', 'Picture List'], ['/kling', 'Video Clips'], ['/publishing', 'Post Video']];
 const MORE: { head: string; items: [string, string, boolean?][] }[] = [
   { head: 'Style', items: [['/settings/bible', 'My Video Style', true], ['/continuity', 'Keep It Consistent'], ['/references', 'Example Pictures']] },
   { head: 'Work', items: [['/ingredients', 'Ingredients'], ['/script', 'Script'], ['/short', 'Short/Reel'], ['/queue', 'Pictures to Make', true], ['/files', 'Files']] },
-  { head: 'Advanced', items: [['/builder', 'Write a Prompt'], ['/overrides', 'Special Rules'], ['/scenes', 'Scene details'], ['/images', 'Picture list'], ['/prompts', 'Prompt templates'], ['/notes', 'Notes']] },
+  { head: 'Advanced', items: [['/builder', 'Write a Prompt'], ['/overrides', 'Special Rules'], ['/scenes', 'Scene details'], ['/prompts', 'Prompt templates'], ['/notes', 'Notes']] },
 ];
 
 export function ProjectTabs({ slug, missing }: { slug: string; missing: number }) {
   const path = usePathname();
   const base = `/projects/${slug}`;
-  const active = (s: string) => (s === '' ? path === base : s === '/story' ? path.startsWith(base + '/story') || path.startsWith(base + '/images/') : path.startsWith(base + s));
+  const active = (s: string) => (s === '' ? path === base : s === '/images' ? path === base + '/images' : s === '/story' ? path.startsWith(base + '/story') || path.startsWith(base + '/images/') : path.startsWith(base + s));
   const moreActive = path === base + '/more' || MORE.some(g => g.items.some(([s, , abs]) => !abs && path.startsWith(base + s))) && !active('/story');
   const tab = ([s, l]: [string, string]) => (
     <Link key={s} href={base + s} aria-current={active(s) ? 'page' : undefined} className={`relative inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-3.5 text-[14px] transition ${active(s) ? 'font-semibold text-ink' : 'font-medium text-ink-secondary hover:text-ink'}`} style={active(s) ? { boxShadow: 'inset 0 -2px 0 #1E1D22' } : undefined}>
