@@ -8,6 +8,7 @@ import { Collapsible, KlingRefStrip, PreflightCard } from '@/components/kling-cl
 import { addKlingRef, deleteKling, moveKlingRef, recordKlingAttempt, removeKlingRef, restoreKlingPrompt, reviewKlingAttempt, saveKling, setKlingStatus } from '@/lib/actions/kling';
 import { dialogueWarning, preflight } from '@/lib/kling';
 import { KLING_STATUSES } from '@/lib/constants';
+import { effectiveCode } from '@/lib/project-code';
 import { fmtDate, imageCode, klingCode, parseJson, ratioLabel, sceneCode, wordCount } from '@/lib/util';
 
 export default async function KlingPage({ params }: { params: { slug: string; klingId: string } }) {
@@ -22,9 +23,11 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
     db.promptVersion.findMany({ where: { ownerId: k.id, type: 'KLING' }, orderBy: { version: 'desc' } }),
   ]);
   const code = klingCode(k.order);
+  const sceneNo = k.scenes[0] ? scenes.find(s => s.id === k.scenes[0].sceneId)?.order : undefined;
+  const clipFile = `${effectiveCode(p)}${sceneNo ? `-S${String(sceneNo).padStart(2, '0')}` : ''}-CLIP${String(k.order).padStart(2, '0')}_v${(k.attempts[0]?.number ?? 0) + 1}.mp4`;
   const refRows = k.refs.map((r, i) => {
     const asset = r.image.approvedAttempt?.asset ?? r.image.attempts[0]?.asset ?? null;
-    return { r, n: i + 1, asset, approved: !!r.image.approvedAttemptId, label: `@image${i + 1} (${imageCode(r.image.seq)})`, orientation: asset?.orientation ?? 'UNKNOWN' };
+    return { r, n: i + 1, asset, approved: !!r.image.approvedAttemptId, file: asset?.displayName ?? null, label: `@image${i + 1} (${imageCode(r.image.seq)})`, orientation: asset?.orientation ?? 'UNKNOWN' };
   });
   const linkedScenes = scenes.filter(s => k.scenes.some(x => x.sceneId === s.id));
   const adultNeeded = linkedScenes.some(s => s.adultAssist === 'YES');
@@ -47,7 +50,8 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
 
       <section className="card border-purple-mid">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><div className="eyebrow text-purple-deep">REFERENCE STRIP · UPLOAD TO KLING IN THIS ORDER</div><p className="text-[12px] text-ink-secondary">Drag to reorder · @image numbers update the prompt</p></div></div>
-        <KlingRefStrip klingId={k.id} items={refRows.map(x => ({ id: x.r.id, tag: `@image${x.n}`, code: imageCode(x.r.image.seq), title: x.r.image.title, assetId: x.asset?.id ?? null, approved: x.approved, meta: `${x.orientation}${x.asset?.width ? ` · ${ratioLabel(x.asset.width, x.asset.height)}` : ''}` }))} />
+        {refRows.some(x => x.file) && <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px]"><CopyButton text={refRows.map(x => `@image${x.n} = ${x.file ?? '(no file yet)'}`).join('\n')} label="COPY ALL PICTURE FILE NAMES" variant="secondary" /><span className="text-ink-secondary">The pictures that go with this clip, in the order to upload them to Kling.</span></div>}
+        <KlingRefStrip klingId={k.id} items={refRows.map(x => ({ id: x.r.id, tag: `@image${x.n}`, code: imageCode(x.r.image.seq), title: x.r.image.title, assetId: x.asset?.id ?? null, file: x.file, approved: x.approved, meta: `${x.orientation}${x.asset?.width ? ` · ${ratioLabel(x.asset.width, x.asset.height)}` : ''}` }))} />
         <AttachImageForm action={addKlingRef} klingId={k.id} options={imgs.filter(i => !attached.has(i.id)).map(i => ({ id: i.id, label: `${imageCode(i.seq)} ${i.title}`, approved: !!i.approvedAttemptId }))} />
         <p className="mt-1 text-[11px] text-ink-secondary">Non-approved images can be attached after a warning (“Continue anyway?”).</p>
       </section>
@@ -115,12 +119,14 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
 
       <Section title="Video attempts made in Kling">
         <form action={recordKlingAttempt} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="klingId" value={k.id} />
+          <div className="sm:col-span-2 rounded-lg border border-purple-mid bg-purple-tint/50 p-3 text-[12.5px]" data-testid="clip-uses"><div className="eyebrow text-purple-deep">THIS VIDEO IS MADE FROM THESE PICTURES</div>{refRows.length ? <ol className="mt-1 space-y-0.5 font-mono">{refRows.map(x => <li key={x.r.id}>@image{x.n} · {x.file ?? 'no picture file yet'}</li>)}</ol> : <p className="mt-1 text-ink-secondary">No pictures attached to this clip yet.</p>}<div className="mt-2 text-ink-secondary">The video you add is saved as <span className="font-mono text-ink">{clipFile}</span></div></div>
           <Text name="externalName" label="External filename / ID" /><Field label="Optional video upload"><input type="file" name="file" accept="video/*" className="input" /></Field>
           <Text name="notes" label="Notes" className="sm:col-span-2" /><div className="sm:col-span-2"><SubmitBtn pendingText="Saving…">RECORD GENERATION #{(k.attempts[0]?.number ?? 0) + 1}</SubmitBtn></div></form>
         <div className="mt-4 space-y-3">{k.attempts.map(a => (
           <div key={a.id} className="rounded-lg border border-line p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2"><b>Generation {a.number}</b><Chip>{a.status}</Chip><span className="text-xs text-ink-secondary">{fmtDate(a.createdAt)} · {a.externalName || 'no external name'}</span></div>
             {a.asset && <video src={`/api/files/${a.assetId}`} controls className="mt-2 max-h-72 w-full rounded-lg bg-black" />}
+            {(a as any).imageFiles && <p className="mt-1 break-all font-mono text-[11px] text-ink-secondary">Made from: {(parseJson<string[]>((a as any).imageFiles, [])).join(' · ')}</p>}
             {a.notes && <p className="mt-1">{a.notes}</p>}
             {a.wrong && <p className="mt-1"><b className="text-[#A8513F]">Wrong:</b> {a.wrong}</p>}{a.change && <p><b className="text-[#3B6448]">Change:</b> {a.change}</p>}{a.keep && <p><b>Keep:</b> {a.keep}</p>}{a.promptNotes && <p><b>Prompt revision notes:</b> {a.promptNotes}</p>}
             <Link href={`/projects/${p.slug}/builder?type=kling-redo&kling=${k.id}&kattempt=${a.id}`} className="btn btn-sm mt-2">PREPARE KLING REDO PROMPT</Link>

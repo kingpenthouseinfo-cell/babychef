@@ -1,5 +1,6 @@
 'use server';
 import { sceneLabels } from '../scene-label';
+import { effectiveCode } from '../project-code';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -114,15 +115,16 @@ export async function restoreKlingPrompt(fd: FormData) {
 
 export async function recordKlingAttempt(fd: FormData) {
   const klingId = str(fd, 'klingId')!;
-  const k = await db.klingClip.findUniqueOrThrow({ where: { id: klingId }, include: { project: true } });
+  const k: any = await db.klingClip.findUniqueOrThrow({ where: { id: klingId }, include: { project: true, scenes: { include: { scene: true } }, refs: { orderBy: { order: 'asc' }, include: { image: { include: { approvedAttempt: { include: { asset: true } }, attempts: { orderBy: { number: 'desc' }, take: 1, include: { asset: true } } } } } } } as any });
+  const imageFiles = (k as any).refs.map((r: any) => (r.image.approvedAttempt?.asset ?? r.image.attempts[0]?.asset)?.displayName).filter(Boolean) as string[];
   const n = (await db.klingAttempt.aggregate({ where: { klingId }, _max: { number: true } }))._max.number ?? 0;
   const file = fd.get('file') as File | null;
   let assetId: string | null = null;
   if (file && file.size) {
-    const a = await importFile(file, { rootFolder: await projectFolder(k.projectId), folder: '04 Kling', fileBase: `${k.project.slug}_${klingCode(k.order)}_video-v${n + 1}`, kind: 'KLING_VIDEO', version: n + 1, projectSlug: k.project.slug });
+    const a = await importFile(file, { rootFolder: await projectFolder(k.projectId), folder: '04 Kling', fileBase: `${effectiveCode(k.project)}${(k as any).scenes?.[0]?.scene ? `-S${String((k as any).scenes[0].scene.order).padStart(2, '0')}` : ''}-CLIP${String(k.order).padStart(2, '0')}_v${n + 1}`, kind: 'KLING_VIDEO', version: n + 1, projectSlug: k.project.slug });
     assetId = a.id;
   }
-  await db.klingAttempt.create({ data: { klingId, number: n + 1, externalName: str(fd, 'externalName'), assetId, notes: str(fd, 'notes'), status: 'REVIEW' } });
+  await db.klingAttempt.create({ data: { klingId, number: n + 1, externalName: str(fd, 'externalName'), assetId, notes: str(fd, 'notes'), status: 'REVIEW', imageFiles: JSON.stringify(imageFiles) } as any });
   await db.klingClip.update({ where: { id: klingId }, data: { status: 'REVIEW' } });
   await logActivity(`${klingCode(k.order)} generation ${n + 1} recorded`, null, k.projectId);
   touch();

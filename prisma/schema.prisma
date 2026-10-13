@@ -508,6 +508,7 @@ model KlingAttempt {
   change        String?
   keep          String?
   promptNotes   String?
+  imageFiles    String?  // JSON: the picture file names this video was made from
   createdAt     DateTime @default(now())
   kling KlingClip @relation(fields: [klingId], references: [id], onDelete: Cascade)
   asset Asset?    @relation(fields: [assetId], references: [id])

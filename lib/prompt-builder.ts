@@ -243,7 +243,7 @@ const BLOCKS: Record<string, (c: Ctx, o: { bibleKeys?: string[]; type: BuilderTy
     if (!k) return null;
     const refs = k.refs.map((r, n) => {
       const im = r.image; const a = im.approvedAttempt?.asset ?? im.attempts[0]?.asset;
-      return `@image${n + 1} = ${imageCode(im.seq)} "${im.title}" (${im.approvedAttemptId ? 'approved' : 'NOT approved'}${a?.width ? `, ${ratioLabel(a.width, a.height)} ${a.orientation}` : ''}; ${sceneCode(im.scene.order)})${val(im.startingComposition) ? `\n   composition: ${im.startingComposition}` : ''}${val(im.ingredientState) ? `\n   food state: ${im.ingredientState}` : ''}${val(im.actionMoment) ? `\n   moment: ${im.actionMoment}` : ''}`;
+      return `@image${n + 1} = ${imageCode(im.seq)} "${im.title}"${a?.displayName ? ` [file: ${a.displayName}]` : ''} (${im.approvedAttemptId ? 'approved' : 'NOT approved'}${a?.width ? `, ${ratioLabel(a.width, a.height)} ${a.orientation}` : ''}; ${sceneCode(im.scene.order)})${val(im.startingComposition) ? `\n   composition: ${im.startingComposition}` : ''}${val(im.ingredientState) ? `\n   food state: ${im.ingredientState}` : ''}${val(im.actionMoment) ? `\n   moment: ${im.actionMoment}` : ''}`;
     }).join('\n');
     const voice = k.useProfileVoice ? val(c.project.babyChef?.voiceInstruction) : val(k.voiceOverride);
     const acts = parseJson<string[]>(k.majorActions, []).map((a, n) => `${n + 1}. ${a}`).join('\n');

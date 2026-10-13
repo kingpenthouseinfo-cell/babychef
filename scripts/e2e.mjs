@@ -675,6 +675,10 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   const saved = walk(STORE).filter(f => /GPT-S\d+-IMG\d+.*_v\d+\.png$/.test(f));
   ok('Uploaded photo is saved in the project folder with the generated file name', saved.length >= 2, saved.map(f => path.basename(f)).join(' | '));
   await go('/projects/generate-plan-test/kling');
+  ok('Video clips: the picture file name is shown next to each picture used', (await page.locator('[data-testid=scene-image-file]').first().textContent()).startsWith('GPT-S01-IMG002'), await page.locator('[data-testid=scene-image-file]').first().textContent().catch(() => ''));
+  await page.locator('button:has-text("Make video prompt")').first().click(); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
+  ok('Clip page: reference strip shows the picture file name', (await page.locator('[data-testid=clip-image-file]').first().textContent()).startsWith('GPT-S01-IMG002'));
+  ok('Clip page: video upload form lists the pictures and the video file name', (await page.locator('[data-testid=clip-uses]').textContent()).includes('GPT-S01-IMG002') && /GPT-S01-CLIP\d+_v1\.mp4/.test(await page.locator('[data-testid=clip-uses]').textContent()));
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
 }
 // ---- Settings: update / quit controls live inside the app

@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { SubmitBtn } from './client';
+import { SubmitBtn, CopyButton } from './client';
 import { reorderKlingRefs, removeKlingRef, setKlingStatus } from '@/lib/actions/kling';
 
-export type StripItem = { id: string; tag: string; code: string; title: string; assetId: string | null; approved: boolean; meta: string };
+export type StripItem = { id: string; tag: string; code: string; title: string; assetId: string | null; approved: boolean; meta: string; file?: string | null };
 
 /** Ordered @image reference strip: drag to reorder (↑/↓ buttons for keyboard and touch). */
 export function KlingRefStrip({ klingId, items }: { klingId: string; items: StripItem[] }) {
@@ -23,6 +23,7 @@ export function KlingRefStrip({ klingId, items }: { klingId: string; items: Stri
           {it.assetId ? <img src={`/api/files/${it.assetId}?w=400`} alt={`${it.code} ${it.title}`} className="aspect-video w-full rounded-sm border border-line bg-sunken object-cover" /> : <div className="flex aspect-video items-center justify-center rounded-sm bg-sunken text-xs text-ink-muted">no image</div>}
           <div className="mt-1.5 flex items-center gap-1.5"><span className="font-mono text-[12px] font-medium">{it.code}</span>{it.approved ? <span className="text-[11px] font-semibold text-[#3B6448]">✓ Looks good</span> : <span className="text-[11px] font-semibold text-[#8A6216]">⚠ not approved</span>}</div>
           <div className="truncate text-[12px] text-ink-secondary" title={it.title}>{it.title}</div>
+          {it.file ? <div className="mt-0.5 flex items-start gap-1"><span className="min-w-0 flex-1 break-all font-mono text-[10.5px] leading-tight text-ink" data-testid="clip-image-file">{it.file}</span><CopyButton text={it.file} label="Copy" variant="secondary" className="btn-sm px-1.5" /></div> : <div className="mt-0.5 text-[10.5px] text-[#A5473A]">No picture file yet</div>}
           <div className="text-[11px] text-ink-muted">{it.meta}</div>
           <div className="mt-1.5 flex gap-1">
             <button type="button" className="btn btn-sm px-2" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label={`Move ${it.code} earlier`}>←</button>

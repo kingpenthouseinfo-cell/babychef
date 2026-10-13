@@ -1,4 +1,5 @@
 import { sceneLabels } from '@/lib/scene-label';
+import { effectiveCode } from '@/lib/project-code';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db';
@@ -16,9 +17,9 @@ export default async function KlingList({ params }: { params: { slug: string } }
   if (!p) notFound();
   await backfillPositions();
   const [clips, scenes, imgs] = await Promise.all([
-    db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { refs: { orderBy: { order: 'asc' }, include: { image: { include: { approvedAttempt: true } } } }, scenes: { include: { scene: true } } } }),
+    db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { refs: { orderBy: { order: 'asc' }, include: { image: { include: { approvedAttempt: { include: { asset: true } } } } } }, scenes: { include: { scene: true } } } }),
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: { include: { asset: true } } } }),
   ]);
   const lab = sceneLabels(scenes);
   const linked = new Set(clips.flatMap(c => c.scenes.map(x => x.sceneId)));
@@ -37,7 +38,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
         const clip = clips.find(c => c.scenes.some(x => x.sceneId === sc.id));
         const chip = ready ? [`${good.length} pictures ready`, 'bg-[#E3EAF2] text-[#46638A]'] : fix ? [`${fix} picture${fix > 1 ? 's' : ''} need${fix > 1 ? '' : 's'} fixing first`, 'bg-[#F5E1DB] text-[#A5473A]'] : good.length ? [`${rest} picture${rest > 1 ? 's' : ''} still to make`, 'bg-[#F0EEF3] text-[#6F6A75]'] : ['Pictures not made yet', 'bg-[#F0EEF3] text-[#6F6A75]'];
         const open = ready && !opened && !clip?.status.match(/APPROVED/); if (open) opened = true;
-        const clipName = `${p.slug}_${sceneCode(sc.order)}_CLIP_v1.mp4`;
+        const clipName = `${effectiveCode(p)}-S${String(sc.order).padStart(2, '0')}-CLIP_v1.mp4`;
         return (
           <section key={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
             <details open={open}>
@@ -51,7 +52,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
                   <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-[14.5px]">The pictures that look good are already gathered in order.</p>
                     {clip ? <Link href={`/projects/${p.slug}/kling/${clip.id}`} className="btn btn-purple min-h-[46px] px-6">Open video prompt</Link> : <form action={makeClipForScene}><input type="hidden" name="sceneId" value={sc.id} /><SubmitBtn className="btn-purple min-h-[46px] px-6" pendingText="Gathering…">Make video prompt</SubmitBtn></form>}</div>
                   <div className="eyebrow mt-4 !text-[#6A4E98]">PICTURES USED</div>
-                  <div className="mt-2 flex flex-wrap gap-3">{good.map(x => <div key={x.id} className="w-[120px]"><div className="aspect-[4/3] overflow-hidden rounded-xl bg-white">{x.approvedAttempt && <img src={fileUrl(x.approvedAttempt.assetId, 240)} alt={x.title} className="h-full w-full object-cover" />}</div><div className="mt-1 truncate text-[12.5px]"><b className="text-[#46704F]">✓</b> {x.title}</div></div>)}</div>
+                  <div className="mt-2 flex flex-wrap gap-3">{good.map(x => <div key={x.id} className="w-[120px]"><div className="aspect-[4/3] overflow-hidden rounded-xl bg-white">{x.approvedAttempt && <img src={fileUrl(x.approvedAttempt.assetId, 240)} alt={x.title} className="h-full w-full object-cover" />}</div><div className="mt-1 truncate text-[12.5px]"><b className="text-[#46704F]">✓</b> {x.title}</div>{x.approvedAttempt && <div className="break-all font-mono text-[10px] leading-tight text-ink-secondary" data-testid="scene-image-file">{x.approvedAttempt.asset?.displayName}</div>}</div>)}</div>
                   <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-ink-secondary"><span>Save clip as <code className="font-mono text-[12.5px] text-ink">{clipName}</code></span><a href="https://klingai.com/" target="_blank" rel="noreferrer" className="font-semibold text-[#6A4E98]">Open Kling ↗</a>{clip && <Link href={`/projects/${p.slug}/kling/${clip.id}`} className="font-semibold text-blue-deep" title={klingCode(clip.order)}>More details</Link>}</div>
                 </div>
               )}
