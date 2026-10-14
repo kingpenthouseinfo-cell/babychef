@@ -729,6 +729,23 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   ok('Clip page: video upload form lists the pictures and the video file name', (await page.locator('[data-testid=clip-uses]').textContent()).includes('GPT-S01-IMG002') && /GPT-S01-CLIP\d+_v1\.mp4/.test(await page.locator('[data-testid=clip-uses]').textContent()));
   await go('/projects/generate-plan-test/kling');
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
+  // ---- arrange pictures from the Picture List: move into the neighbouring scene, then swap places
+  await go('/projects/generate-plan-test/images');
+  let c3 = page.locator('div.card:has(a.font-semibold:text-is("Brown the beef"))').first();
+  await c3.locator('summary:has-text("Move or reorder")').click();
+  await c3.locator('button[aria-label="Move this picture up"]').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1500);
+  await go('/projects/generate-plan-test/images');
+  c3 = page.locator('div.card:has(a.font-semibold:text-is("Brown the beef"))').first();
+  ok('Move up at the start of a scene moves the picture into the scene before', (await c3.textContent()).includes('SC01'), (await c3.textContent()).slice(0, 80));
+  await c3.locator('summary:has-text("Move or reorder")').click();
+  const opts = await c3.locator('select[aria-label="Swap with picture"] option').allTextContents();
+  const k = opts.findIndex(t => t.includes('Dry flour'));
+  await c3.locator('select[aria-label="Swap with picture"]').selectOption({ index: k });
+  await c3.locator('button:has-text("SWAP")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1500);
+  await go('/projects/generate-plan-test/images');
+  const titles = await page.locator('div.card a.font-semibold').allTextContents();
+  ok('Swap puts the two pictures in each other\'s place (IMG numbers stay with their pictures)', titles[0].trim() === 'Brown the beef' && titles[2].trim() === 'Dry flour mixture in the bowl', titles.join(' | '));
+  ok('Picture IMG numbers did not change when moved', (await page.locator('div.card:has(a.font-semibold:text-is("Brown the beef")) .font-mono').first().textContent()).trim() === 'IMG-003');
 }
 // ---- project tabs: Picture List follows Images to Generate
 await go('/projects/generate-plan-test');

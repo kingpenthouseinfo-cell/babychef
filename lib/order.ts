@@ -20,10 +20,10 @@ export async function backfillPositions() {
 export const SCENE_ORDER = [{ pos: 'asc' }, { order: 'asc' }] as const;
 export const IMAGE_ORDER = [{ scene: { pos: 'asc' } }, { pos: 'asc' }, { seq: 'asc' }] as const;
 
-async function resequenceScenes(projectId: string, ids: string[]) {
+export async function resequenceScenes(projectId: string, ids: string[]) {
   await db.$transaction(ids.map((id, i) => db.scene.update({ where: { id }, data: { pos: i + 1 } })));
 }
-async function resequenceImages(ids: string[]) {
+export async function resequenceImages(ids: string[]) {
   await db.$transaction(ids.map((id, i) => db.plannedImage.update({ where: { id }, data: { pos: i + 1 } })));
 }
 const sceneIds = async (projectId: string) => (await db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true } })).map(s => s.id);

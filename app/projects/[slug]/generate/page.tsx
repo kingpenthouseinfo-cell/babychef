@@ -14,6 +14,7 @@ import { MakePictureButton } from '@/components/make-picture';
 import { CardUpload } from '@/components/card-upload';
 import { InsertTile } from '@/components/story-bits';
 import { AiReferences } from '@/components/ai-references';
+import { PictureArrange } from '@/components/picture-arrange';
 import { aiReferencesForProject, aiRefOptions } from '@/lib/ai-refs';
 import { Empty, Thumb, fileUrl } from '@/components/ui';
 
@@ -131,6 +132,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                         <form action={rewritePrompt}><input type="hidden" name="imageId" value={i.id} /><SubmitBtn className="btn btn-ghost" pendingText="Writing…">REGENERATE PROMPT</SubmitBtn></form>
                         <Link className="btn btn-ghost" href={`${b}/images/${i.id}`}>EDIT / MORE</Link>
                       </div>
+                      <div className="mt-2"><PictureArrange imageId={i.id} sceneId={i.sceneId} scenes={scenes.map(sc => ({ id: sc.id, label: `Scene ${lab.get(sc.id)} · ${sc.title}` }))} pictures={imgs.map((x, n) => ({ id: x.id, label: `Picture ${n + 1} · ${x.title}` }))} /></div>
                       {aiMap.get(i.id) && <div className="mt-3"><AiReferences set={aiMap.get(i.id)!} opts={aiOpts} projectSlug={p.slug} /></div>}
                     </article>
                   );

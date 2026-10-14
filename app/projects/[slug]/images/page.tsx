@@ -25,6 +25,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
   const lab = sceneLabels(scenes);
   const [aiMap, aiOpts, masters, settings] = await Promise.all([aiReferencesForProject(p.id), aiRefOptions(p.id), projectMasters(p.id), getSettings()]);
   const chatgpt = settings.url_ChatGPT || 'https://chatgpt.com/';
+  const arrange = { scenes: scenes.map(s => ({ id: s.id, label: `Scene ${lab.get(s.id)} · ${s.title}` })), pictures: all.map((i, n) => ({ id: i.id, label: `Picture ${n + 1} · ${i.title}` })) };
   const nextSeq = all.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
   const st = searchParams.status;
   const list = all.filter(i =>
@@ -63,7 +64,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
                 <Sel name="role" label="Role" options={IMAGE_REF_ROLES} /><div className="flex gap-2"><button name="op" value="addRef" className="btn btn-sm">Add reference</button><button name="op" value="removeRef" className="btn btn-sm btn-danger" onClick={undefined}>Remove reference</button></div></div>
               <div className="flex items-end"><CopyButton text={list.map(i => imageCode(i.seq)).join(', ')} label="COPY IMAGE IDS (filtered)" className="btn-sm" /></div>
             </div></details>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} arrange={arrange} />)}</div>
         </form>
       )}
 
