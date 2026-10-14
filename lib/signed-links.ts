@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { headers } from 'next/headers';
+import { publicBase } from './automation-config';
 
 /**
  * Short-lived signed links for direct image access (so a browser agent can open an image without being "logged in").
@@ -23,21 +24,29 @@ export function verify(scope: string, exp: string | null, sig: string | null): b
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-/** http://localhost:3000 — the address this page was opened on. */
-export function origin(): string {
+/** The address this page was opened on, e.g. http://localhost:3000 */
+export function requestOrigin(): string {
   const h = headers();
   const host = h.get('host') || 'localhost:3000';
   const proto = h.get('x-forwarded-proto') || (/^(localhost|127\.0\.0\.1)/.test(host) ? 'http' : 'https');
   return `${proto}://${host}`;
 }
+/** The address automation links should use: the https bridge address when one is set, otherwise this computer. The signature does not include the address. */
+export function origin(): string { return publicBase().base ?? requestOrigin(); }
 
 const q = (o: Record<string, string | number>) => Object.entries(o).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
 
 /** Full-resolution image bytes for an asset (or a planned picture id), as an absolute, expiring link. */
 export function directImageUrl(assetId: string, extra: Record<string, string> = {}): string {
   const { exp, sig } = sign(`img:${assetId}`);
-  return `${origin()}/api/images/${assetId}/file?${q({ ...extra, exp, sig })}`;
+  return `${origin()}/api/images/${assetId}/${extra.download ? 'download' : 'file'}?${q({ ...extra, exp, sig })}`;
 }
 export const downloadImageUrl = (assetId: string, name: string) => directImageUrl(assetId, { download: '1', name });
 export function zipUrl(imageId: string): string { const { exp, sig } = sign(`zip:${imageId}`); return `${origin()}/api/ai-refs/${imageId}/zip?${q({ exp, sig })}`; }
 export function manifestUrl(slug: string, imageId: string): string { const { exp, sig } = sign(`manifest:${imageId}`); return `${origin()}/api/projects/${slug}/images/${imageId}/references?${q({ exp, sig })}`; }
+
+/** Signed path + query only (no address), so the same link can be served on localhost or on the https bridge address. */
+export function signedImagePath(assetId: string, extra: Record<string, string> = {}): string {
+  const { exp, sig } = sign(`img:${assetId}`);
+  return `/api/images/${assetId}/${extra.download ? 'download' : 'file'}?${q({ ...extra, exp, sig })}`;
+}

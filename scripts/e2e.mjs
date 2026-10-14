@@ -680,7 +680,7 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   // ---- AI references on the project Images page
   await go('/projects/generate-plan-test/images');
   ok('Images page: project references block is at the top', (await page.locator('[data-testid=project-refs]').count()) === 1);
-  const beef = page.locator('div.card:has([data-testid=ai-refs]):has-text("Brown the beef")').first();
+  const beef = page.locator('div.card:has(a.font-semibold:text-is("Brown the beef"))').first();
   ok('Card: AI references row shows BEFORE and AFTER tiles', (await beef.locator('[data-testid=ai-ref][data-role=BEFORE]').count()) === 1 && (await beef.locator('[data-testid=ai-ref][data-role=AFTER]').count()) === 1);
   ok('Card: BEFORE is the closest approved picture in production order', (await beef.locator('[data-testid=ai-ref][data-role=BEFORE]').textContent()).includes('Close-up macro of butter pinched into crumbs'));
   const dlHref = await beef.locator('[data-role=BEFORE] [data-testid=ai-ref-download]').getAttribute('href');
@@ -694,7 +694,7 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   await beef.locator('select[aria-label="Change previous reference"]').selectOption({ index: 1 });
   const chosen = await beef.locator('select[aria-label="Change previous reference"] option:checked').textContent();
   await beef.locator('button:has-text("CHANGE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
-  const beef2 = page.locator('div.card:has([data-testid=ai-refs]):has-text("Brown the beef")').first();
+  const beef2 = page.locator('div.card:has(a.font-semibold:text-is("Brown the beef"))').first();
   ok('CHANGE picks another approved picture for BEFORE', (await beef2.locator('[data-testid=ai-ref][data-role=BEFORE]').textContent()).includes(chosen.replace(/^IMG-\d+\s+/, '').trim()), chosen);
   const refUrl = (await page.locator('a:has-text("OPEN REFERENCE PACK")').first().getAttribute('href'));
   await go(refUrl);
@@ -746,6 +746,55 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   const titles = await page.locator('div.card a.font-semibold').allTextContents();
   ok('Swap puts the two pictures in each other\'s place (IMG numbers stay with their pictures)', titles[0].trim() === 'Brown the beef' && titles[2].trim() === 'Dry flour mixture in the bowl', titles.join(' | '));
   ok('Picture IMG numbers did not change when moved', (await page.locator('div.card:has(a.font-semibold:text-is("Brown the beef")) .font-mono').first().textContent()).trim() === 'IMG-003');
+  // ---- cloud reference bridge
+  await go('/projects/generate-plan-test/images');
+  ok('Cloud access: shows LOCAL ONLY when no address is set', (await page.locator('[data-testid=cloud-state]').textContent()).trim() === 'LOCAL ONLY');
+  await page.click('button:has-text("TEST CLOUD ACCESS")'); await page.waitForSelector('[data-testid=cloud-result]');
+  ok('Test cloud access: EXTERNAL REFERENCE URL NOT CONFIGURED (with the local URL)', (await page.locator('[data-testid=cloud-result]').textContent()).includes('NOT CONFIGURED') && (await page.locator('[data-testid=cloud-result]').textContent()).includes('/api/images/'));
+  await go('/settings');
+  await page.fill('input[aria-label="External reference base URL"]', 'http://abc.example.test');
+  await page.click('button:has-text("SAVE ADDRESS")'); await page.waitForTimeout(800);
+  ok('Settings: a public http:// address is refused (https only)', (await page.locator('text=must start with https://').count()) === 1);
+  await page.fill('input[aria-label="External reference base URL"]', 'https://abc.example.test/some/path');
+  await page.click('button:has-text("SAVE ADDRESS")'); await page.waitForTimeout(800);
+  ok('Settings: an https address is saved (path is dropped)', (await page.locator('text=https://abc.example.test').count()) >= 1);
+  const man2 = await (await page.request.get(BASE + '/api/projects/generate-plan-test/images/IMG-003/references')).json();
+  const urls = [man2.zipUrl, ...man2.references.flatMap(r => [r.directImageUrl, r.downloadUrl]).filter(Boolean), man2.currentImage.directImageUrl].filter(Boolean);
+  ok('Reference list uses the external https address for every automation link', urls.length >= 3 && urls.every(u => u.startsWith('https://abc.example.test/')), urls.slice(0, 2).join(' '));
+  ok('Reference list: download links use the /download route', man2.references.filter(r => r.downloadUrl).every(r => /\/api\/images\/[^/]+\/download\?/.test(r.downloadUrl)));
+  const localCopy = urls.find(u => u.includes('/api/images/') && u.includes('/file?'));
+  const viaLocal = await page.request.get(BASE + new URL(localCopy).pathname + new URL(localCopy).search);
+  ok('The same signed link works on this computer (the signature does not include the address)', viaLocal.status() === 200 && /^image\//.test(viaLocal.headers()['content-type'] || ''));
+  const dlUrl = man2.references.find(r => r.downloadUrl).downloadUrl;
+  const dlRes = await page.request.get(BASE + new URL(dlUrl).pathname + new URL(dlUrl).search);
+  ok('The download route sends the file as an attachment', dlRes.status() === 200 && /attachment/.test(dlRes.headers()['content-disposition'] || ''), dlRes.headers()['content-disposition']);
+  const tamper = new URL(localCopy); tamper.pathname = tamper.pathname.replace(/\/api\/images\/[^/]+\//, '/api/images/someotherid/');
+  const tRes = await page.request.get(BASE + tamper.pathname + tamper.search, { headers: { host: 'abc.example.test' } });
+  ok('A signed link cannot be reused for a different picture', tRes.status() === 403 || tRes.status() === 404, String(tRes.status()));
+  const expired = new URL(localCopy); expired.searchParams.set('exp', '1000');
+  const eRes = await page.request.get(BASE + expired.pathname + expired.search, { headers: { host: 'abc.example.test' } });
+  ok('An expired or altered link is refused (403)', eRes.status() === 403, String(eRes.status()));
+  const home = await page.request.get(BASE + '/', { headers: { host: 'abc.example.test' } });
+  ok('Through the bridge address the rest of the app stays closed (pages)', home.status() === 403, String(home.status()));
+  const fwd = await page.request.get(BASE + '/projects', { headers: { 'x-forwarded-for': '203.0.113.9' } });
+  ok('A request that arrives through a tunnel (forwarding header) cannot open pages either', fwd.status() === 403, String(fwd.status()));
+  const act = await page.request.post(BASE + '/api/quit', { headers: { host: 'abc.example.test' } });
+  ok('The bridge cannot quit or update the app', act.status() === 403, String(act.status()));
+  await go('/projects/generate-plan-test/images/' + man2.currentImage.pictureId + '/references');
+  ok('Reference pack page: COPY AUTOMATION JSON URL copies the external address', await (async () => { await page.click('button:has-text("COPY AUTOMATION JSON URL")'); await page.waitForTimeout(300); return (await clip()).startsWith('https://abc.example.test/api/projects/'); })());
+  // back to local only
+  await go('/settings');
+  await page.click('button:has-text("Clear")'); await page.waitForTimeout(800);
+  await go('/projects/generate-plan-test/images');
+  ok('Cleared: back to LOCAL ONLY', (await page.locator('[data-testid=cloud-state]').textContent()).trim() === 'LOCAL ONLY');
+  // a local address passes the end-to-end check from this machine
+  await go('/settings');
+  await page.fill('input[aria-label="External reference base URL"]', BASE);
+  await page.click('button:has-text("SAVE ADDRESS")'); await page.waitForTimeout(800);
+  await go('/projects/generate-plan-test/images');
+  await page.click('button:has-text("TEST CLOUD ACCESS")'); await page.waitForSelector('[data-testid=cloud-result]');
+  ok('Test cloud access: EXTERNAL REFERENCE URL READY when the address serves a signed picture', (await page.locator('[data-testid=cloud-result]').textContent()).includes('EXTERNAL REFERENCE URL READY'), await page.locator('[data-testid=cloud-result]').textContent());
+  await go('/settings'); await page.click('button:has-text("Clear")'); await page.waitForTimeout(800);
 }
 // ---- project tabs: Picture List follows Images to Generate
 await go('/projects/generate-plan-test');

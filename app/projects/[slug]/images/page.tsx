@@ -10,6 +10,8 @@ import { IMAGE_STATUSES, PRIORITIES, SHOT_TYPES, IMAGE_REF_ROLES } from '@/lib/c
 import { imageCode, sceneCode } from '@/lib/util';
 import { AddPictureFields } from '@/components/add-picture-fields';
 import { ProjectReferences } from '@/components/ai-references';
+import { CloudReferenceStatus } from '@/components/cloud-reference-status';
+import { publicBase } from '@/lib/automation-config';
 import { aiReferencesForProject, aiRefOptions, projectMasters } from '@/lib/ai-refs';
 import { getSettings } from '@/lib/settings';
 import { sceneLabels } from '@/lib/scene-label';
@@ -53,6 +55,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
         <button className="btn">Filter</button>
       </form>
       <ProjectReferences masters={masters} />
+      <CloudReferenceStatus projectId={p.id} base={publicBase().base} source={publicBase().source} />
       {Object.keys(summary).length > 0 && <div className="text-xs text-ink-secondary">Shot variety: {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}</div>}
 
       {all.length === 0 ? <Empty title="No planned images yet." hint="Add images to your Scenes. A scene can have many images, numbered IMG-001, IMG-002… across the project." /> : list.length === 0 ? <Empty title="No images match this filter." /> : (

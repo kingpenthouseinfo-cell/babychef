@@ -36,7 +36,7 @@ export default async function ReferencesPage({ params }: { params: { slug: strin
       </div>
       <div className="card text-[13px]" data-testid="manifest-box"><div className="eyebrow">FOR AUTOMATION</div>
         <p className="mt-1 text-ink-secondary">Every picture above opens as a normal image from its OPEN FULL IMAGE link, so nothing has to be downloaded first. The list below says exactly which files belong to this picture. Links expire after 12 hours.</p>
-        <div className="mt-1 break-all font-mono text-[11.5px]">{manifest}</div><div className="mt-2 flex flex-wrap gap-2"><a className="btn btn-sm" href={manifest} target="_blank" rel="noreferrer">OPEN REFERENCE LIST (JSON)</a><CopyButton text={manifest} label="COPY REFERENCE LIST LINK" variant="secondary" className="btn-sm" /></div></div>
+        <div className="mt-1 break-all font-mono text-[11.5px]">{manifest}</div><div className="mt-2 flex flex-wrap gap-2"><a className="btn btn-sm" href={manifest} target="_blank" rel="noreferrer">OPEN REFERENCE LIST (JSON)</a><CopyButton text={manifest} label="COPY AUTOMATION JSON URL" variant="secondary" className="btn-sm" /></div></div>
       <div className="card text-[13.5px]"><div className="eyebrow">HOW TO USE THESE</div>
         <p className="mt-1">These pictures are for continuity only. Use them to keep the same Baby Chef, kitchen, outfit, lighting, cookware, scale and photographic style. Do not copy the pose, action, camera or food state from the neighbouring pictures. The prompt for {set.tag} decides the exact action and food state. Do not add ingredients or cooking stages from a later picture.</p></div>
     </div>

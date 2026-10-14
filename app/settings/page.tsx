@@ -15,6 +15,8 @@ import { listBackups, dbPaths } from '@/lib/backup';
 import { backupNow } from '@/lib/actions/settings';
 import { RevealButton } from '@/components/image-workspace';
 import { AppControls } from '@/components/app-controls';
+import { ReferenceBaseForm } from '@/components/cloud-reference-status';
+import { publicBase } from '@/lib/automation-config';
 
 export default async function Settings() {
   const s = await getSettings();
@@ -27,6 +29,9 @@ export default async function Settings() {
     <>
       <h1 className="mb-6 text-[34px] md:text-[40px]">Settings</h1>
       <div className="mb-8 max-w-[860px] space-y-4">
+        <section id="automation" className="card !p-6 scroll-mt-24" aria-label="Automation"><h2 className="text-[24px]">Automation</h2>
+          <p className="mt-1 text-[13.5px] text-ink-secondary">Optional. Lets a cloud assistant (like Claude Cowork) download the AI reference pictures by giving the app a secure https address that reaches this Mac. Use any tunnel or secure proxy you trust; the app doesn't care which. Pictures are never public: only short-lived signed links work, and only reference pictures can be fetched from outside. Leave it empty to keep everything on this computer.</p>
+          <ReferenceBaseForm base={publicBase().base} source={publicBase().source} /></section>
         <section className="card !p-6" aria-label="Baby Chef Studio app"><h2 className="text-[24px]">Baby Chef Studio app</h2>
           <p className="mt-1 text-[13.5px] text-ink-secondary">Update to the newest version, or quit the app. Your recipes, pictures and backups are never touched.</p>
           <AppControls /></section>
