@@ -45,7 +45,7 @@ export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts,
   const href = `/projects/${slug}/images/${img.id}`;
   const expected = expectedFilename({ slug, code: pcode, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextVersion((img.attempts ?? []).map((a: any) => a.number)) });
   return (
-    <div className="card flex flex-col gap-2">
+    <div className="card flex min-w-0 flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0"><div className="flex items-center gap-2"><span className="font-mono text-sm font-bold">{code}</span><Chip>{img.status}</Chip>{img.priority === 'HIGH' && <Chip tone="HIGH">HIGH</Chip>}</div>
           <div className="text-xs text-ink-secondary">{sceneCode(img.scene.order)} {img.scene.title}</div></div>
