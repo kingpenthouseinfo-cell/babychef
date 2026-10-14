@@ -13,6 +13,8 @@ import { SubmitBtn, CopyButton } from '@/components/client';
 import { MakePictureButton } from '@/components/make-picture';
 import { CardUpload } from '@/components/card-upload';
 import { InsertTile } from '@/components/story-bits';
+import { AiReferences } from '@/components/ai-references';
+import { aiReferencesForProject, aiRefOptions } from '@/lib/ai-refs';
 import { Empty, Thumb, fileUrl } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
     getSettings(),
   ]);
   const chatgpt = settings.url_ChatGPT || 'https://chatgpt.com/';
+  const [aiMap, aiOpts] = await Promise.all([aiReferencesForProject(p.id), aiRefOptions(p.id)]);
   const lab = sceneLabels(scenes);
   const f = searchParams.f || 'ALL';
   const shortKeep = new Set(scenes.filter(s => s.shortKeep).map(s => s.id));
@@ -128,6 +131,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                         <form action={rewritePrompt}><input type="hidden" name="imageId" value={i.id} /><SubmitBtn className="btn btn-ghost" pendingText="Writing…">REGENERATE PROMPT</SubmitBtn></form>
                         <Link className="btn btn-ghost" href={`${b}/images/${i.id}`}>EDIT / MORE</Link>
                       </div>
+                      {aiMap.get(i.id) && <div className="mt-3"><AiReferences set={aiMap.get(i.id)!} opts={aiOpts} projectSlug={p.slug} /></div>}
                     </article>
                   );
                 })}

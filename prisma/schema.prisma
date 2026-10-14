@@ -317,6 +317,7 @@ model PlannedImage {
   autoPlanned     Boolean  @default(false) // created by the automatic image plan
   foodState       String?  // exact food state at this moment
   why             String?  // WHY THIS IMAGE IS NEEDED
+  aiRefs          String?  // JSON: manual choices for the AI generation references {prev?, next?, extra:[{k,id}]}
   pos             Int      @default(0) // visible position inside its scene
   title           String
   shotType        String   @default("MAIN NARRATIVE SHOT")

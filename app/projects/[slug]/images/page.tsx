@@ -9,6 +9,9 @@ import { createImage, batchImages } from '@/lib/actions/image';
 import { IMAGE_STATUSES, PRIORITIES, SHOT_TYPES, IMAGE_REF_ROLES } from '@/lib/constants';
 import { imageCode, sceneCode } from '@/lib/util';
 import { AddPictureFields } from '@/components/add-picture-fields';
+import { ProjectReferences } from '@/components/ai-references';
+import { aiReferencesForProject, aiRefOptions, projectMasters } from '@/lib/ai-refs';
+import { getSettings } from '@/lib/settings';
 import { sceneLabels } from '@/lib/scene-label';
 
 export default async function Images({ params, searchParams }: { params: { slug: string }; searchParams: { status?: string; scene?: string; shot?: string; ingredient?: string; keep?: string; add?: string } }) {
@@ -20,6 +23,8 @@ export default async function Images({ params, searchParams }: { params: { slug:
     refPool(p),
   ]);
   const lab = sceneLabels(scenes);
+  const [aiMap, aiOpts, masters, settings] = await Promise.all([aiReferencesForProject(p.id), aiRefOptions(p.id), projectMasters(p.id), getSettings()]);
+  const chatgpt = settings.url_ChatGPT || 'https://chatgpt.com/';
   const nextSeq = all.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
   const st = searchParams.status;
   const list = all.filter(i =>
@@ -46,6 +51,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
         <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" name="keep" value="1" defaultChecked={!!searchParams.keep} />Short Keep</label>
         <button className="btn">Filter</button>
       </form>
+      <ProjectReferences masters={masters} />
       {Object.keys(summary).length > 0 && <div className="text-xs text-ink-secondary">Shot variety: {Object.entries(summary).map(([k, v]) => `${v} × ${k.toLowerCase()}`).join(' · ')}</div>}
 
       {all.length === 0 ? <Empty title="No planned images yet." hint="Add images to your Scenes. A scene can have many images, numbered IMG-001, IMG-002… across the project." /> : list.length === 0 ? <Empty title="No images match this filter." /> : (
@@ -57,7 +63,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
                 <Sel name="role" label="Role" options={IMAGE_REF_ROLES} /><div className="flex gap-2"><button name="op" value="addRef" className="btn btn-sm">Add reference</button><button name="op" value="removeRef" className="btn btn-sm btn-danger" onClick={undefined}>Remove reference</button></div></div>
               <div className="flex items-end"><CopyButton text={list.map(i => imageCode(i.seq)).join(', ')} label="COPY IMAGE IDS (filtered)" className="btn-sm" /></div>
             </div></details>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} />)}</div>
         </form>
       )}
 

@@ -10,6 +10,8 @@ import { ConfirmForm, CopyButton, DirtyForm, SubmitBtn } from '@/components/clie
 import { AddResultButton, AddResultDialog, HoldApprove, PromptEditor, RevealButton } from '@/components/image-workspace';
 import { ReviewPanel } from '@/components/review-panel';
 import { MakePictureButton } from '@/components/make-picture';
+import { AiReferences } from '@/components/ai-references';
+import { aiReferencesFor, aiRefOptions } from '@/lib/ai-refs';
 import { getSettings } from '@/lib/settings';
 import { deleteAttempt, pickReferencesForMe, makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
@@ -76,6 +78,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
   const expected = expectedFilename({ slug: p.slug, code: p.code, sceneOrder: img.scene.order, seq: img.seq, title: img.title, version: nextV });
   const fullCopy = withFilename(img.fullPrompt, expected), contCopy = withFilename(img.contPrompt, expected);
   const settings = await getSettings();
+  const [aiSet, aiOpts] = await Promise.all([aiReferencesFor(p.id, img.id), aiRefOptions(p.id)]);
   const chatgptUrl = settings.url_ChatGPT || 'https://chatgpt.com/';
   const hasPrev = img.refs.some(r => r.role === 'PREVIOUS APPROVED FRAME');
   const makeText = hasPrev && img.contPrompt?.trim() ? contCopy : img.fullPrompt?.trim() ? fullCopy : contCopy;
@@ -198,6 +201,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           ) : (
             <>
           <section className="rounded-[16px] border p-4" style={{ background: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', borderColor: '#F0CDDA' }} aria-label="Make this picture"><MakePictureButton imageId={img.id} text={makeText} chatgpt={chatgptUrl} mark={img.status === 'READY'} /><p className="text-[12.5px] text-ink-secondary">Copies the prompt (with the file name) and opens ChatGPT. Then paste, generate, and save the picture.</p></section>
+          {aiSet && <AiReferences set={aiSet} opts={aiOpts} projectSlug={p.slug} compact />}
           <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
             <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><form action={pickReferencesForMe}><input type="hidden" name="imageId" value={img.id} /><button className="text-[12.5px] font-semibold text-blue-deep hover:underline">Pick the obvious ones for me</button></form></div>
           {prevSuggest && (

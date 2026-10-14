@@ -677,6 +677,28 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   // approve the first picture too so the whole scene is ready for a video clip
   await go('/projects/generate-plan-test/generate?x=all');
   await page.locator('[data-testid=gen-card]').nth(0).locator('button:has-text("MARK APPROVED")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
+  // ---- AI references on the project Images page
+  await go('/projects/generate-plan-test/images');
+  ok('Images page: project references block is at the top', (await page.locator('[data-testid=project-refs]').count()) === 1);
+  const beef = page.locator('div.card:has([data-testid=ai-refs]):has-text("Brown the beef")').first();
+  ok('Card: AI references row shows BEFORE and AFTER tiles', (await beef.locator('[data-testid=ai-ref][data-role=BEFORE]').count()) === 1 && (await beef.locator('[data-testid=ai-ref][data-role=AFTER]').count()) === 1);
+  ok('Card: BEFORE is the closest approved picture in production order', (await beef.locator('[data-testid=ai-ref][data-role=BEFORE]').textContent()).includes('Close-up macro of butter pinched into crumbs'));
+  const dlHref = await beef.locator('[data-role=BEFORE] [data-testid=ai-ref-download]').getAttribute('href');
+  ok('Reference download uses a self-explaining file name', /download=1&name=REF_BEFORE_IMG002/.test(dlHref || ''), dlHref || '');
+  const zipHref = await beef.locator('[data-testid=ai-refs-zip]').getAttribute('href');
+  const zipRes = await page.request.get(BASE + zipHref);
+  const zipBytes = await zipRes.body();
+  ok('DOWNLOAD REFERENCES gives one small ZIP named for the picture', zipRes.status() === 200 && /AI-REFERENCES\.zip/.test(zipRes.headers()['content-disposition'] || '') && zipBytes.slice(0, 2).toString() === 'PK', zipRes.headers()['content-disposition']);
+  ok('ZIP holds the reference files and the notes file', (() => { const t = zipBytes.toString('latin1'); return t.includes('REFERENCE-NOTES.txt') && /REF_BEFORE_IMG002/.test(t); })());
+  await beef.locator('summary:has-text("Change references")').click();
+  await beef.locator('select[aria-label="Change previous reference"]').selectOption({ index: 1 });
+  const chosen = await beef.locator('select[aria-label="Change previous reference"] option:checked').textContent();
+  await beef.locator('button:has-text("CHANGE")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
+  const beef2 = page.locator('div.card:has([data-testid=ai-refs]):has-text("Brown the beef")').first();
+  ok('CHANGE picks another approved picture for BEFORE', (await beef2.locator('[data-testid=ai-ref][data-role=BEFORE]').textContent()).includes(chosen.replace(/^IMG-\d+\s+/, '').trim()), chosen);
+  const refUrl = (await page.locator('a:has-text("OPEN REFERENCE PACK")').first().getAttribute('href'));
+  await go(refUrl);
+  ok('Reference pack page shows the current image and download buttons', (await page.locator('text=CURRENT IMAGE').count()) > 0 && (await page.locator('a:has-text("DOWNLOAD ALL REFERENCES")').count()) === 1 && (await page.locator('a:has-text("DOWNLOAD PREVIOUS")').count()) + (await page.locator('a:has-text("DOWNLOAD NEXT")').count()) >= 1);
   await go('/projects/generate-plan-test/kling');
   ok('Video clips: the picture file name is shown next to each picture used', (await page.locator('[data-testid=scene-image-file]').first().textContent()).startsWith('GPT-S01-IMG001'), await page.locator('[data-testid=scene-image-file]').first().textContent().catch(() => ''));
   await page.locator('button:has-text("Make video prompt")').first().click(); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');

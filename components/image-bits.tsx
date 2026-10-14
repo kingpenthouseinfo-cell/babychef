@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { Chip, Thumb, fileUrl } from './ui';
 import { CopyButton } from './client';
 import { CardUpload } from './card-upload';
+import { MakePictureButton } from './make-picture';
+import { AiReferences } from './ai-references';
+import type { AiRefSet } from '@/lib/ai-refs';
 import { imageCode, sceneCode } from '@/lib/util';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
 import type { ChecklistEntry } from '@/lib/queries';
@@ -35,7 +38,7 @@ export function ChecklistText({ list }: { list: ChecklistEntry[] }) {
   );
 }
 
-export function ImageCard({ img, slug, pcode, checklist, selectable }: { img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
+export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts, chatgpt }: { ai?: AiRefSet; aiOpts?: { images: { value: string; label: string }[]; refs: { value: string; label: string }[] }; chatgpt?: string; img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
   const code = imageCode(img.seq);
   const thumb = img.approvedAttempt?.assetId ?? img.attempts?.[img.attempts.length - 1]?.assetId;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
@@ -51,16 +54,19 @@ export function ImageCard({ img, slug, pcode, checklist, selectable }: { img: an
       <Link href={href}><Thumb id={thumb} alt={img.title} w={480} /></Link>
       <Link href={href} className="font-semibold leading-tight hover:underline">{img.title}</Link>
       <div className="text-xs text-ink-secondary">{img.shotType}</div>
-      <RefThumbs list={checklist} />
+      {!ai && <RefThumbs list={checklist} />}
+      {ai && (img.contPrompt || img.fullPrompt) && <details className="text-[12.5px]"><summary className="cursor-pointer text-ink-secondary">Show prompt</summary><div className="mt-1 max-h-[160px] overflow-y-auto whitespace-pre-wrap rounded-md border border-line bg-surface p-2">{img.contPrompt || img.fullPrompt}</div></details>}
       {blocked && <div className="text-xs font-semibold text-[#8A6216]">Waiting for {imageCode(img.dependsOn.seq)}.</div>}
       <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
         <Link href={href} className="btn btn-sm">Open</Link>
         <CopyButton text={withFilename(img.contPrompt || img.fullPrompt, expected)} label="Copy prompt" className="btn-sm" />
         <CopyButton text={expected} label="Copy filename" variant="secondary" className="btn-sm" />
+        <MakePictureButton imageId={img.id} text={withFilename(img.contPrompt || img.fullPrompt, expected)} chatgpt={chatgpt ?? 'https://chatgpt.com/'} mark={img.status === 'READY'} label="Open ChatGPT" className="btn btn-sm btn-accent" />
         <CardUpload imageId={img.id} label={img.attempts?.length ? 'Replace photo' : 'Upload photo'} className="btn btn-sm btn-copy" />
         <Link href={`${href}#results`} className="btn btn-sm">Import</Link>
         {img.status === 'REVIEW' && <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link>}
       </div>
+      {ai && aiOpts && <AiReferences set={ai} opts={aiOpts} projectSlug={slug} />}
     </div>
   );
 }
