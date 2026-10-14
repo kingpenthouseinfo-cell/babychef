@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { fileUrl } from './ui';
-import { SubmitBtn } from './client';
-import { setAiRef, addAiExtra, removeAiExtra } from '@/lib/actions/ai-refs';
+import { AiRefChangers } from './ai-ref-changers';
 import type { AiMasters, AiRef, AiRefSet } from '@/lib/ai-refs';
 
 type Opts = { images: { value: string; label: string }[]; refs: { value: string; label: string }[] };
@@ -43,26 +42,7 @@ export function AiReferences({ set, opts, projectSlug, compact = true }: { set: 
 }
 
 function Changers({ set, opts }: { set: AiRefSet; opts: Opts }) {
-  const sel = 'input h-9 min-w-[160px] max-w-[260px] text-[12.5px]';
-  return (
-    <div className="mt-2 space-y-2">
-      {(['previous', 'next'] as const).map(w => (
-        <form key={w} action={setAiRef} className="flex flex-wrap items-center gap-2"><input type="hidden" name="imageId" value={set.imageId} /><input type="hidden" name="which" value={w} />
-          <span className="w-24 text-[12px] font-semibold">{w === 'previous' ? 'CHANGE BEFORE' : 'CHANGE AFTER'}</span>
-          <select name="pick" className={sel} aria-label={`Change ${w} reference`} defaultValue=""><option value="">Automatic (closest approved)</option>{opts.images.filter(o => o.value !== set.imageId).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-          <SubmitBtn className="btn btn-sm" pendingText="Saving…">CHANGE</SubmitBtn></form>
-      ))}
-      <form action={addAiExtra} className="flex flex-wrap items-center gap-2"><input type="hidden" name="imageId" value={set.imageId} />
-        <span className="w-24 text-[12px] font-semibold">+ ADD EXTRA</span>
-        <select name="pick" className={sel} aria-label="Add extra reference" defaultValue=""><option value="">Choose a picture…</option>
-          <optgroup label="Approved pictures">{opts.images.filter(o => o.value !== set.imageId).map(o => <option key={o.value} value={`img:${o.value}`}>{o.label}</option>)}</optgroup>
-          {opts.refs.length > 0 && <optgroup label="Reference pictures">{opts.refs.map(o => <option key={o.value} value={`ref:${o.value}`}>{o.label}</option>)}</optgroup>}</select>
-        <SubmitBtn className="btn btn-sm" pendingText="Adding…">+ ADD EXTRA REFERENCE</SubmitBtn></form>
-      {set.refs.filter(r => r.role === 'EXTRA').map(r => (
-        <form key={r.key} action={removeAiExtra} className="flex items-center gap-2 text-[12px]"><input type="hidden" name="imageId" value={set.imageId} /><input type="hidden" name="key" value={r.key} /><span>Extra: {r.title}</span><button className="btn btn-sm btn-ghost" aria-label={`Remove extra ${r.title}`}>✕ remove</button></form>
-      ))}
-    </div>
-  );
+  return <AiRefChangers imageId={set.imageId} extras={set.refs.filter(r => r.role === 'EXTRA').map(r => ({ key: r.key, title: r.title ?? 'extra' }))} opts={opts} />;
 }
 
 /** The project's permanent references, shown once at the top of the Images page. */
