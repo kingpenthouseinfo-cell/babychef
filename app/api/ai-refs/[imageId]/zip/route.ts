@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { buildReferencePack } from '@/lib/ai-refs-pack';
+import { isLocalRequest } from '@/lib/local-only';
+import { verify } from '@/lib/signed-links';
 
 export const dynamic = 'force-dynamic';
 
 /** DOWNLOAD REFERENCES: all the continuity pictures for one picture, as one small ZIP. */
-export async function GET(_req: Request, { params }: { params: { imageId: string } }) {
+export async function GET(req: Request, { params }: { params: { imageId: string } }) {
+  const u = new URL(req.url);
+  if (!isLocalRequest(req) && !verify(`zip:${params.imageId}`, u.searchParams.get('exp'), u.searchParams.get('sig'))) return new NextResponse('This link has expired or is not allowed.', { status: 403 });
   const img = await db.plannedImage.findUnique({ where: { id: params.imageId }, select: { projectId: true } });
   if (!img) return new NextResponse('Not found', { status: 404 });
   const pack = await buildReferencePack(img.projectId, params.imageId);
