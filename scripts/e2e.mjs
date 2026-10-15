@@ -843,15 +843,19 @@ await go('/projects/generate-plan-test/images');
   ok('Fix page opens one picture at a time with 3 big steps', (await page.locator('[data-testid=fix-steps] button').count()) === 3 && (await page.locator('[data-testid=fix-references]').count()) === 1 && (await page.locator('[data-testid=fix-prompt]').count()) === 0);
   const tiles = page.locator('[data-testid=fix-ref]');
   ok('References step lists tickable thumbnails (or says none)', (await tiles.count()) > 0 || (await page.locator('text=No reference pictures yet').count()) === 1);
+  ok('Nothing is pre-picked', (await page.locator('[data-testid=fix-ref][data-on="1"]').count()) === 0);
   if (await tiles.count()) {
-    await tiles.first().locator('input[type=checkbox]').check();
+    ok('Category chips and search bar are on the helpers screen', (await page.locator('[data-testid=fix-cat-all]').count()) === 1 && (await page.locator('[data-testid=fix-search]').count()) === 1);
+    await page.fill('[data-testid=fix-search]', 'zzzznotaphoto');
+    ok('Search with no match says so', (await page.locator('text=No photos called').count()) === 1);
+    await page.fill('[data-testid=fix-search]', '');
+    await tiles.first().click();
+    ok('Picked photo shows its number', (await tiles.first().textContent()).includes('✓ 1'));
     await page.locator('[data-testid=fix-chosen] input').first().fill('copper pot with the beef');
-    await page.locator('[data-testid=fix-add-to-prompt]').click(); await page.waitForSelector('[data-testid=fix-prompt]'); await page.waitForTimeout(800);
-    ok('Add as list puts the note under REFERENCE IMAGES in the prompt', /REFERENCE IMAGES[\s\S]*copper pot with the beef/.test(await page.locator('[data-testid=fix-prompt]').inputValue()));
+    await page.locator('[data-testid=fix-add-to-prompt]').click(); await page.waitForSelector('[data-testid=fix-prompt]'); await page.waitForTimeout(500);
+    ok('Original prompt stays untouched; helpers are added separately at the end', !/REFERENCE IMAGES/.test(await page.locator('[data-testid=fix-prompt]').inputValue()) && /REFERENCE IMAGES[\s\S]*copper pot with the beef/.test(await page.locator('[data-testid=fix-added]').textContent()));
+    ok('Attach-order strip is shown', (await page.locator('[data-testid=fix-attach]').count()) === 1);
     await page.locator('[data-testid=fix-steps] button').first().click();
-    await page.locator('[data-testid=fix-add-sentence]').click(); await page.waitForSelector('[data-testid=fix-prompt]'); await page.waitForTimeout(800);
-    const pv = await page.locator('[data-testid=fix-prompt]').inputValue();
-    ok('Add into prompt text replaces the list with one sentence', /Attached reference pictures/.test(pv) && !/REFERENCE IMAGES/.test(pv));
   } else { await page.locator('[data-testid=fix-steps] button').nth(1).click(); }
   await page.locator('[data-testid=fix-steps] button').nth(2).click();
   ok('Final image step has upload / drop box', (await page.locator('[data-testid=fix-final]').count()) === 1);
