@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-const ITEMS: [string, string][] = [['/settings#general', 'General'], ['/settings#defaults', 'Video Defaults'], ['/settings/bible', 'My Video Style'], ['/templates', 'Prompt Templates'], ['/settings#tools', 'External Tool Links'], ['/settings#naming', 'File Naming'], ['/settings#storage', 'Storage']];
+const ITEMS: [string, string][] = [['/settings#automation', 'Automation'], ['/settings#general', 'General'], ['/settings#defaults', 'Video Defaults'], ['/settings/bible', 'My Video Style'], ['/templates', 'Prompt Templates'], ['/settings#tools', 'External Tool Links'], ['/settings#naming', 'File Naming'], ['/settings#storage', 'Storage']];
 
 export function SettingsNav({ active }: { active: string }) {
   return (
