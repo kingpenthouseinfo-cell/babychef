@@ -114,3 +114,7 @@ Server actions in `lib/actions/*` write; `lib/prompt-builder.ts` is the Prompt B
 ## Drag and drop uploads
 
 Drop a PNG/JPG/WebP picture straight onto any picture card (Picture List, Scenes & Pictures, Images to Generate) — it is saved to the right folder with the right name automatically. Drop an MP4/MOV/WebM onto the Video Clips page (or a clip's page) to record it as the next video attempt. The old "choose file" buttons still work.
+
+## One double-click start + update
+
+Put `Baby Chef Studio.command` on your Desktop (one-time: see the install block in the chat, or copy `scripts/launcher.command`). Double-click it: it starts the app and opens your browser. When you download a newer `baby-chef-studio….zip` from Claude (it lands in Downloads), double-click it again — it installs the newer version (old code folder is kept as `baby-chef-studio-OLD-…`), then starts. Your data in `~/Documents/Baby Chef Studio` is never touched.
