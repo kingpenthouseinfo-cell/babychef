@@ -323,6 +323,7 @@ model PlannedImage {
   flagged         Boolean  @default(false) // marked NEED TO FIX
   flagNote        String?
   flaggedAt       DateTime?
+  fixHelpers      String?  // JSON: NEED TO FIX picks {picked:[keys], notes:{key:text}} so they are not lost
   aiRefs          String?  // JSON: manual choices for the AI generation references {prev?, next?, extra:[{k,id}]}
   pos             Int      @default(0) // visible position inside its scene
   title           String

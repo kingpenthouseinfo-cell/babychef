@@ -1,8 +1,8 @@
 'use client';
-import { useRef, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { autosavePrompt } from '@/lib/actions/image';
-import { saveFlagNote, toggleFlag, uploadFixHelper } from '@/lib/actions/flags';
+import { saveFlagNote, toggleFlag, uploadFixHelper, saveFixHelpers } from '@/lib/actions/flags';
 import { MakePictureButton } from './make-picture';
 import type { FixRef, FixCat } from '@/lib/fix-refs';
 import { HEAD, BODY, PINK_BTN, MINT_BTN, SKY_BTN, SOFT_BTN } from '@/lib/fix-style';
@@ -16,10 +16,10 @@ const CATS: { id: 'all' | FixCat; label: string; color: string }[] = [
 ];
 const catColor = (c: FixCat) => CATS.find(x => x.id === c)!.color;
 
-type Props = { projectId: string; imageId: string; title: string; sceneLine: string; current: { assetId: string; fileName: string } | null; flagNote: string; prompt: string; chatgpt: string; refs: FixRef[]; final: ReactNode };
+type Props = { saved?: { picked: string[]; notes: Record<string, string> }; projectId: string; imageId: string; title: string; sceneLine: string; current: { assetId: string; fileName: string } | null; flagNote: string; prompt: string; chatgpt: string; refs: FixRef[]; final: ReactNode };
 
 /** Fix one flagged picture in 3 steps: 1 what's wrong + pick helpers, 2 the prompt (original + helpers added at the end), 3 the new picture. */
-export function FixWorkspace({ projectId, imageId, title, sceneLine, current, flagNote, prompt, chatgpt, refs: refsIn, final }: Props) {
+export function FixWorkspace({ saved: savedHelpers, projectId, imageId, title, sceneLine, current, flagNote, prompt, chatgpt, refs: refsIn, final }: Props) {
   const [extra, setExtra] = useState<FixRef[]>([]);
   const refs = [...extra, ...refsIn];
   const [upMsg, setUpMsg] = useState('');
@@ -29,8 +29,11 @@ export function FixWorkspace({ projectId, imageId, title, sceneLine, current, fl
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [done, setDone] = useState<number[]>([]);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const validKeys = new Set(refsIn.map(r => r.key));
+  const [picked, setPicked] = useState<string[]>(() => (savedHelpers?.picked ?? []).filter(k => validKeys.has(k)));
+  const [notes, setNotes] = useState<Record<string, string>>(savedHelpers?.notes ?? {});
+  const [helpersSaved, setHelpersSaved] = useState('');
+  const firstRun = useRef(true);
   const [cat, setCat] = useState<'all' | FixCat>('all');
   const [q, setQ] = useState('');
   const [wrong, setWrong] = useState(flagNote);
@@ -39,6 +42,12 @@ export function FixWorkspace({ projectId, imageId, title, sceneLine, current, fl
   const [copied, setCopied] = useState(false);
   const [, start] = useTransition();
   const lastSaved = useRef(prompt), lastWrong = useRef(flagNote);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    setHelpersSaved('Saving…');
+    const t = setTimeout(() => { saveFixHelpers(imageId, picked, notes).then(() => setHelpersSaved('Saved ✓')).catch(() => setHelpersSaved('Could not save — try again')); }, 600);
+    return () => clearTimeout(t);
+  }, [picked, notes, imageId]);
   const go = (n: number) => { if (n > step) setDone(d => Array.from(new Set([...d, step]))); setStep(n); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const saveOrig = () => { if (orig === lastSaved.current) return; lastSaved.current = orig; start(async () => { await autosavePrompt(imageId, 'fullPrompt', orig); setSaved('Saved ✓'); router.refresh(); }); };
   const saveWrong = () => { if (wrong.trim() === lastWrong.current.trim()) return; lastWrong.current = wrong; start(async () => { const fd = new FormData(); fd.set('kind', 'image'); fd.set('id', imageId); fd.set('note', wrong); await saveFlagNote(fd); router.refresh(); }); };
@@ -87,7 +96,7 @@ export function FixWorkspace({ projectId, imageId, title, sceneLine, current, fl
           <label className="mt-4 block text-[18px] font-semibold" style={HEAD} htmlFor="fix-wrong">What’s wrong with it?</label>
           <textarea id="fix-wrong" aria-label="What needs fixing" rows={2} className="mt-1 w-full rounded-[18px] border-2 border-[#F6D3E1] bg-[#FFFAFC] p-3 text-[16px] outline-none focus:border-[#F2A1BF]" placeholder="e.g. The beef still looks pink in the middle" value={wrong} onChange={e => setWrong(e.target.value)} onBlur={saveWrong} />
           <div className="my-6 border-t-2 border-dashed border-[#EADFF3]" />
-          <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-[26px] font-semibold" style={HEAD}>Now pick helper pictures</h3><span className="text-[14px] font-semibold text-[#C2577E]">{picked.length} picked</span></div>
+          <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-[26px] font-semibold" style={HEAD}>Now pick helper pictures</h3><span className="text-[14px] font-semibold text-[#C2577E]">{picked.length} picked{helpersSaved && <span className="ml-2 font-normal text-[#5F8F72]" role="status" data-testid="fix-helpers-saved">· {helpersSaved}</span>}</span></div>
           <p className="text-[14px] text-[#8A8093]">Every photo in this project · tap the ones that show what you want</p>
           <div className="mt-3 rounded-[26px] bg-gradient-to-b from-[#F9F6FE] to-[#F1EBFB] p-3 md:p-4">
             <div className="flex flex-wrap gap-2" role="tablist" aria-label="Photo categories">{CATS.map(c => <button key={c.id} type="button" data-testid={`fix-cat-${c.id}`} onClick={() => setCat(c.id)} className={`rounded-full border px-4 py-2 text-[14px] font-semibold ${cat === c.id ? 'text-white' : 'bg-white'}`} style={cat === c.id ? { background: c.color, borderColor: c.color } : { color: c.color, borderColor: '#EFE6F7' }}>{c.label}</button>)}</div>

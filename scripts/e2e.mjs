@@ -861,6 +861,9 @@ await go('/projects/generate-plan-test/images');
     await page.locator('[data-testid=fix-upload-input]').setInputFiles('/tmp/claude-0/card-upload.png');
     await page.waitForFunction(() => /Added/.test(document.querySelector('[data-testid=fix-upload-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
     ok('Uploading a reference picture by hand adds it and ticks it', (await page.locator('[data-testid=fix-ref]').count()) === before + 1 && (await page.locator('[data-testid=fix-ref][data-on="1"]').count()) === 2 && (await page.locator('[data-testid=fix-chosen]').textContent()).includes('my copper pot') || (await page.locator('[data-testid=fix-chosen] input[aria-label="Note for my copper pot"]').count()) === 1);
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=fix-helpers-saved]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
+    await page.reload({ waitUntil: 'networkidle' });
+    ok('Picked helpers and their notes are still there after reloading the page', (await page.locator('[data-testid=fix-ref][data-on="1"]').count()) === 2 && (await page.locator('[data-testid=fix-chosen] input').first().inputValue()) === 'copper pot with the beef');
   } else { await page.locator('[data-testid=fix-steps] button').nth(1).click(); }
   await page.locator('[data-testid=fix-steps] button').nth(2).click();
   ok('Final image step has upload / drop box', (await page.locator('[data-testid=fix-final]').count()) === 1);

@@ -19,7 +19,7 @@ export async function toggleFlag(fd: FormData) {
   } else {
     const cur = await db.plannedImage.findUniqueOrThrow({ where: { id } });
     const next = on ? on === '1' : !cur.flagged;
-    await db.plannedImage.update({ where: { id }, data: { flagged: next, flaggedAt: next ? new Date() : null, ...(next ? {} : { flagNote: null }) } as any });
+    await db.plannedImage.update({ where: { id }, data: { flagged: next, flaggedAt: next ? new Date() : null, ...(next ? {} : { flagNote: null, fixHelpers: null }) } as any });
   }
   touch();
 }
@@ -37,7 +37,7 @@ export async function resolveFlagged(fd: FormData) {
   const id = str(fd, 'id')!;
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id }, include: { project: true } });
   if (img.status !== 'APPROVED') { const f = new FormData(); f.set('imageId', id); await approveLatest(f); }
-  await db.plannedImage.update({ where: { id }, data: { flagged: false, flaggedAt: null, flagNote: null } as any });
+  await db.plannedImage.update({ where: { id }, data: { flagged: false, flaggedAt: null, flagNote: null, fixHelpers: null } as any });
   touch();
   redirect(`/projects/${img.project.slug}/fix`);
 }
@@ -52,4 +52,12 @@ export async function uploadFixHelper(fd: FormData): Promise<{ key: string; asse
   await uploadReference(f);
   const r = await db.reference.findFirstOrThrow({ where: { projectId, deletedAt: null }, orderBy: { createdAt: 'desc' } });
   return { key: `r:${r.id}`, assetId: r.assetId, title: r.title };
+}
+
+/** NEED TO FIX: remember which helper pictures are ticked and what each is for (so leaving the page loses nothing). */
+export async function saveFixHelpers(imageId: string, picked: string[], notes: Record<string, string>): Promise<{ savedAt: string }> {
+  const clean: Record<string, string> = {};
+  for (const k of picked) if (typeof notes[k] === 'string' && notes[k].trim()) clean[k] = notes[k].slice(0, 500);
+  await db.plannedImage.update({ where: { id: imageId }, data: { fixHelpers: JSON.stringify({ picked: picked.slice(0, 40), notes: clean }) } as any });
+  return { savedAt: new Date().toISOString() };
 }
