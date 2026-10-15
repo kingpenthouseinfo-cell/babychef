@@ -266,6 +266,9 @@ model Scene {
   order          Int      // stable scene number (SC code) — never renumbered
   pos            Int      @default(0) // visible position; inserts/moves change this, not the stable number
   inserted       Boolean  @default(false) // added between existing scenes → shown as 4A, 4B…
+  flagged        Boolean  @default(false) // marked NEED TO FIX
+  flagNote       String?
+  flaggedAt      DateTime?
   title          String
   recipeStep     String?
   purpose        String?
@@ -317,6 +320,9 @@ model PlannedImage {
   autoPlanned     Boolean  @default(false) // created by the automatic image plan
   foodState       String?  // exact food state at this moment
   why             String?  // WHY THIS IMAGE IS NEEDED
+  flagged         Boolean  @default(false) // marked NEED TO FIX
+  flagNote        String?
+  flaggedAt       DateTime?
   aiRefs          String?  // JSON: manual choices for the AI generation references {prev?, next?, extra:[{k,id}]}
   pos             Int      @default(0) // visible position inside its scene
   title           String

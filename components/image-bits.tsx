@@ -5,6 +5,7 @@ import { CardUpload } from './card-upload';
 import { MakePictureButton } from './make-picture';
 import { AiReferences } from './ai-references';
 import { PictureArrange } from './picture-arrange';
+import { FlagButton } from './flag-button';
 import type { AiRefSet } from '@/lib/ai-refs';
 import { imageCode, sceneCode } from '@/lib/util';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
@@ -52,7 +53,7 @@ export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts,
           <div className="text-xs text-ink-secondary">{sceneCode(img.scene.order)} {img.scene.title}</div></div>
         {selectable && <input type="checkbox" name="ids" value={img.id} className="mt-1 h-5 w-5" aria-label={`Select ${code}`} />}
       </div>
-      <Link href={href}><Thumb id={thumb} alt={img.title} w={480} /></Link>
+      <div className="relative"><Link href={href}><Thumb id={thumb} alt={img.title} w={480} /></Link><div className="absolute right-2 top-2"><FlagButton kind="image" id={img.id} flagged={!!img.flagged} /></div>{img.flagged && <div className="absolute bottom-2 left-2 rounded-full bg-[#E5493A] px-2 py-0.5 text-[11px] font-semibold text-white">NEED TO FIX</div>}</div>
       <Link href={href} className="font-semibold leading-tight hover:underline">{img.title}</Link>
       <div className="text-xs text-ink-secondary">{img.shotType}</div>
       {!ai && <RefThumbs list={checklist} />}

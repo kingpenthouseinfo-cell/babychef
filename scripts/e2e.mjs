@@ -798,6 +798,28 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   ok('Test cloud access: EXTERNAL REFERENCE URL READY when the address serves a signed picture', (await page.locator('[data-testid=cloud-result]').textContent()).includes('EXTERNAL REFERENCE URL READY'), await page.locator('[data-testid=cloud-result]').textContent());
   await go('/settings'); await page.click('button:has-text("Clear")'); await page.waitForTimeout(800);
 }
+// ---- red flags + NEED TO FIX tab
+await go('/projects/generate-plan-test/images');
+{
+  const card = () => page.locator('div.card:has(a.font-semibold:text-is("Brown the beef"))').first();
+  ok('Picture List: every picture preview has a flag button', (await page.locator('div.card [data-testid=flag-btn]').count()) >= 3);
+  await card().locator('[data-testid=flag-btn]').click(); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/images');
+  ok('Flagging puts a red flag on the preview', (await card().locator('[data-testid=flag-btn]').getAttribute('aria-pressed')) === 'true' && (await card().locator('text=NEED TO FIX').count()) >= 1);
+  ok('The NEED TO FIX tab shows a count of 1', (await page.locator('[data-testid=flag-count]').textContent()).trim() === '1');
+  await page.locator('[aria-label="Recipe video sections"] a:has-text("NEED TO FIX")').click(); await page.waitForURL(/\/fix$/);
+  ok('NEED TO FIX lists the flagged picture', (await page.locator('[data-testid=flagged-image]').count()) === 1 && (await page.locator('[data-testid=flagged-image]').textContent()).includes('Brown the beef'));
+  await page.fill('textarea[aria-label="What needs fixing"]', 'Beef looks too pink'); await page.locator('textarea[aria-label="What needs fixing"]').blur(); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/fix');
+  ok('The note about what needs fixing is saved', (await page.locator('textarea[aria-label="What needs fixing"]').inputValue()) === 'Beef looks too pink');
+  // scene flag from Scenes & Pictures
+  await go('/projects/generate-plan-test/story');
+  await page.locator('[data-testid=flag-btn][aria-label*="scene"]').first().click(); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/fix');
+  ok('A flagged scene shows in NEED TO FIX too', (await page.locator('[data-testid=flagged-scene]').count()) === 1 && (await page.locator('[data-testid=flag-count]').textContent()).trim() === '2');
+  while (await page.locator('[data-testid=unflag]').count()) { await page.locator('[data-testid=unflag]').first().click(); await page.waitForTimeout(1000); }
+  ok('Removing the flags empties NEED TO FIX', (await page.locator('text=Nothing to fix').count()) === 1 && (await page.locator('[data-testid=flag-count]').count()) === 0);
+}
 // ---- project tabs: Picture List follows Images to Generate
 await go('/projects/generate-plan-test');
 { const tabs = await page.locator('[aria-label="Recipe video sections"] a').allTextContents(); const t = tabs.map(x => x.trim());

@@ -8,6 +8,7 @@ import { imageCode, sceneCode } from '@/lib/util';
 import { statusWords } from '@/lib/words';
 import { Empty, fileUrl } from '@/components/ui';
 import { sceneLabels } from '@/lib/scene-label';
+import { FlagButton } from '@/components/flag-button';
 import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 import { Sortable, Handle } from '@/components/sortable';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
@@ -109,6 +110,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                         </Sortable>
                       )}
                     </details>
+                    <div className="absolute right-14 top-3.5"><FlagButton kind="scene" id={s.id} flagged={s.flagged} /></div>
                     <div className="absolute right-3 top-3.5"><SceneMenu projectId={p.id} scene={{ id: s.id, title: s.title }} images={list.map(i => ({ id: i.id, label: `Picture ${num.get(i.id)} — ${i.title}` }))} first={si === 0} last={si === scenes.length - 1} /></div>
                   </section>
                   <div className="my-3 flex items-center gap-3"><span className="h-px flex-1 bg-line" /><InsertScene projectId={p.id} afterSceneId={s.id} label={si === scenes.length - 1 ? '+ Add next scene' : '+ Add scene here'} /><span className="h-px flex-1 bg-line" /></div>

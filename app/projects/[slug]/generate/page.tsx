@@ -15,6 +15,7 @@ import { CardUpload } from '@/components/card-upload';
 import { InsertTile } from '@/components/story-bits';
 import { AiReferences } from '@/components/ai-references';
 import { PictureArrange } from '@/components/picture-arrange';
+import { FlagButton } from '@/components/flag-button';
 import { aiReferencesForProject, aiRefOptions } from '@/lib/ai-refs';
 import { Empty, Thumb, fileUrl } from '@/components/ui';
 
@@ -107,7 +108,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                     <article key={i.id} id={`pic-${i.id}`} data-testid="gen-card" className="rounded-[14px] border border-line bg-white p-4">
                       <div className="flex flex-wrap items-start gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2"><span className="eyebrow" title={imageCode(i.seq)}>IMAGE {imageLabel(lab.get(s.id) ?? '', idx)}</span><span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${BADGE[st]}`}>{st}{st === 'APPROVED' ? ' ✓' : ''}</span></div>
+                          <div className="flex flex-wrap items-center gap-2"><span className="eyebrow" title={imageCode(i.seq)}>IMAGE {imageLabel(lab.get(s.id) ?? '', idx)}</span><span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${BADGE[st]}`}>{st}{st === 'APPROVED' ? ' ✓' : ''}</span><FlagButton kind="image" id={i.id} flagged={i.flagged} className="!h-7 !w-7" /></div>
                           <h3 className="mt-1 text-[19px]"><Link href={`${b}/images/${i.id}`} className="hover:underline">{i.title}</Link></h3>
                           <dl className="mt-2 grid gap-x-6 gap-y-1 text-[13px] sm:grid-cols-2">
                             <div><dt className="eyebrow">IMAGE TYPE</dt><dd>{i.shotType}</dd></div>

@@ -11,8 +11,9 @@ import { RevealButton } from '@/components/image-workspace';
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
-  const [open, chef, root, s, folder] = await Promise.all([
+  const [open, flaggedN, chef, root, s, folder] = await Promise.all([
     db.projectQuestion.count({ where: { projectId: p.id, status: 'OPEN' } }),
+    Promise.all([db.plannedImage.count({ where: { projectId: p.id, flagged: true } }), db.scene.count({ where: { projectId: p.id, flagged: true } })]).then(([a, b]) => a + b),
     p.babyChefId ? db.babyChef.findUnique({ where: { id: p.babyChefId } }) : null,
     getStorageRoot(), getSettings(), projectFolder(p.id),
   ]);
@@ -32,7 +33,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         </div>
         {watching && <span className="hidden items-center gap-2 whitespace-nowrap rounded-full border border-line-strong px-3 py-1.5 text-[12.5px] text-ink-secondary sm:inline-flex"><span className="h-[7px] w-[7px] rounded-full bg-[#6E9A76]" />Watching Pictures folder</span>}
       </div>
-      <ProjectTabs slug={p.slug} missing={open} />
+      <ProjectTabs slug={p.slug} missing={open} flagged={flaggedN} />
       {children}
     </>
   );
