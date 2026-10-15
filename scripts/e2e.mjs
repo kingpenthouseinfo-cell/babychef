@@ -864,6 +864,7 @@ await go('/projects/generate-plan-test/images');
   await page.locator('[data-testid=flag-btn][aria-label*="scene"]').first().click(); await page.waitForTimeout(1200);
   await go('/projects/generate-plan-test/fix');
   ok('A flagged scene shows in NEED TO FIX too', (await page.locator('[data-testid=flagged-scene]').count()) === 1 && (await page.locator('[data-testid=flag-count]').textContent()).trim() === '2');
+  await go('/projects/generate-plan-test/fix?' + pickHref.split('?')[1]);
   while (await page.locator('[data-testid=unflag]').count()) { await page.locator('[data-testid=unflag]').first().click(); await page.waitForTimeout(1000); }
   ok('Removing the flags empties NEED TO FIX', (await page.locator('text=Nothing to fix').count()) === 1 && (await page.locator('[data-testid=flag-count]').count()) === 0);
 }
