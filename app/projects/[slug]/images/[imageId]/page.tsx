@@ -201,7 +201,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
           ) : (
             <>
           <section className="rounded-[16px] border p-4" style={{ background: 'linear-gradient(135deg,#FDECF1,#F9EEF7)', borderColor: '#F0CDDA' }} aria-label="Make this picture"><MakePictureButton imageId={img.id} text={makeText} chatgpt={chatgptUrl} mark={img.status === 'READY'} /><p className="text-[12.5px] text-ink-secondary">Copies the prompt (with the file name) and opens ChatGPT. Then paste, generate, and save the picture.</p></section>
-          {aiSet && <AiReferences set={aiSet} opts={aiOpts} projectSlug={p.slug} compact />}
+          {aiSet && <AiReferences set={aiSet} opts={aiOpts} projectSlug={p.slug} compact defaultOpen />}
           <section className="rounded-[18px] border p-4" style={{ background: 'linear-gradient(135deg,#E9F1FC,#EEEDFC)', borderColor: '#C9D9EF' }}>
             <div className="mb-3 flex items-center justify-between"><span className="eyebrow text-blue-deep">CHATGPT WILL USE</span><form action={pickReferencesForMe}><input type="hidden" name="imageId" value={img.id} /><button className="text-[12.5px] font-semibold text-blue-deep hover:underline">Pick the obvious ones for me</button></form></div>
           {prevSuggest && (

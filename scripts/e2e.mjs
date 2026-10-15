@@ -690,6 +690,8 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   const zipBytes = await zipRes.body();
   ok('DOWNLOAD REFERENCES gives one small ZIP named for the picture', zipRes.status() === 200 && /AI-REFERENCES\.zip/.test(zipRes.headers()['content-disposition'] || '') && zipBytes.slice(0, 2).toString() === 'PK', zipRes.headers()['content-disposition']);
   ok('ZIP holds the reference files and the notes file', (() => { const t = zipBytes.toString('latin1'); return t.includes('REFERENCE-NOTES.txt') && /REF_BEFORE_IMG002/.test(t); })());
+  ok('AI references are collapsed by default on the card (summary line shows what is ready)', (await beef.locator('[data-testid=ai-refs-toggle]').textContent()).includes('After') && !(await beef.locator('[data-testid=ai-refs] details').first().evaluate(d => d.open)));
+  await beef.locator('[data-testid=ai-refs-toggle]').click();
   await beef.locator('summary:has-text("Change references")').click();
   await beef.locator('select[aria-label="Change previous reference"]').selectOption({ index: 1 });
   const chosen = await beef.locator('select[aria-label="Change previous reference"] option:checked').textContent();

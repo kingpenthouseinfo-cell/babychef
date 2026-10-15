@@ -15,7 +15,7 @@ function Tile({ r, big = false }: { r: AiRef; big?: boolean }) {
     <div className={big ? 'w-full' : 'w-[132px] shrink-0'} data-testid="ai-ref" data-role={r.role}>
       <div className="eyebrow !text-[10.5px]">{r.label}{r.tag ? ` · ${r.tag}` : ''}{r.overridden ? ' ✎' : ''}</div>
       {r.assetId ? (
-        <a href={fileUrl(r.assetId)} target="_blank" rel="noreferrer" title="View full size"><img src={`${fileUrl(r.assetId, big ? 900 : 220)}`} alt={`${r.label} ${r.title ?? ''}`} className={`${big ? 'max-h-[420px] w-full object-contain' : 'aspect-[4/3] w-full object-cover'} mt-1 rounded-md border border-line bg-sunken`} /></a>
+        <a href={fileUrl(r.assetId)} target="_blank" rel="noreferrer" title="View full size"><img loading="lazy" src={`${fileUrl(r.assetId, big ? 900 : 220)}`} alt={`${r.label} ${r.title ?? ''}`} className={`${big ? 'max-h-[420px] w-full object-contain' : 'aspect-[4/3] w-full object-cover'} mt-1 rounded-md border border-line bg-sunken`} /></a>
       ) : <div className={`${big ? 'h-[120px]' : 'aspect-[4/3]'} mt-1 flex items-center justify-center rounded-md border border-dashed border-line-strong bg-sunken text-[11px] text-ink-muted`}>none yet</div>}
       {r.title && <div className="mt-0.5 truncate text-[11.5px] text-ink-secondary" title={r.title}>{r.title}</div>}
       {r.assetId && (
@@ -31,23 +31,29 @@ function Tile({ r, big = false }: { r: AiRef; big?: boolean }) {
   );
 }
 
-/** AI GENERATION REFERENCES for one picture: Baby Chef, kitchen, outfit, the closest approved picture before and after (production order), extras. */
-export function AiReferences({ set, opts, projectSlug, compact = true }: { set: AiRefSet; opts: Opts; projectSlug: string; compact?: boolean }) {
+/** AI GENERATION REFERENCES for one picture. Collapsed by default so cards stay easy to scan; the summary line shows what is ready. */
+export function AiReferences({ set, opts, projectSlug, compact = true, defaultOpen = false }: { set: AiRefSet; opts: Opts; projectSlug: string; compact?: boolean; defaultOpen?: boolean }) {
   const have = set.refs.filter(r => r.assetId).length;
+  const chip = (r: AiRef) => `${r.role === 'BABY' ? 'Baby' : r.role === 'KITCHEN' ? 'Kitchen' : r.role === 'OUTFIT' ? 'Outfit' : r.role === 'BEFORE' ? 'Before' : r.role === 'AFTER' ? 'After' : 'Extra'}${r.assetId ? ' ✓' : ' –'}`;
   return (
-    <div className="rounded-lg border border-line bg-surface p-3" data-testid="ai-refs" aria-label="AI references">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="eyebrow">AI REFERENCES <span className="font-sans normal-case text-ink-muted">· pictures to give ChatGPT for {set.tag}</span></div>
-        <div className="flex flex-wrap gap-1.5">
-          {have > 0 && <a className="btn btn-sm btn-copy" href={`/api/ai-refs/${set.imageId}/zip`} data-testid="ai-refs-zip">DOWNLOAD REFERENCES</a>}
-          <Link className="btn btn-sm" href={`/projects/${projectSlug}/images/${set.imageId}/references`}>OPEN REFERENCE PACK</Link>
+    <div className="rounded-lg border border-line bg-surface" data-testid="ai-refs" aria-label="AI references">
+      <details open={defaultOpen}>
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-[12px]" data-testid="ai-refs-toggle">
+          <span className="eyebrow !text-[10.5px]">▸ AI REFERENCES</span>
+          <span className="text-ink-secondary">{set.refs.map(chip).join(' · ')}</span>
+        </summary>
+        <div className="border-t border-line p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {have > 0 && <a className="btn btn-sm btn-copy" href={`/api/ai-refs/${set.imageId}/zip`} data-testid="ai-refs-zip">DOWNLOAD REFERENCES</a>}
+            <Link className="btn btn-sm" href={`/projects/${projectSlug}/images/${set.imageId}/references`}>OPEN REFERENCE PACK</Link>
+          </div>
+          <div className="mt-2 flex gap-2.5 overflow-x-auto pb-1">{set.refs.map(r => <Tile key={r.key} r={r} />)}</div>
+          <p className="mt-1 text-[11.5px] text-ink-secondary">Continuity only: same Baby Chef, kitchen, outfit and look. The prompt for {set.tag} decides the food and the action.</p>
+          {compact ? (
+            <details className="mt-1.5 text-[12.5px]"><summary className="cursor-pointer font-semibold text-ink-secondary">Change references</summary><Changers set={set} opts={opts} /></details>
+          ) : <Changers set={set} opts={opts} />}
         </div>
-      </div>
-      <div className="mt-2 flex gap-2.5 overflow-x-auto pb-1">{set.refs.map(r => <Tile key={r.key} r={r} />)}</div>
-      <p className="mt-1 text-[11.5px] text-ink-secondary">Continuity only: same Baby Chef, kitchen, outfit and look. The prompt for this picture decides the food and the action.</p>
-      {compact ? (
-        <details className="mt-1.5 text-[12.5px]"><summary className="cursor-pointer font-semibold text-ink-secondary">Change references</summary><Changers set={set} opts={opts} /></details>
-      ) : <Changers set={set} opts={opts} />}
+      </details>
     </div>
   );
 }
