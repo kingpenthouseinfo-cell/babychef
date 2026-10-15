@@ -1,3 +1,4 @@
+import { VideoDrop } from '@/components/drop-zone';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -118,6 +119,7 @@ export default async function KlingPage({ params }: { params: { slug: string; kl
       </Section>
 
       <Section title="Video attempts made in Kling">
+        <VideoDrop klingId={k.id} hint="Drop the video here to save it as this clip" className="rounded-xl border-2 border-dashed border-purple-mid bg-purple-tint/30 p-3 text-center text-[13.5px] font-semibold text-purple-deep" data-testid="video-drop-main">Drag the finished video here — it is saved and named automatically.</VideoDrop>
         <form action={recordKlingAttempt} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="klingId" value={k.id} />
           <div className="sm:col-span-2 rounded-lg border border-purple-mid bg-purple-tint/50 p-3 text-[12.5px]" data-testid="clip-uses"><div className="eyebrow text-purple-deep">THIS VIDEO IS MADE FROM THESE PICTURES</div>{refRows.length ? <ol className="mt-1 space-y-0.5 font-mono">{refRows.map(x => <li key={x.r.id}>@image{x.n} · {x.file ?? 'no picture file yet'}</li>)}</ol> : <p className="mt-1 text-ink-secondary">No pictures attached to this clip yet.</p>}<div className="mt-2 text-ink-secondary">The video you add is saved as <span className="font-mono text-ink">{clipFile}</span></div></div>
           <Text name="externalName" label="External filename / ID" /><Field label="Optional video upload"><input type="file" name="file" accept="video/*" className="input" /></Field>

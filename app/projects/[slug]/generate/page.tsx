@@ -16,6 +16,7 @@ import { InsertTile } from '@/components/story-bits';
 import { AiReferences } from '@/components/ai-references';
 import { PictureArrange } from '@/components/picture-arrange';
 import { FlagButton } from '@/components/flag-button';
+import { ImageDrop } from '@/components/drop-zone';
 import { aiReferencesForProject, aiRefOptions } from '@/lib/ai-refs';
 import { Empty, Thumb, fileUrl } from '@/components/ui';
 
@@ -105,7 +106,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                   const text = withFilename(i.fullPrompt ?? '', filename);
                   const shown = i.approvedAttempt ?? i.attempts[0] ?? null;
                   return (
-                    <article key={i.id} id={`pic-${i.id}`} data-testid="gen-card" className="rounded-[14px] border border-line bg-white p-4">
+                    <ImageDrop key={i.id} imageId={i.id} id={`pic-${i.id}`} data-testid="gen-card" hint={`Drop the picture here to add it to ${imageCode(i.seq)}`} className="rounded-[14px] border border-line bg-white p-4">
                       <div className="flex flex-wrap items-start gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2"><span className="eyebrow" title={imageCode(i.seq)}>IMAGE {imageLabel(lab.get(s.id) ?? '', idx)}</span><span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${BADGE[st]}`}>{st}{st === 'APPROVED' ? ' ✓' : ''}</span><FlagButton kind="image" id={i.id} flagged={i.flagged} className="!h-7 !w-7" /></div>
@@ -135,7 +136,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                       </div>
                       <div className="mt-2"><PictureArrange imageId={i.id} sceneId={i.sceneId} scenes={scenes.map(sc => ({ id: sc.id, label: `Scene ${lab.get(sc.id)} · ${sc.title}` }))} pictures={imgs.map((x, n) => ({ id: x.id, label: `Picture ${n + 1} · ${x.title}` }))} /></div>
                       {aiMap.get(i.id) && <div className="mt-3"><AiReferences set={aiMap.get(i.id)!} opts={aiOpts} projectSlug={p.slug} /></div>}
-                    </article>
+                    </ImageDrop>
                   );
                 })}
                 <InsertTile projectId={p.id} sceneId={s.id} afterImageId={all.length ? all[all.length - 1].id : ''} ctx={{ slug: p.slug, code: p.code, sceneOrder: s.order, nextSeq: imgs.reduce((m, i) => Math.max(m, i.seq), 0) + 1 }} />

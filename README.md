@@ -110,3 +110,7 @@ Baby Chef Studio does **not**: generate images or videos; call the ChatGPT, Clau
 ## Architecture notes (for future versions)
 
 Server actions in `lib/actions/*` write; `lib/prompt-builder.ts` is the Prompt Builder service (context blocks + editable task templates in `lib/task-templates.ts`); `lib/storage.ts` / `lib/files.ts` are the only places that touch the file system; `prisma/schema.prisma` is the data model. Likely future work: cloud/hosted storage and database, authentication, optional AI APIs, automatic image metadata/analysis, team collaboration.
+
+## Drag and drop uploads
+
+Drop a PNG/JPG/WebP picture straight onto any picture card (Picture List, Scenes & Pictures, Images to Generate) — it is saved to the right folder with the right name automatically. Drop an MP4/MOV/WebM onto the Video Clips page (or a clip's page) to record it as the next video attempt. The old "choose file" buttons still work.

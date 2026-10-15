@@ -1,3 +1,6 @@
+import { VideoDrop } from '@/components/drop-zone';
+import type { ReactNode, CSSProperties } from 'react';
+function VideoWrap({ klingId, children, ...rest }: { klingId?: string; className?: string; style?: CSSProperties; children: ReactNode }) { return klingId ? <VideoDrop klingId={klingId} hint="Drop the video here to save it as this clip" {...rest}>{children}</VideoDrop> : <section {...rest}>{children}</section>; }
 import { sceneLabels } from '@/lib/scene-label';
 import { effectiveCode } from '@/lib/project-code';
 import { notFound } from 'next/navigation';
@@ -40,7 +43,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
         const open = ready && !opened && !clip?.status.match(/APPROVED/); if (open) opened = true;
         const clipName = `${effectiveCode(p)}-S${String(sc.order).padStart(2, '0')}-CLIP_v1.mp4`;
         return (
-          <section key={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
+          <VideoWrap key={sc.id} klingId={clip?.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
             <details open={open}>
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-4">
                 <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {lab.get(sc.id)} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>
@@ -58,7 +61,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
               )}
               {!ready && <div className="border-t border-line px-5 py-3 text-[13.5px] text-ink-secondary">{fix ? 'Fix the picture first — then this clip is ready to make.' : 'Make the pictures first — they are gathered here automatically.'}</div>}
             </details>
-          </section>
+          </VideoWrap>
         );
       })}
       {other.length > 0 && (<>

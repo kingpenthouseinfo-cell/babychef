@@ -346,6 +346,21 @@ b = await builder('continuity');
 ok('Continuity review prompt: food state rules + approved images', ['FOOD STATE RULES', 'APPROVED IMAGES', 'REGRESSES'].every(x => b.includes(x)));
 b = await builder('kling-group');
 ok('Kling grouping prompt: approved images + grouping principle', b.includes('APPROVED IMAGES') && b.includes('NOT EVERY STILL IMAGE REQUIRES') && b.includes('SPLIT WARNING IF TOO COMPLEX'));
+
+// drag-and-drop helper: fire a real drop event carrying a File on a locator
+const dropFile = async (loc, name, type, bytes) => {
+  const dt = await page.evaluateHandle(({ name, type, bytes }) => { const d = new DataTransfer(); d.items.add(new File([new Uint8Array(bytes)], name, { type })); return d; }, { name, type, bytes: Array.from(bytes) });
+  await loc.dispatchEvent('dragenter', { dataTransfer: dt }); await loc.dispatchEvent('dragover', { dataTransfer: dt }); await loc.dispatchEvent('drop', { dataTransfer: dt });
+};
+// drag-and-drop a video onto the clip page
+await page.goto(klingUrl, { waitUntil: 'networkidle' });
+const attemptsBefore = await page.locator('text=/GENERATION #|Generation #/').count();
+await dropFile(page.locator('[data-testid=video-drop-main]'), 'kling_dropped.mp4', 'video/mp4', Buffer.from('00000018667479706d703432', 'hex'));
+await page.waitForSelector('[data-testid=drop-msg]', { timeout: 15000 }).catch(() => null); await page.waitForTimeout(1200);
+ok('Dropping a video on the clip page records it', (await page.content()).includes('kling_dropped.mp4') || (await page.content()).includes('-CLIP'));
+await dropFile(page.locator('[data-testid=video-drop-main]'), 'notes.txt', 'text/plain', Buffer.from('hello'));
+await page.waitForTimeout(800);
+ok('Dropping a non-video shows a friendly message', (await page.locator('[data-testid=drop-msg]').allTextContents()).some(t => /Drop a video/.test(t)));
 // record a failed Kling generation, then build the Kling redo prompt
 await page.goto(klingUrl, { waitUntil: 'networkidle' });
 await page.fill('input[name=externalName]', 'kling_try1.mp4'); await page.click('button:has-text("RECORD GENERATION")'); await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
@@ -677,6 +692,20 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   // approve the first picture too so the whole scene is ready for a video clip
   await go('/projects/generate-plan-test/generate?x=all');
   await page.locator('[data-testid=gen-card]').nth(0).locator('button:has-text("MARK APPROVED")').click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1200);
+  // ---- drag-and-drop pictures
+  await go('/projects/generate-plan-test/generate?x=all');
+  const dc = page.locator('[data-testid=gen-card]').nth(2);
+  await dropFile(dc, 'dropped.png', 'image/png', png);
+  await page.waitForSelector('[data-testid=drop-msg]', { timeout: 15000 }).catch(() => null); await page.waitForTimeout(1500);
+  await go('/projects/generate-plan-test/generate?x=all');
+  ok('Dropping a picture on an Images to Generate card uploads it', (await page.locator('[data-testid=gen-card]').nth(2).textContent()).includes('IMAGE UPLOADED'));
+  await dropFile(page.locator('[data-testid=gen-card]').nth(0), 'x.txt', 'text/plain', Buffer.from('hi'));
+  await page.waitForTimeout(800);
+  ok('Dropping a non-picture shows a friendly message', (await page.locator('[data-testid=drop-msg]').allTextContents()).some(t => /PNG, JPG or WebP/.test(t)));
+  await go('/projects/generate-plan-test/images');
+  ok('Picture List cards are drop targets', (await page.locator('div.card[data-drop]').count()) >= 3);
+  await go('/projects/generate-plan-test/story');
+  ok('Scenes & Pictures tiles are drop targets', (await page.locator('[data-sort-id][data-drop]').count()) >= 3);
   // ---- AI references on the project Images page
   await go('/projects/generate-plan-test/images');
   ok('Images page: project references block is at the top', (await page.locator('[data-testid=project-refs]').count()) === 1);

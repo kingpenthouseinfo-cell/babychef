@@ -9,6 +9,7 @@ import { statusWords } from '@/lib/words';
 import { Empty, fileUrl } from '@/components/ui';
 import { sceneLabels } from '@/lib/scene-label';
 import { FlagButton } from '@/components/flag-button';
+import { ImageDrop } from '@/components/drop-zone';
 import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 import { Sortable, Handle } from '@/components/sortable';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
@@ -72,14 +73,14 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                               const st = waitingFor ? 'WAITING' : i.status; const href = `${b}/images/${i.id}`; const t = thumbOf(i);
                               const act = waitingFor ? null : i.status === 'REVIEW' ? ['Check picture', `${href}#review`, 'btn-copy'] : i.status === 'REDO' ? ['Fix it', href, 'btn-danger'] : i.status === 'READY' ? ['Make picture', href, 'btn-accent'] : null;
                               return (
-                                <div key={i.id} id={`pic-${i.id}`} data-sort-id={i.id} className="relative flex flex-wrap items-center gap-3 py-2.5">
+                                <ImageDrop key={i.id} imageId={i.id} id={`pic-${i.id}`} data-sort-id={i.id} hint="Drop the picture here" className="relative flex flex-wrap items-center gap-3 py-2.5">
                                   <Handle label={i.title} />
                                   <span className="h-9 w-12 shrink-0 overflow-hidden rounded-md bg-sunken">{t && <img src={fileUrl(t, 100)} alt="" className="h-full w-full object-cover" />}</span>
                                   <Link href={href} title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} className="min-w-0 flex-1"><span className="block text-[12px] text-ink-secondary">Picture {num.get(i.id)}</span><span className="block truncate text-[14px] font-semibold">{i.title}</span></Link>
                                   <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{waitingFor ? `Waiting for Picture ${waitingFor}` : statusWords(i.status)}</span>
                                   {act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}
                                   <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} />
-                                </div>);
+                                </ImageDrop>);
                             })}
                           </Sortable>
                           <div className="mt-2"><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} label="+ Add picture here" ctx={ctxOf(s)} /></div>
@@ -94,7 +95,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                             const act = waitingFor ? null : i.status === 'REVIEW' ? ['Check picture', `${href}#review`, 'btn-copy'] : i.status === 'REDO' ? ['Fix it', href, 'btn-danger'] : i.status === 'READY' ? ['Make picture', href, 'btn-accent'] : null;
                             const t = thumbOf(i);
                             return (
-                              <div key={i.id} id={`pic-${i.id}`} data-sort-id={i.id} className="relative flex scroll-mt-24 flex-col rounded-[14px] border border-line p-2.5">
+                              <ImageDrop key={i.id} imageId={i.id} id={`pic-${i.id}`} data-sort-id={i.id} hint="Drop the picture here" className="relative flex scroll-mt-24 flex-col rounded-[14px] border border-line p-2.5">
                                 <Link href={href} title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} className="block">
                                   <div className={`aspect-[4/3] overflow-hidden rounded-[10px] ${t ? (i.status === 'REDO' ? 'ring-2 ring-inset ring-[#E9A99B]' : '') : 'border border-dashed border-line-strong bg-[#FAF9FC]'}`}>{t ? <img src={fileUrl(t, 400)} alt={i.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center font-serif text-[34px] text-[#C9C5D1]">{num.get(i.id)}</div>}</div>
                                   <div className="mt-2 text-[12px] text-ink-secondary">Picture {num.get(i.id)}</div>
@@ -103,7 +104,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                 <div className="absolute left-3.5 top-3.5 rounded-md bg-white/85 backdrop-blur"><Handle label={i.title} /></div>
                                 <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} /></div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}</div>
-                              </div>
+                              </ImageDrop>
                             );
                           })}
                           <InsertTile projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} ctx={ctxOf(s)} />
