@@ -838,8 +838,26 @@ await go('/projects/generate-plan-test/images');
   ok('The NEED TO FIX tab shows a count of 1', (await page.locator('[data-testid=flag-count]').textContent()).trim() === '1');
   await page.locator('[aria-label="Recipe video sections"] a:has-text("NEED TO FIX")').click(); await page.waitForURL(/\/fix$/);
   ok('NEED TO FIX lists the flagged picture', (await page.locator('[data-testid=flagged-image]').count()) === 1 && (await page.locator('[data-testid=flagged-image]').textContent()).includes('Brown the beef'));
+  const pickHref = await page.locator('[data-testid=flagged-image]').getAttribute('href');
+  await page.locator('[data-testid=flagged-image]').click(); await page.waitForURL(/pick=/); await page.waitForLoadState('networkidle');
+  ok('Fix page opens one picture at a time with 3 big steps', (await page.locator('[data-testid=fix-steps] button').count()) === 3 && (await page.locator('[data-testid=fix-references]').count()) === 1 && (await page.locator('[data-testid=fix-prompt]').count()) === 0);
+  const tiles = page.locator('[data-testid=fix-ref]');
+  ok('References step lists tickable thumbnails (or says none)', (await tiles.count()) > 0 || (await page.locator('text=No reference pictures yet').count()) === 1);
+  if (await tiles.count()) {
+    await tiles.first().locator('input[type=checkbox]').check();
+    await page.locator('[data-testid=fix-chosen] input').first().fill('copper pot with the beef');
+    await page.locator('[data-testid=fix-add-to-prompt]').click(); await page.waitForSelector('[data-testid=fix-prompt]'); await page.waitForTimeout(800);
+    ok('Add as list puts the note under REFERENCE IMAGES in the prompt', /REFERENCE IMAGES[\s\S]*copper pot with the beef/.test(await page.locator('[data-testid=fix-prompt]').inputValue()));
+    await page.locator('[data-testid=fix-steps] button').first().click();
+    await page.locator('[data-testid=fix-add-sentence]').click(); await page.waitForSelector('[data-testid=fix-prompt]'); await page.waitForTimeout(800);
+    const pv = await page.locator('[data-testid=fix-prompt]').inputValue();
+    ok('Add into prompt text replaces the list with one sentence', /Attached reference pictures/.test(pv) && !/REFERENCE IMAGES/.test(pv));
+  } else { await page.locator('[data-testid=fix-steps] button').nth(1).click(); }
+  await page.locator('[data-testid=fix-steps] button').nth(2).click();
+  ok('Final image step has upload / drop box', (await page.locator('[data-testid=fix-final]').count()) === 1);
+  await page.locator('[data-testid=fix-steps] button').first().click();
   await page.fill('textarea[aria-label="What needs fixing"]', 'Beef looks too pink'); await page.locator('textarea[aria-label="What needs fixing"]').blur(); await page.waitForTimeout(1200);
-  await go('/projects/generate-plan-test/fix');
+  await go('/projects/generate-plan-test/fix?' + pickHref.split('?')[1]);
   ok('The note about what needs fixing is saved', (await page.locator('textarea[aria-label="What needs fixing"]').inputValue()) === 'Beef looks too pink');
   // scene flag from Scenes & Pictures
   await go('/projects/generate-plan-test/story');

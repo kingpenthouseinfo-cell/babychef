@@ -1,7 +1,9 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { db } from '../db';
+import { redirect } from 'next/navigation';
 import { str } from '../util';
+import { approveLatest } from './generate';
 
 const touch = () => revalidatePath('/', 'layout');
 
@@ -27,4 +29,14 @@ export async function saveFlagNote(fd: FormData) {
   if (kind === 'scene') await db.scene.update({ where: { id }, data: { flagNote: note } });
   else await db.plannedImage.update({ where: { id }, data: { flagNote: note } as any });
   touch();
+}
+
+/** Picture fixed: approve the newest uploaded picture, take the flag off and go to the next flagged picture. */
+export async function resolveFlagged(fd: FormData) {
+  const id = str(fd, 'id')!;
+  const img = await db.plannedImage.findUniqueOrThrow({ where: { id }, include: { project: true } });
+  if (img.status !== 'APPROVED') { const f = new FormData(); f.set('imageId', id); await approveLatest(f); }
+  await db.plannedImage.update({ where: { id }, data: { flagged: false, flaggedAt: null, flagNote: null } as any });
+  touch();
+  redirect(`/projects/${img.project.slug}/fix`);
 }
