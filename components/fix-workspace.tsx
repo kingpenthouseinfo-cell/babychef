@@ -2,7 +2,7 @@
 import { useRef, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { autosavePrompt } from '@/lib/actions/image';
-import { saveFlagNote, toggleFlag } from '@/lib/actions/flags';
+import { saveFlagNote, toggleFlag, uploadFixHelper } from '@/lib/actions/flags';
 import { MakePictureButton } from './make-picture';
 import type { FixRef, FixCat } from '@/lib/fix-refs';
 import { HEAD, BODY, PINK_BTN, MINT_BTN, SKY_BTN, SOFT_BTN } from '@/lib/fix-style';
@@ -16,10 +16,16 @@ const CATS: { id: 'all' | FixCat; label: string; color: string }[] = [
 ];
 const catColor = (c: FixCat) => CATS.find(x => x.id === c)!.color;
 
-type Props = { imageId: string; title: string; sceneLine: string; current: { assetId: string; fileName: string } | null; flagNote: string; prompt: string; chatgpt: string; refs: FixRef[]; final: ReactNode };
+type Props = { projectId: string; imageId: string; title: string; sceneLine: string; current: { assetId: string; fileName: string } | null; flagNote: string; prompt: string; chatgpt: string; refs: FixRef[]; final: ReactNode };
 
 /** Fix one flagged picture in 3 steps: 1 what's wrong + pick helpers, 2 the prompt (original + helpers added at the end), 3 the new picture. */
-export function FixWorkspace({ imageId, title, sceneLine, current, flagNote, prompt, chatgpt, refs, final }: Props) {
+export function FixWorkspace({ projectId, imageId, title, sceneLine, current, flagNote, prompt, chatgpt, refs: refsIn, final }: Props) {
+  const [extra, setExtra] = useState<FixRef[]>([]);
+  const refs = [...extra, ...refsIn];
+  const [upMsg, setUpMsg] = useState('');
+  const [upName, setUpName] = useState('');
+  const [over, setOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [done, setDone] = useState<number[]>([]);
@@ -37,6 +43,23 @@ export function FixWorkspace({ imageId, title, sceneLine, current, flagNote, pro
   const saveOrig = () => { if (orig === lastSaved.current) return; lastSaved.current = orig; start(async () => { await autosavePrompt(imageId, 'fullPrompt', orig); setSaved('Saved ✓'); router.refresh(); }); };
   const saveWrong = () => { if (wrong.trim() === lastWrong.current.trim()) return; lastWrong.current = wrong; start(async () => { const fd = new FormData(); fd.set('kind', 'image'); fd.set('id', imageId); fd.set('note', wrong); await saveFlagNote(fd); router.refresh(); }); };
   const unflag = () => start(async () => { const fd = new FormData(); fd.set('kind', 'image'); fd.set('id', imageId); fd.set('on', '0'); await toggleFlag(fd); router.push(location.pathname); router.refresh(); });
+  const upload = (files: File[]) => {
+    const pics = files.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
+    if (!pics.length) { setUpMsg('Choose a PNG, JPG or WebP picture.'); return; }
+    if (pics.some(f => /\.(heic|heif)$/i.test(f.name))) { setUpMsg('HEIC is not supported yet. Export it as JPG or PNG first.'); return; }
+    setUpMsg('Uploading…');
+    start(async () => {
+      try {
+        for (const f of pics) {
+          const fd = new FormData(); fd.set('projectId', projectId); fd.set('file', f); if (upName.trim() && pics.length === 1) fd.set('title', upName.trim());
+          const r = await uploadFixHelper(fd);
+          setExtra(x => [{ key: r.key, assetId: r.assetId, cat: 'reference', label: 'Reference', title: r.title, hint: '' }, ...x]);
+          setPicked(p => [...p, r.key]);
+        }
+        setUpName(''); setCat('all'); setQ(''); setUpMsg(`Added ✓ — ${pics.length === 1 ? 'it is' : 'they are'} ticked below. Say what ${pics.length === 1 ? 'it is' : 'they are'} for.`); router.refresh();
+      } catch (e: any) { setUpMsg(e?.message || 'Upload failed. Try again.'); }
+    });
+  };
   const toggle = (k: string) => setPicked(p => (p.includes(k) ? p.filter(x => x !== k) : [...p, k]));
   const chosen = picked.map(k => refs.find(r => r.key === k)!).filter(Boolean);
   const block = chosen.length ? `${START}\n${chosen.map((r, n) => `Reference ${n + 1} (${r.title}): ${(notes[r.key] ?? '').trim() || 'use for continuity'}`).join('\n')}\n${END}` : '';
@@ -80,6 +103,16 @@ export function FixWorkspace({ imageId, title, sceneLine, current, flagNote, pro
                 </button>); })}
             </div>
             {shownRefs.length === 0 && <p className="py-6 text-center text-[14px] text-[#8A8093]">{q.trim() ? `No photos called “${q.trim()}”. Try another word.` : 'No photos here yet. Add some on the References page.'}</p>}
+          </div>
+          <div className={`mt-4 rounded-[26px] border-[3px] border-dashed p-4 text-center transition ${over ? 'border-[#9A80CC] bg-[#F1EBFB]' : 'border-[#DCCFF0] bg-[#FBF9FE]'}`} data-testid="fix-upload"
+            onDragOver={e => { if (Array.from(e.dataTransfer?.types ?? []).includes('Files')) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)}
+            onDrop={e => { e.preventDefault(); setOver(false); upload(Array.from(e.dataTransfer.files)); }}>
+            <div className="text-[19px] font-semibold" style={HEAD}>Don’t see the one you want?</div>
+            <p className="text-[13.5px] text-[#8A8093]">Upload a reference picture yourself — drag it here or choose a file.</p>
+            <input className="mx-auto mt-3 block w-full max-w-[420px] rounded-full border border-[#EADFF3] bg-white px-5 py-2.5 text-center text-[14px] outline-none focus:border-[#C6B3E6]" placeholder="What is it? (optional) e.g. my copper pot" aria-label="Name for the uploaded picture" value={upName} onChange={e => setUpName(e.target.value)} />
+            <input ref={fileRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className="sr-only" data-testid="fix-upload-input" aria-label="Upload a reference picture" onChange={e => { upload(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
+            <button type="button" className={`${SOFT_BTN} mt-3`} onClick={() => fileRef.current?.click()} data-testid="fix-upload-btn">+ Upload a reference picture</button>
+            {upMsg && <div className="mt-2 text-[13px] font-semibold text-[#5F8F72]" role="status" data-testid="fix-upload-msg">{upMsg}</div>}
           </div>
           {chosen.length > 0 && (
             <div className="mt-4 rounded-[26px] bg-gradient-to-b from-[#FFF5F9] to-[#FFEAF2] p-4" data-testid="fix-chosen">

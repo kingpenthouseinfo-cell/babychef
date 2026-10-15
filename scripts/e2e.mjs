@@ -856,6 +856,11 @@ await go('/projects/generate-plan-test/images');
     ok('Original prompt stays untouched; helpers are added separately at the end', !/REFERENCE IMAGES/.test(await page.locator('[data-testid=fix-prompt]').inputValue()) && /REFERENCE IMAGES[\s\S]*copper pot with the beef/.test(await page.locator('[data-testid=fix-added]').textContent()));
     ok('Attach-order strip is shown', (await page.locator('[data-testid=fix-attach]').count()) === 1);
     await page.locator('[data-testid=fix-steps] button').first().click();
+    const before = await page.locator('[data-testid=fix-ref]').count();
+    await page.fill('[aria-label="Name for the uploaded picture"]', 'my copper pot');
+    await page.locator('[data-testid=fix-upload-input]').setInputFiles('/tmp/claude-0/card-upload.png');
+    await page.waitForFunction(() => /Added/.test(document.querySelector('[data-testid=fix-upload-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
+    ok('Uploading a reference picture by hand adds it and ticks it', (await page.locator('[data-testid=fix-ref]').count()) === before + 1 && (await page.locator('[data-testid=fix-ref][data-on="1"]').count()) === 2 && (await page.locator('[data-testid=fix-chosen]').textContent()).includes('my copper pot') || (await page.locator('[data-testid=fix-chosen] input[aria-label="Note for my copper pot"]').count()) === 1);
   } else { await page.locator('[data-testid=fix-steps] button').nth(1).click(); }
   await page.locator('[data-testid=fix-steps] button').nth(2).click();
   ok('Final image step has upload / drop box', (await page.locator('[data-testid=fix-final]').count()) === 1);

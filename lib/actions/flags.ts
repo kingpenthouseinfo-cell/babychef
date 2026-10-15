@@ -4,6 +4,7 @@ import { db } from '../db';
 import { redirect } from 'next/navigation';
 import { str } from '../util';
 import { approveLatest } from './generate';
+import { uploadReference } from './babychef';
 
 const touch = () => revalidatePath('/', 'layout');
 
@@ -39,4 +40,16 @@ export async function resolveFlagged(fd: FormData) {
   await db.plannedImage.update({ where: { id }, data: { flagged: false, flaggedAt: null, flagNote: null } as any });
   touch();
   redirect(`/projects/${img.project.slug}/fix`);
+}
+
+/** NEED TO FIX: upload a helper picture by hand. It is saved as a project reference (so it stays available) and handed back to be ticked. */
+export async function uploadFixHelper(fd: FormData): Promise<{ key: string; assetId: string; title: string }> {
+  const projectId = str(fd, 'projectId')!;
+  const file = fd.get('file') as File | null;
+  if (!file || !file.size) throw new Error('Choose a picture');
+  if (!/^image\//.test(file.type) && !/\.(png|jpe?g|webp)$/i.test(file.name)) throw new Error('Choose a PNG, JPG or WebP picture');
+  const f = new FormData(); f.set('projectId', projectId); f.set('file', file); f.set('category', 'Other'); f.set('title', (str(fd, 'title') || file.name.replace(/\.[^.]+$/, '')).slice(0, 80));
+  await uploadReference(f);
+  const r = await db.reference.findFirstOrThrow({ where: { projectId, deletedAt: null }, orderBy: { createdAt: 'desc' } });
+  return { key: `r:${r.id}`, assetId: r.assetId, title: r.title };
 }

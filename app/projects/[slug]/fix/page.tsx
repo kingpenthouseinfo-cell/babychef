@@ -72,7 +72,7 @@ export default async function NeedToFix({ params, searchParams }: { params: { sl
       {cur && (
         <section aria-label="Fix this picture" data-testid="fix-panel">
           <Link href={`${b}/fix`} className="mb-3 inline-block text-[15px] font-semibold text-[#6F93C9]" data-testid="fix-back">← All fix-ups ({flaggedImgs.length})</Link>
-          <FixWorkspace key={cur.id} imageId={cur.id} title={cur.title} sceneLine={sceneLine(cur)} current={shown ? { assetId: shown.assetId, fileName: shown.asset?.displayName ?? '' } : null} flagNote={cur.flagNote ?? ''} prompt={cur.fullPrompt ?? ''} chatgpt={chatgpt} refs={cands} final={
+          <FixWorkspace key={cur.id} projectId={p.id} imageId={cur.id} title={cur.title} sceneLine={sceneLine(cur)} current={shown ? { assetId: shown.assetId, fileName: shown.asset?.displayName ?? '' } : null} flagNote={cur.flagNote ?? ''} prompt={cur.fullPrompt ?? ''} chatgpt={chatgpt} refs={cands} final={
             <div>
               <h2 className="text-[32px] font-semibold" style={HEAD}>Drop in the new picture</h2>
               <p className="text-[#8A8093]">It’s saved with the right name automatically.</p>
