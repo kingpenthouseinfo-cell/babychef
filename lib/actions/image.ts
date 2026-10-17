@@ -9,7 +9,7 @@ import { importFile, nextCode, projectFolder, moveAssetToFolder } from '../files
 import { bool, imageCode, pickText, sceneCode, str, strRaw, int, parseJson } from '../util';
 import { logActivity } from '../activity';
 import { readDownload, removeDownload } from '../downloads';
-import { snapshotPrompts } from '../prompt-versions';
+import { snapshotPrompts, versionPrompt } from '../prompt-versions';
 import { registerAttempt } from '../results';
 import { expectedFilename, nextVersion } from '../naming';
 import { IMAGE_STATUSES, PRIORITIES } from '../constants';
@@ -309,4 +309,16 @@ export async function deleteAttempt(fd: FormData) {
   await db.plannedImage.update({ where: { id: a.imageId }, data: { status, attemptCount: left.length } });
   await logActivity(`Version ${a.number} of ${imageCode(a.image.seq)} deleted`, null, a.image.projectId);
   touch();
+}
+
+/** Image Prompts page: save one picture's full prompt (the old text is kept as a version). */
+export async function saveImagePrompt(imageId: string, text: string): Promise<{ savedAt: string }> {
+  const old = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId } });
+  if (old.fullPrompt !== text) await versionPrompt(imageId, 'FULL', old.fullPrompt ?? '', text, 'Edited on Image Prompts');
+  const data: any = { fullPrompt: text };
+  if (text.trim() && old.promptStatus === 'NOT STARTED') data.promptStatus = 'DRAFT';
+  if (text.trim() && old.status === 'PLANNED') data.status = 'PROMPT DRAFT';
+  await db.plannedImage.update({ where: { id: imageId }, data });
+  touch();
+  return { savedAt: new Date().toISOString() };
 }

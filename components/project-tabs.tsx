@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/generate', 'Images to Generate'], ['/images', 'Picture List'], ['/fix', 'NEED TO FIX'], ['/kling', 'Video Clips'], ['/publishing', 'Post Video']];
+const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/generate', 'Images to Generate'], ['/images', 'Picture List'], ['/image-prompts', 'Image Prompts'], ['/fix', 'NEED TO FIX'], ['/kling', 'Video Clips'], ['/video-prompts', 'Video Prompts'], ['/publishing', 'Post Video']];
 const MORE: { head: string; items: [string, string, boolean?][] }[] = [
   { head: 'Style', items: [['/settings/bible', 'My Video Style', true], ['/continuity', 'Keep It Consistent'], ['/references', 'Example Pictures']] },
   { head: 'Work', items: [['/ingredients', 'Ingredients'], ['/script', 'Script'], ['/short', 'Short/Reel'], ['/queue', 'Pictures to Make', true], ['/files', 'Files']] },

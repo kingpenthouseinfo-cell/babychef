@@ -150,3 +150,12 @@ export async function reorderKlingRefs(klingId: string, orderedIds: string[]) {
   await db.$transaction(valid.map((id, i) => db.klingRef.update({ where: { id }, data: { order: i } })));
   touch();
 }
+
+/** Video Prompts page: save one clip's prompt (the old text is kept as a version). */
+export async function saveClipPrompt(klingId: string, text: string): Promise<{ savedAt: string }> {
+  const old = await db.klingClip.findUniqueOrThrow({ where: { id: klingId } });
+  await snapshotPrompt(klingId, old.finalPrompt, text, 'Edited on Video Prompts');
+  await db.klingClip.update({ where: { id: klingId }, data: { finalPrompt: text, ...(text.trim() && old.status === 'PLANNED' ? { status: 'DRAFT' } : {}) } });
+  touch();
+  return { savedAt: new Date().toISOString() };
+}

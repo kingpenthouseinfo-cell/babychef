@@ -431,7 +431,7 @@ const c = await ctx.request.get(`${BASE}/api/projects/${slug}/export?format=csv&
 // ---- Responsive + console
 for (const [w, h, n] of [[1440, 900, 'desktop'], [820, 1100, 'tablet'], [390, 844, 'phone']]) {
   await page.setViewportSize({ width: w, height: h });
-  for (const u of [`/projects/${slug}/images`, img1Url.replace(BASE, ''), '/queue', `/projects/${slug}/builder?type=plan`]) {
+  for (const u of [`/projects/${slug}/images`, `/projects/${slug}/image-prompts`, `/projects/${slug}/video-prompts`, img1Url.replace(BASE, ''), '/queue', `/projects/${slug}/builder?type=plan`]) {
     await go(u);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     ok(`No horizontal overflow @${n} ${u.split('/').slice(-1)[0].slice(0, 20)}`, !overflow);
@@ -889,6 +889,38 @@ await go('/projects/generate-plan-test');
 // ---- Settings: update / quit controls live inside the app
 await go('/settings');
 ok('Settings: app section has Update now, Check again and Quit (not clicked: it would stop the test server)', (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("UPDATE NOW")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("QUIT")').count()) === 1 && (await page.locator('section[aria-label="Baby Chef Studio app"] button:has-text("Check again")').count()) === 1);
+// ---- Image Prompts + Video Prompts tabs
+{
+  await go('/projects/generate-plan-test/image-prompts');
+  const rows = page.locator('[data-testid=image-prompt-row]');
+  ok('Image Prompts: one row per picture with thumbnail slot, prompt and 4 buttons', (await rows.count()) >= 3 && (await rows.first().locator('textarea').count()) === 1 && (await rows.first().locator('[data-testid=prompt-copy], [data-testid=prompt-edit], [data-testid=prompt-save], [data-testid=prompt-clear]').count()) === 4);
+  ok('Image Prompts tab is in the tab bar', (await page.locator('[aria-label="Recipe video sections"] a:has-text("Image Prompts")').count()) === 1 && (await page.locator('[aria-label="Recipe video sections"] a:has-text("Video Prompts")').count()) === 1);
+  const r0 = rows.first(); const orig = await r0.locator('textarea').inputValue();
+  ok('Prompt is read-only until EDIT is pressed', (await r0.locator('textarea').getAttribute('readonly')) !== null);
+  await r0.locator('[data-testid=prompt-copy]').click(); await page.waitForTimeout(500);
+  ok('COPY says Copied', (await r0.locator('[data-testid=prompt-msg]').textContent()).includes('Copied'));
+  await r0.locator('[data-testid=prompt-edit]').click();
+  ok('EDIT makes the prompt editable and SAVE needs a change', (await r0.locator('textarea').getAttribute('readonly')) === null && (await r0.locator('[data-testid=prompt-save]').isDisabled()));
+  await r0.locator('textarea').fill(orig + '\nEXTRA LINE FROM TEST');
+  await r0.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/image-prompts');
+  ok('SAVE keeps the edited prompt after reload', (await page.locator('[data-testid=image-prompt-row]').first().locator('textarea').inputValue()).includes('EXTRA LINE FROM TEST'));
+  const r1 = page.locator('[data-testid=image-prompt-row]').first();
+  await r1.locator('[data-testid=prompt-clear]').click();
+  ok('CLEAR PROMPT empties the box but nothing is lost until SAVE', (await r1.locator('textarea').inputValue()) === '');
+  await r1.locator('[data-testid=prompt-edit]').click();
+  ok('CANCEL after clearing brings the prompt back', (await r1.locator('textarea').inputValue()).includes('EXTRA LINE FROM TEST'));
+  await r1.locator('[data-testid=prompt-edit]').click(); await r1.locator('textarea').fill(orig); await r1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+  await go(`/projects/${slug}/video-prompts`);
+  const vrows = page.locator('[data-testid=video-prompt-row]');
+  ok('Video Prompts: one row per clip with its pictures, prompt and 4 buttons', (await vrows.count()) >= 1 && (await vrows.first().locator('textarea').count()) === 1 && (await vrows.first().locator('[data-testid=prompt-copy], [data-testid=prompt-edit], [data-testid=prompt-save], [data-testid=prompt-clear]').count()) === 4);
+  const v0 = vrows.first(); const vorig = await v0.locator('textarea').inputValue();
+  await v0.locator('[data-testid=prompt-edit]').click(); await v0.locator('textarea').fill(vorig + '\nVIDEO EXTRA'); await v0.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1200);
+  await go(`/projects/${slug}/video-prompts`);
+  ok('Video prompt SAVE persists', (await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes('VIDEO EXTRA'));
+  const v1 = page.locator('[data-testid=video-prompt-row]').first();
+  await v1.locator('[data-testid=prompt-edit]').click(); await v1.locator('textarea').fill(vorig); await v1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+}
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
