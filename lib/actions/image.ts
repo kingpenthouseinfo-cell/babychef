@@ -322,3 +322,35 @@ export async function saveImagePrompt(imageId: string, text: string): Promise<{ 
   touch();
   return { savedAt: new Date().toISOString() };
 }
+
+/** Image Prompts import: where would each pasted picture description go? (nothing is saved here) */
+export type ImageImportItem = { seqs: number[]; title: string; prompt: string; target: string; targetLabel: string; hasPrompt: boolean };
+export async function previewImageImport(projectId: string, text: string): Promise<{ items: ImageImportItem[]; options: { value: string; label: string }[]; shared: string }> {
+  const { parseImagePlan } = await import('../image-import');
+  const plan = parseImagePlan(text);
+  const imgs = await db.plannedImage.findMany({ where: { projectId }, orderBy: [{ scene: { pos: 'asc' } }, { pos: 'asc' }], select: { id: true, seq: true, title: true, fullPrompt: true } });
+  const items: ImageImportItem[] = plan.sections.map(sec => {
+    const im = imgs.find(i => i.seq === sec.seq);
+    return { seqs: [sec.seq], title: sec.title, prompt: sec.prompt, target: im ? `img:${im.id}` : '', targetLabel: im ? `${imageCode(im.seq)} · ${im.title}` : '', hasPrompt: !!im?.fullPrompt?.trim() };
+  });
+  return { items, shared: plan.shared, options: imgs.map(i => ({ value: `img:${i.id}`, label: `${imageCode(i.seq)} · ${i.title}` })) };
+}
+
+/** Image Prompts import: save the checked prompts into their pictures (old prompt text is kept as a version). */
+export async function applyImageImport(items: { target: string; prompt: string }[]): Promise<{ saved: number }> {
+  let saved = 0;
+  for (const it of items) {
+    if (!it.target.startsWith('img:') || !it.prompt.trim()) continue;
+    const id = it.target.slice(4);
+    const old = await db.plannedImage.findUnique({ where: { id } });
+    if (!old) continue;
+    if (old.fullPrompt !== it.prompt) await versionPrompt(id, 'FULL', old.fullPrompt ?? '', it.prompt, 'Imported on Image Prompts');
+    const data: any = { fullPrompt: it.prompt };
+    if (old.promptStatus === 'NOT STARTED') data.promptStatus = 'DRAFT';
+    if (old.status === 'PLANNED') data.status = 'PROMPT DRAFT';
+    await db.plannedImage.update({ where: { id }, data });
+    saved++;
+  }
+  touch();
+  return { saved };
+}

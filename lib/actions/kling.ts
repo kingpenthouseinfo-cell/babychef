@@ -25,12 +25,12 @@ export async function createKling(fd: FormData) {
 }
 
 /** One video clip per scene: gathers the scene's pictures that look good, in order, then opens the clip. */
-export async function makeClipForScene(fd: FormData) {
-  const sceneId = str(fd, 'sceneId')!;
+/** Find or make the video clip of a scene (pictures gathered from the approved ones). No redirect. */
+async function ensureClipForScene(sceneId: string) {
   const sc = await db.scene.findUniqueOrThrow({ where: { id: sceneId } });
   const p = await db.project.findUniqueOrThrow({ where: { id: sc.projectId } });
   const existing = await db.klingClip.findFirst({ where: { projectId: p.id, scenes: { some: { sceneId } } } });
-  if (existing) { redirect(`/projects/${p.slug}/kling/${existing.id}`); }
+  if (existing) return { clip: existing, slug: p.slug, created: false };
   const scenesNo = sceneLabels(await db.scene.findMany({ where: { projectId: p.id }, select: { id: true, pos: true, order: true, inserted: true } })).get(sceneId) ?? '?';
   const max = await db.klingClip.aggregate({ where: { projectId: p.id }, _max: { order: true } });
   const k = await db.klingClip.create({ data: { projectId: p.id, title: `Scene ${scenesNo} video — ${sc.title}`, order: (max._max.order ?? 0) + 1, purpose: (sc as any).klingNote || null } as any });
@@ -39,8 +39,12 @@ export async function makeClipForScene(fd: FormData) {
   let o = 0;
   for (const im of pics) await db.klingRef.create({ data: { klingId: k.id, imageId: im.id, order: ++o } });
   await logActivity(`${klingCode(k.order)} made from scene ${scenesNo}`, `/projects/${p.slug}/kling/${k.id}`, p.id);
+  return { clip: k, slug: p.slug, created: true };
+}
+export async function makeClipForScene(fd: FormData) {
+  const { clip, slug } = await ensureClipForScene(str(fd, 'sceneId')!);
   touch();
-  redirect(`/projects/${p.slug}/kling/${k.id}`);
+  redirect(`/projects/${slug}/kling/${clip.id}`);
 }
 
 async function snapshotPrompt(id: string, oldText: string, newText: string, reason: string | null) {
@@ -158,4 +162,50 @@ export async function saveClipPrompt(klingId: string, text: string): Promise<{ s
   await db.klingClip.update({ where: { id: klingId }, data: { finalPrompt: text, ...(text.trim() && old.status === 'PLANNED' ? { status: 'DRAFT' } : {}) } });
   touch();
   return { savedAt: new Date().toISOString() };
+}
+
+/** Video Prompts import: where would each pasted prompt go? (nothing is saved here) */
+export type VideoImportItem = { seqs: number[]; title: string; prompt: string; target: string; targetLabel: string; hasPrompt: boolean };
+export async function previewVideoImport(projectId: string, text: string): Promise<{ items: VideoImportItem[]; options: { value: string; label: string }[] }> {
+  const { parseVideoPrompts } = await import('../video-import');
+  const sections = parseVideoPrompts(text);
+  const [clips, scenes, imgs] = await Promise.all([
+    db.klingClip.findMany({ where: { projectId }, orderBy: { order: 'asc' }, include: { scenes: true, refs: true } }),
+    db.scene.findMany({ where: { projectId }, orderBy: [{ pos: 'asc' }, { order: 'asc' }], select: { id: true, title: true, pos: true, order: true, inserted: true } }),
+    db.plannedImage.findMany({ where: { projectId }, select: { id: true, seq: true, sceneId: true } }),
+  ]);
+  const lab = sceneLabels(scenes);
+  const clipLabel = (k: (typeof clips)[number]) => `${klingCode(k.order)} · ${k.title}`;
+  const items: VideoImportItem[] = sections.map(sec => {
+    let target = '', targetLabel = '';
+    for (const seq of sec.seqs) {
+      const im = imgs.find(i => i.seq === seq); if (!im) continue;
+      const k = clips.find(c => c.refs.some(r => r.imageId === im.id)) ?? clips.find(c => c.scenes.some(s => s.sceneId === im.sceneId));
+      if (k) { target = `clip:${k.id}`; targetLabel = clipLabel(k); break; }
+      const sc = scenes.find(s => s.id === im.sceneId);
+      if (sc && !target) { target = `scene:${sc.id}`; targetLabel = `NEW clip for Scene ${lab.get(sc.id)} · ${sc.title}`; }
+    }
+    const k = target.startsWith('clip:') ? clips.find(c => c.id === target.slice(5)) : null;
+    return { ...sec, target, targetLabel, hasPrompt: !!k?.finalPrompt.trim() };
+  });
+  const options = [...clips.map(k => ({ value: `clip:${k.id}`, label: clipLabel(k) })), ...scenes.filter(s => !clips.some(c => c.scenes.some(x => x.sceneId === s.id))).map(s => ({ value: `scene:${s.id}`, label: `NEW clip for Scene ${lab.get(s.id)} · ${s.title}` }))];
+  return { items, options };
+}
+
+/** Video Prompts import: save the checked prompts into their clips (a clip is made for a scene that has none; old prompt text is kept as a version). */
+export async function applyVideoImport(items: { target: string; prompt: string }[]): Promise<{ saved: number }> {
+  let saved = 0;
+  for (const it of items) {
+    if (!it.target || !it.prompt.trim()) continue;
+    let clipId = '';
+    if (it.target.startsWith('clip:')) clipId = it.target.slice(5);
+    else if (it.target.startsWith('scene:')) clipId = (await ensureClipForScene(it.target.slice(6))).clip.id;
+    if (!clipId) continue;
+    const old = await db.klingClip.findUniqueOrThrow({ where: { id: clipId } });
+    await snapshotPrompt(clipId, old.finalPrompt, it.prompt, 'Imported on Video Prompts');
+    await db.klingClip.update({ where: { id: clipId }, data: { finalPrompt: it.prompt, ...(old.status === 'PLANNED' ? { status: 'DRAFT' } : {}) } });
+    saved++;
+  }
+  touch();
+  return { saved };
 }

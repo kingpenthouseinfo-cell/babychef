@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { saveImagePrompt } from '@/lib/actions/image';
 import { saveClipPrompt } from '@/lib/actions/kling';
 
@@ -11,6 +11,9 @@ export function PromptRow({ kind, id, prompt, children }: { kind: 'image' | 'vid
   const [msg, setMsg] = useState('');
   const [busy, start] = useTransition();
   const ta = useRef<HTMLTextAreaElement>(null);
+  // the prompt can change from outside (paste-to-fill import, another tab): show it unless the user is typing
+  const lastProp = useRef(prompt);
+  useEffect(() => { if (prompt !== lastProp.current) { lastProp.current = prompt; if (!editing) { setSaved(prompt); setDraft(prompt); } } }, [prompt, editing]);
   const dirty = draft !== saved;
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3500); };
   const copy = async () => {

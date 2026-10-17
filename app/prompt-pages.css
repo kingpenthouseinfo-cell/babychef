@@ -31,3 +31,19 @@
 .prompt-row__btn--save { background: #4C6B52; border-color: #4C6B52; color: #fff; }
 .prompt-row__btn--clear { color: #A5473A; }
 .prompt-row__msg { font-size: 13px; font-weight: 600; color: #46704F; }
+
+/* Paste-to-fill box on Video Prompts */
+.prompt-import { margin-bottom: 18px; border: 1px solid #ECEAF0; border-radius: 16px; background: #FAF9FC; }
+.prompt-import__summary { padding: 14px 16px; cursor: pointer; font-size: 16px; font-weight: 700; }
+.prompt-import__body { padding: 0 16px 16px; }
+.prompt-import__help { margin: 0 0 8px; font-size: 13.5px; color: #6F6A75; }
+.prompt-import__text { display: block; width: 100%; padding: 10px 12px; border: 1px solid #ECEAF0; border-radius: 10px; background: #fff; font: 13px/1.5 ui-monospace, Menlo, monospace; }
+.prompt-import__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.prompt-import__found { margin: 14px 0 8px; font-weight: 600; }
+.prompt-import__list { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0 0 12px; padding: 0; }
+.prompt-import__item { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #ECEAF0; border-radius: 12px; background: #fff; }
+.prompt-import__check { display: flex; align-items: center; gap: 8px; }
+.prompt-import__select { max-width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid #E7E4EC; border-radius: 8px; background: #fff; }
+.prompt-import__note { font-size: 12.5px; color: #6F6A75; }
+.prompt-import__sample { margin: 0; max-height: 70px; overflow: hidden; white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #6F6A75; }
+.prompt-import__shared { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13.5px; }

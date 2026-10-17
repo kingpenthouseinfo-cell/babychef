@@ -911,6 +911,21 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   await r1.locator('[data-testid=prompt-edit]').click();
   ok('CANCEL after clearing brings the prompt back', (await r1.locator('textarea').inputValue()).includes('EXTRA LINE FROM TEST'));
   await r1.locator('[data-testid=prompt-edit]').click(); await r1.locator('textarea').fill(orig); await r1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+  // paste-to-fill import for pictures
+  const code0 = (await page.locator('[data-testid=image-prompt-row] .prompt-row__code').first().textContent()).trim();
+  const seq0 = parseInt(code0.replace(/\D/g, ''), 10);
+  await go('/projects/generate-plan-test/image-prompts');
+  await page.locator('[data-testid=image-import] summary').click();
+  await page.fill('[data-testid=import-text]', `TITLE\n\nMASTER VISUAL CONTINUITY\nBABY CHEF\nSame baby always\nSC01 - FIRST SCENE\nIMG-${String(seq0).padStart(3, '0')} - Test picture\nBaby Chef stands.\n\n* Exactly 10 whole eggs\n\nCamera: medium-wide.\nFilename:\n\`x_SC01_IMG-001_test_v3.png\`\nSC02 - SECOND\nIMG-9999 - No such picture\nNowhere.\nFINAL STEP-BY-STEP RECIPE ORDER\n1. ignored`);
+  await page.locator('[data-testid=import-check]').click(); await page.waitForSelector('[data-testid=import-preview]', { timeout: 15000 });
+  ok('Picture import finds both pictures, matches the known number, flags the unknown one', (await page.locator('[data-testid=import-item]').count()) === 2 && (await page.locator('[data-testid=import-item]').first().locator('select').inputValue()).startsWith('img:') && (await page.locator('[data-testid=import-item]').nth(1).textContent()).includes('No picture with that number'));
+  ok('Shared look rules option is offered', (await page.locator('[data-testid=import-shared]').count()) === 1);
+  await page.locator('[data-testid=import-shared] input').check();
+  await page.locator('[data-testid=import-fill]').click(); await page.waitForSelector('text=Done ✓', { timeout: 15000 }); await page.waitForTimeout(1200);
+  const imp = await page.locator('[data-testid=image-prompt-row]').first().locator('textarea').inputValue();
+  ok('Picture FILL IN saves the description (shared rules on top, Filename line removed)', imp.includes('MASTER VISUAL CONTINUITY') && imp.includes('Exactly 10 whole eggs') && imp.includes('Camera: medium-wide.') && !/Filename/i.test(imp) && !imp.includes('.png'));
+  const r2 = page.locator('[data-testid=image-prompt-row]').first();
+  await r2.locator('[data-testid=prompt-edit]').click(); await r2.locator('textarea').fill(orig); await r2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
   await go(`/projects/${slug}/video-prompts`);
   const vrows = page.locator('[data-testid=video-prompt-row]');
   ok('Video Prompts: one row per clip with its pictures, prompt and 4 buttons', (await vrows.count()) >= 1 && (await vrows.first().locator('textarea').count()) === 1 && (await vrows.first().locator('[data-testid=prompt-copy], [data-testid=prompt-edit], [data-testid=prompt-save], [data-testid=prompt-clear]').count()) === 4);
@@ -920,6 +935,18 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   ok('Video prompt SAVE persists', (await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes('VIDEO EXTRA'));
   const v1 = page.locator('[data-testid=video-prompt-row]').first();
   await v1.locator('[data-testid=prompt-edit]').click(); await v1.locator('textarea').fill(vorig); await v1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+  // paste-to-fill import
+  const thumbTitle = await page.locator('[data-testid=video-prompt-row] .prompt-row__thumb--small').first().getAttribute('title');
+  const seqNo = parseInt((thumbTitle || '').match(/IMG-0*(\d+)/)?.[1] || '0', 10);
+  await page.locator('[data-testid=video-import] summary').click();
+  await page.fill('[data-testid=import-text]', `# Revised\n## Global instructions\nignore me\n## IMG-${String(seqNo).padStart(3, '0')}: Test picture\n\n**KLING PROMPT**\n\n@image1 IMPORTED TEST PROMPT\n\n**Audio:** hello\n\n## IMG-999: Nothing like it\n\n**KLING PROMPT**\n\n@image1 nowhere\n\n# Rules\nignored`);
+  await page.locator('[data-testid=import-check]').click(); await page.waitForSelector('[data-testid=import-preview]', { timeout: 15000 });
+  ok('Import finds both prompts and matches the known picture to its clip', (await page.locator('[data-testid=import-item]').count()) === 2 && (await page.locator('[data-testid=import-item]').first().locator('select').inputValue()).startsWith('clip:') && (await page.locator('[data-testid=import-item]').nth(1).locator('select').inputValue()) === '');
+  ok('Unknown picture is not ticked and says no matching clip', (await page.locator('[data-testid=import-item]').nth(1).textContent()).includes('No matching clip'));
+  await page.locator('[data-testid=import-fill]').click(); await page.waitForSelector('text=Done ✓', { timeout: 15000 }); await page.waitForTimeout(1200);
+  ok('FILL IN puts the prompt in the clip box', (await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes('IMPORTED TEST PROMPT'));
+  const v2 = page.locator('[data-testid=video-prompt-row]').first();
+  await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
 }
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',

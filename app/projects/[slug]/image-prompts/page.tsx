@@ -9,6 +9,7 @@ import { imageLabel } from '@/lib/image-gen';
 import { imageCode } from '@/lib/util';
 import { Empty, fileUrl } from '@/components/ui';
 import { PromptRow } from '@/components/prompt-row';
+import { PromptImport } from '@/components/prompt-import';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ export default async function ImagePrompts({ params }: { params: { slug: string 
   return (
     <div className="prompt-page prompt-page--images" data-testid="image-prompts">
       <header className="prompt-page__head"><h1 className="prompt-page__title">Image Prompts</h1><p className="prompt-page__sub">{imgs.length} picture{imgs.length === 1 ? '' : 's'} · one prompt per row · copy, edit or clear any of them</p></header>
+      <PromptImport kind="image" projectId={p.id} />
       {imgs.length === 0 && <Empty title="No pictures yet." hint="Add scenes first — each scene gets its pictures and prompts automatically." />}
       <ul className="prompt-page__list">
         {imgs.map(i => { const sh = i.approvedAttempt ?? i.attempts[0] ?? null; const sc = scenes.find(s => s.id === i.sceneId); return (

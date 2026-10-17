@@ -9,6 +9,7 @@ import { klingCode, imageCode } from '@/lib/util';
 import { Empty, fileUrl } from '@/components/ui';
 import { SubmitBtn } from '@/components/client';
 import { PromptRow } from '@/components/prompt-row';
+import { PromptImport } from '@/components/prompt-import';
 import { makeClipForScene } from '@/lib/actions/kling';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,7 @@ export default async function VideoPrompts({ params }: { params: { slug: string 
   return (
     <div className="prompt-page prompt-page--videos" data-testid="video-prompts">
       <header className="prompt-page__head"><h1 className="prompt-page__title">Video Prompts</h1><p className="prompt-page__sub">{clips.length} video clip{clips.length === 1 ? '' : 's'} · one prompt per row · copy, edit or clear any of them</p></header>
+      <PromptImport kind="video" projectId={p.id} />
       {clips.length === 0 && waiting.length === 0 && <Empty title="No video clips yet." hint="Approve the pictures of a scene first, then its video prompt can be made here." />}
       <ul className="prompt-page__list">
         {clips.map(k => { const sid = k.scenes[0]?.sceneId; return (
