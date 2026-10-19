@@ -9,6 +9,7 @@ import { openImagePos, openScenePos, moveImagePos, moveScenePos, closeGaps, orde
 import { addNotice, getNotices, setNotices } from '../notices';
 import { autoAttachReferences } from '../auto-refs';
 import { autoTitle } from '../auto-title';
+import { syncFolderNamesSafe } from '../folder-sync';
 
 const touch = () => revalidatePath('/', 'layout');
 const storyUrl = async (projectId: string, hash = '') => `/projects/${(await db.project.findUniqueOrThrow({ where: { id: projectId } })).slug}/story${hash}`;
@@ -41,6 +42,7 @@ export async function addPictureHere(fd: FormData) {
   const clips = await db.klingClip.findMany({ where: { projectId, OR: [{ scenes: { some: { sceneId } } }, { refs: { some: { imageId: { in: [prev?.id, next?.id].filter(Boolean) as string[] } } } }] }, select: { id: true } });
   for (const c of clips) await addNotice(projectId, { kind: 'CLIP_ADD', imageId: img.id, targetId: c.id, text: 'You added a new picture to this section. Do you want to include it in the video clip?' });
   await logActivity(`Picture added: ${title}`, null, projectId);
+  await syncFolderNamesSafe(projectId);
   touch();
   redirect(await storyUrl(projectId, `#pic-${img.id}`));
 }
@@ -62,11 +64,13 @@ export async function addSceneHere(fd: FormData) {
 export async function moveSceneUpDown(fd: FormData) {
   const sc = await db.scene.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
   await moveScenePos(sc.id, str(fd, 'dir') === 'up' ? -1 : 1);
+  await syncFolderNamesSafe(sc.projectId);
   touch(); redirect(await storyUrl(sc.projectId, `#scene-${sc.id}`));
 }
 export async function movePictureUpDown(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
   await moveImagePos(img.id, str(fd, 'dir') === 'up' ? -1 : 1);
+  await syncFolderNamesSafe(img.projectId);
   touch(); redirect(await storyUrl(img.projectId, `#pic-${img.id}`));
 }
 
@@ -83,6 +87,7 @@ export async function duplicatePicture(fd: FormData) {
   const max = await db.plannedImage.aggregate({ where: { projectId: img.projectId }, _max: { seq: true } });
   const pos = await openImagePos(img.sceneId, img.id);
   const copy = await db.plannedImage.create({ data: { projectId: img.projectId, sceneId: img.sceneId, seq: (max._max.seq ?? 0) + 1, pos, title: `${img.title} (copy)`, purpose: img.purpose, shotType: img.shotType, fullPrompt: img.fullPrompt, contPrompt: img.contPrompt } as any });
+  await syncFolderNamesSafe(img.projectId);
   touch(); redirect(await storyUrl(img.projectId, `#pic-${copy.id}`));
 }
 export async function deleteSceneHere(fd: FormData) {
@@ -91,6 +96,7 @@ export async function deleteSceneHere(fd: FormData) {
   await db.plannedImage.deleteMany({ where: { sceneId: sc.id } });
   await db.scene.delete({ where: { id: sc.id } });
   await closeGaps(sc.projectId);
+  await syncFolderNamesSafe(sc.projectId);
   touch(); redirect(await storyUrl(sc.projectId));
 }
 
@@ -107,6 +113,7 @@ export async function splitScene(fd: FormData) {
   await db.$transaction(moving.map((m, i) => db.plannedImage.update({ where: { id: m.id }, data: { sceneId: second.id, pos: i + 1 } })));
   await closeGaps(sc.projectId, sc.id);
   await logActivity(`Scene split: ${sc.title}`, null, sc.projectId);
+  await syncFolderNamesSafe(sc.projectId);
   touch(); redirect(await storyUrl(sc.projectId, `#scene-${second.id}`));
 }
 
@@ -137,6 +144,7 @@ export async function reorderScenes(projectId: string, ids: string[]) {
   const wanted = ids.filter(i => have.has(i));
   const rest = [...have].filter(i => !wanted.includes(i));
   await db.$transaction([...wanted, ...rest].map((id, k) => db.scene.update({ where: { id }, data: { pos: k + 1 } })));
+  await syncFolderNamesSafe(projectId);
   touch();
 }
 /** Drag-and-drop: save the new visible order of pictures inside one scene. */
@@ -146,11 +154,14 @@ export async function reorderPictures(sceneId: string, ids: string[]) {
   const wanted = ids.filter(i => have.has(i));
   const rest = [...have].filter(i => !wanted.includes(i));
   await db.$transaction([...wanted, ...rest].map((id, k) => db.plannedImage.update({ where: { id }, data: { pos: k + 1 } })));
+  const sc = await db.scene.findUnique({ where: { id: sceneId }, select: { projectId: true } });
+  if (sc) await syncFolderNamesSafe(sc.projectId);
   touch();
 }
 export async function deletePictureHere(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
   await db.plannedImage.delete({ where: { id: img.id } });
   await closeGaps(img.projectId, img.sceneId);
+  await syncFolderNamesSafe(img.projectId);
   touch(); redirect(await storyUrl(img.projectId));
 }

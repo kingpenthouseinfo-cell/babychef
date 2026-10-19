@@ -5,13 +5,14 @@ import { backfillPositions } from '../order';
 import { logActivity } from '../activity';
 import { autoAttachReferences } from '../auto-refs';
 import { fillFromScene } from '../image-gen';
+import { syncFolderNames, planFolderNames, syncFolderNamesSafe } from '../folder-sync';
 import type { toSavePayload } from '../storyboard-order';
 
 const touch = () => revalidatePath('/', 'layout');
 
 /** Storyboard "Save order": one transaction that creates the new scenes/pictures, renames, and stores the whole new order (scene order, which scene each picture is in, and the order inside it).
  *  Stable codes (SC02, IMG-021) and file names never change — only order, scene membership and titles do. */
-export async function saveOrder(projectId: string, payload: ReturnType<typeof toSavePayload>): Promise<{ saved: true }> {
+export async function saveOrder(projectId: string, payload: ReturnType<typeof toSavePayload>): Promise<{ saved: true; renamed: number }> {
   await backfillPositions();
   const [scenes, pics, maxScene, maxImg] = await Promise.all([
     db.scene.findMany({ where: { projectId }, select: { id: true, title: true } }),
@@ -60,6 +61,21 @@ export async function saveOrder(projectId: string, payload: ReturnType<typeof to
   // new pictures: attach references and write their first prompt from the scene (best effort)
   for (const id of newPics) { try { await autoAttachReferences(id); await fillFromScene(id); } catch { /* the picture exists; it can be filled in later */ } }
   await logActivity(`Storyboard order saved${moved ? ` (${moved} picture${moved === 1 ? '' : 's'} moved to another scene)` : ''}${newPics.length ? `, ${newPics.length} new picture${newPics.length === 1 ? '' : 's'}` : ''}${renamed ? `, ${renamed} renamed` : ''}`, null, projectId);
+  // the folder lists the pictures in the same order as the storyboard
+  const filesRenamed = await syncFolderNamesSafe(projectId);
   touch();
-  return { saved: true };
+  return { saved: true, renamed: filesRenamed };
+}
+
+/** Storyboard: how many files in the folder do not match the storyboard order yet? (nothing is changed) */
+export async function countFolderMismatches(projectId: string): Promise<{ count: number; examples: string[] }> {
+  const plan = await planFolderNames(projectId);
+  return { count: plan.length, examples: plan.slice(0, 3).map(c => `${c.from.split('/').pop()} → ${c.to.split('/').pop()}`) };
+}
+
+/** Storyboard: rename the files in the folder so they list in storyboard order (old → new names are logged in the project folder). */
+export async function matchFolderToStoryboard(projectId: string): Promise<{ renamed: number }> {
+  const r = await syncFolderNames(projectId);
+  touch();
+  return { renamed: r.renamed };
 }

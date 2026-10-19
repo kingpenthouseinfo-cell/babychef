@@ -8,6 +8,7 @@
  * and a version that does not exist yet. Anything else goes to UNMATCHED FILES — the watcher never guesses,
  * never deletes, never overwrites, and ignores partial downloads. It rescans on startup.
  */
+import { folderSyncRunning } from './folder-sync';
 import fs from 'fs/promises';
 import path from 'path';
 import { db } from './db';
@@ -74,7 +75,7 @@ async function handleFile(p: Proj, sub: string, name: string, rel: string, size:
 /** One pass over all project folders. Safe to call repeatedly; never throws. */
 export async function scanProjectFolders(): Promise<{ matched: number; unmatched: number; skipped?: boolean }> {
   const s = st();
-  if (s.scanning) return { matched: 0, unmatched: 0, skipped: true };
+  if (s.scanning || folderSyncRunning()) return { matched: 0, unmatched: 0, skipped: true };
   s.scanning = true;
   const before = s.counter;
   try {

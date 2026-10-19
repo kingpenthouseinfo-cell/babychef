@@ -8,7 +8,9 @@ import {
 
 type Props = {
   initial: SbBoard;
-  onSave: (payload: ReturnType<typeof toSavePayload>) => Promise<void>;   // persists the order for the whole app
+  onSave: (payload: ReturnType<typeof toSavePayload>) => Promise<{ renamed?: number } | void>;
+  onCheckFolder?: () => Promise<{ count: number; examples: string[] }>;   // how many files do not match this order yet
+  onMatchFolder?: () => Promise<{ renamed: number }>;                     // rename the files in the folder to match this order   // persists the order for the whole app
   onOpenPicture: (pictureId: string) => void;                              // go to Picture detail
   revealInFinder?: (assetId: string) => Promise<void>;                     // defaults to POST /api/reveal
 };
@@ -19,7 +21,7 @@ const FolderIcon = () => (
   </svg>
 );
 
-export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder }: Props) {
+export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder }: Props) {
   const [saved, setSaved] = useState<SbBoard>(initial);
   const [board, setBoard] = useState<SbBoard>(initial);
   const [dirty, setDirty] = useState(false);
@@ -75,8 +77,21 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
 
   const save = async () => {
     setMsg('Saving…');
-    try { await onSave(toSavePayload(board)); } catch (e: any) { setMsg(e?.message || 'Could not save. Try again.'); return; }
-    setSaved(board); setDirty(false); setMsg('✓ Order saved');
+    let renamed = 0;
+    try { const r = await onSave(toSavePayload(board)); renamed = (r && r.renamed) || 0; } catch (e: any) { setMsg(e?.message || 'Could not save. Try again.'); return; }
+    setSaved(board); setDirty(false); setMsg(renamed ? `✓ Order saved · ${renamed} file name${renamed === 1 ? '' : 's'} in the folder updated` : '✓ Order saved');
+  };
+  const matchFolder = async () => {
+    if (!onCheckFolder || !onMatchFolder) return;
+    setMsg('Checking the folder…');
+    try {
+      const c = await onCheckFolder();
+      if (!c.count) { setMsg('✓ The folder already matches this order'); return; }
+      if (!window.confirm(`Rename ${c.count} picture file${c.count === 1 ? '' : 's'} in your folder so they list in this order?\n\nFor example:\n${c.examples.join('\n')}\n\nNothing is deleted. The old names are saved in a log inside the project folder.`)) { setMsg(''); return; }
+      setMsg('Renaming…');
+      const r = await onMatchFolder();
+      setMsg(`✓ ${r.renamed} file name${r.renamed === 1 ? '' : 's'} in the folder updated to match`);
+    } catch (e: any) { setMsg(e?.message || 'Could not rename. Try again.'); }
   };
   const undo = () => { setBoard(saved); setDirty(false); setMsg(''); };
 
@@ -92,6 +107,7 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
           {dirty && <span className="storyboard__msg storyboard__msg--dirty" data-testid="sb-dirty">Unsaved changes</span>}
           {!dirty && msg && <span className="storyboard__msg" data-testid="sb-msg">{msg}</span>}
           {dirty && <button className="storyboard__undo" data-testid="sb-undo" onClick={undo}>Undo changes</button>}
+          {!dirty && onMatchFolder && <button className="storyboard__undo" data-testid="sb-match-folder" onClick={matchFolder} title="Rename the picture files in your folder so they list in this order">Match folder names</button>}
           <button className="storyboard__save" data-testid="sb-save" disabled={!dirty} onClick={save}>Save order</button>
         </div>
       </header>

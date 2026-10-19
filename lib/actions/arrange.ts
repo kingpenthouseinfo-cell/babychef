@@ -4,6 +4,7 @@ import { db } from '../db';
 import { str } from '../util';
 import { backfillPositions, resequenceImages, SCENE_ORDER } from '../order';
 import { logActivity } from '../activity';
+import { syncFolderNamesSafe } from '../folder-sync';
 
 const touch = () => revalidatePath('/', 'layout');
 
@@ -18,7 +19,7 @@ export async function movePictureStep(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id } });
   const ids = await sceneImageIds(img.sceneId);
   const i = ids.indexOf(id), j = i + dir;
-  if (j >= 0 && j < ids.length) { [ids[i], ids[j]] = [ids[j], ids[i]]; await resequenceImages(ids); touch(); return; }
+  if (j >= 0 && j < ids.length) { [ids[i], ids[j]] = [ids[j], ids[i]]; await resequenceImages(ids); await syncFolderNamesSafe(img.projectId); touch(); return; }
   const scenes = await db.scene.findMany({ where: { projectId: img.projectId }, orderBy: [...SCENE_ORDER], select: { id: true } });
   const k = scenes.findIndex(s => s.id === img.sceneId) + dir;
   if (k < 0 || k >= scenes.length) return;
@@ -28,6 +29,7 @@ export async function movePictureStep(fd: FormData) {
   await resequenceImages(dir === 1 ? [id, ...tIds] : [...tIds, id]);
   await resequenceImages(ids.filter(x => x !== id));
   await logActivity('Picture moved to another scene', null, img.projectId);
+  await syncFolderNamesSafe(img.projectId);
   touch();
 }
 
@@ -44,6 +46,7 @@ export async function movePictureToScene(fd: FormData) {
   await resequenceImages(str(fd, 'where') === 'start' ? [id, ...to] : [...to, id]);
   await resequenceImages(from.filter(x => x !== id));
   await logActivity('Picture moved to another scene', null, img.projectId);
+  await syncFolderNamesSafe(img.projectId);
   touch();
 }
 
@@ -61,5 +64,6 @@ export async function swapPictures(fd: FormData) {
   await resequenceImages(await sceneImageIds(x.sceneId));
   if (y.sceneId !== x.sceneId) await resequenceImages(await sceneImageIds(y.sceneId));
   await logActivity('Two pictures swapped', null, x.projectId);
+  await syncFolderNamesSafe(x.projectId);
   touch();
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Storyboard from './Storyboard';
-import { saveOrder } from '@/lib/actions/storyboard';
+import { saveOrder, countFolderMismatches, matchFolderToStoryboard } from '@/lib/actions/storyboard';
 import type { SbBoard } from '@/lib/storyboard-order';
 import type { toSavePayload } from '@/lib/storyboard-order';
 
@@ -13,7 +13,9 @@ export function StoryboardPage({ projectId, slug, board }: { projectId: string; 
     <Storyboard
       key={sig}
       initial={board}
-      onSave={async (payload: ReturnType<typeof toSavePayload>) => { await saveOrder(projectId, payload); router.refresh(); }}
+      onSave={async (payload: ReturnType<typeof toSavePayload>) => { const r = await saveOrder(projectId, payload); router.refresh(); return r; }}
+      onCheckFolder={() => countFolderMismatches(projectId)}
+      onMatchFolder={async () => { const r = await matchFolderToStoryboard(projectId); router.refresh(); return r; }}
       onOpenPicture={id => router.push(`/projects/${slug}/images/${id}`)}
     />
   );

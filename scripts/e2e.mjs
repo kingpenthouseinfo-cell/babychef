@@ -230,7 +230,7 @@ await page.locator('#approve-form button').click();
 await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
 ok('Approve works: THE ONE TO USE badge', (await page.locator('text=THE ONE TO USE').count()) > 0);
 const genFiles = walk(path.join(STORE, PROJ));
-ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
+ok('Generated files organized (02 Images / 03 Redos, readable names)', genFiles.some(f => /02 Images\/(\d{3}_)?[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v2\.png$/.test(f)) && genFiles.some(f => /03 Redos\/(\d{3}_)?[A-Z0-9]{2,5}-S01-IMG001[\w-]*_v1\.png$/.test(f)), genFiles.filter(f => /_v\d/.test(f)).map(f => path.relative(STORE, f)).join(' | '));
 
 // ---- Previous approved frame for IMG-002
 const img2Url = await newImage('Cumin in oil');
@@ -550,7 +550,7 @@ await page.click('button:has-text("Scan folders now")'); await page.waitForTimeo
 ok('Unmatched: bad-name file listed with reason', (await page.locator('text=random-download.png').count()) > 0 && (await page.locator('text=Why it is unmatched').count()) > 0);
 ok('Unmatched: partial download ignored', (await page.locator('text=crdownload').count()) === 0);
 await go(img1Url.replace(BASE, ''));
-ok('Watcher: correctly named v3 file added as an attempt in place', (await page.locator('text=/v3/').count()) > 0 && fs.existsSync(path.join(imgDir, `${pCode}-${scCode}-IMG001_v3.png`)));
+ok('Watcher: correctly named v3 file added as an attempt in place', (await page.locator('text=/v3/').count()) > 0 && walk(imgDir).some(f => new RegExp(`${pCode}-${scCode}-IMG001.*_v3\\.png$`).test(path.basename(f))));
 const expTxt = await page.locator('[data-testid=expected-filename]').first().textContent();
 ok('Expected next filename shows v4', /_v4\.png$/.test(expTxt || ''), expTxt);
 await go('/unmatched');
@@ -754,9 +754,9 @@ ok('Add picture: blank description still works (Picture N title)', /Picture \d+/
   const beforeRes = await page.request.get(man.references.find(r => r.role === 'before').directImageUrl);
   ok('Every link in the reference list opens a real image', beforeRes.status() === 200 && /^image\//.test(beforeRes.headers()['content-type'] || ''));
   await go('/projects/generate-plan-test/kling');
-  ok('Video clips: the picture file name is shown next to each picture used', (await page.locator('[data-testid=scene-image-file]').first().textContent()).startsWith('GPT-S01-IMG001'), await page.locator('[data-testid=scene-image-file]').first().textContent().catch(() => ''));
+  ok('Video clips: the picture file name is shown next to each picture used', (await page.locator('[data-testid=scene-image-file]').first().textContent()).replace(/^\d{3}_/, '').startsWith('GPT-S01-IMG001'), await page.locator('[data-testid=scene-image-file]').first().textContent().catch(() => ''));
   await page.locator('button:has-text("Make video prompt")').first().click(); await page.waitForURL(/\/kling\/[a-z0-9]+$/); await page.waitForLoadState('networkidle');
-  ok('Clip page: reference strip shows the picture file name', (await page.locator('[data-testid=clip-image-file]').first().textContent()).startsWith('GPT-S01-IMG001'));
+  ok('Clip page: reference strip shows the picture file name', (await page.locator('[data-testid=clip-image-file]').first().textContent()).replace(/^\d{3}_/, '').startsWith('GPT-S01-IMG001'));
   ok('Clip page: video upload form lists the pictures and the video file name', (await page.locator('[data-testid=clip-uses]').textContent()).includes('GPT-S01-IMG002') && /GPT-S01-CLIP\d+_v1\.mp4/.test(await page.locator('[data-testid=clip-uses]').textContent()));
   await go('/projects/generate-plan-test/kling');
   ok('Video clips page uses the scene (clip grouping note kept)', (await page.locator('h2:has-text("Scene 1 video")').count()) === 1);
@@ -989,6 +989,17 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   await go(U);
   const after = await ids();
   ok('Storyboard: Save order stores the new order', after[0] === before[1] && after[1] === before[0]);
+  // files in the folder carry the storyboard place in their name
+  const codes = await tiles().evaluateAll(els => Object.fromEntries(els.map(e => [e.getAttribute('data-pic-id'), (e.querySelector('.storyboard__code')?.textContent || '').trim()])));
+  await go('/projects/generate-plan-test/generate?x=all');
+  const cardNames = await page.locator('[data-testid=gen-card]').evaluateAll(els => els.map(e => ({ id: (e.id || '').replace('pic-', ''), text: e.textContent || '' })));
+  const withFile = cardNames.map(c => ({ ...c, m: c.text.match(/(\d{3})_[A-Za-z0-9]+-S\d+-IMG\d+/) })).filter(c => c.m);
+  ok('Folder file names start with the storyboard place (001_, 002_ …) and match the storyboard', withFile.length >= 1 && withFile.every(c => c.m[1] === codes[c.id]), withFile.map(c => `${c.id}:${c.m[1]}/${codes[c.id]}`).join(' '));
+  const onDisk = walk(STORE).filter(f => /-IMG\d+.*_v\d+\.png$/.test(f)).map(f => path.basename(f));
+  ok('Every picture file on disk has the place prefix', onDisk.length >= 1 && onDisk.every(n => /^\d{3}_/.test(n)), onDisk.join(' | '));
+  await go(U);
+  await page.locator('[data-testid=sb-match-folder]').click(); await page.waitForTimeout(1500);
+  ok('Match folder names says the folder already matches', (await page.locator('[data-testid=sb-msg]').textContent()).includes('already matches'));
   await go('/projects/generate-plan-test/images');
   ok('Storyboard order is the real order (Picture List follows it)', (await page.locator('div.card[data-drop] a.font-semibold').first().getAttribute('href')).includes(after[0]));
   await go(U);

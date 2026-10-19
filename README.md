@@ -118,3 +118,7 @@ Drop a PNG/JPG/WebP picture straight onto any picture card (Picture List, Scenes
 ## One double-click start + update
 
 Put `Baby Chef Studio.command` on your Desktop (one-time: see the install block in the chat, or copy `scripts/launcher.command`). Double-click it: it starts the app and opens your browser. When you download a newer `baby-chef-studio….zip` from Claude (it lands in Downloads), double-click it again — it installs the newer version (old code folder is kept as `baby-chef-studio-OLD-…`), then starts. Your data in `~/Documents/Baby Chef Studio` is never touched.
+
+## Folder order = Storyboard order
+
+Picture files are named `NNN_CODE-Snn-IMGnnn_description_vN.png`, where `NNN` is the picture's place in the Storyboard (001, 002 …), so your folder lists them in the same order as the Storyboard tab. The app renames the files (same folder, same picture, same version — only the name) whenever the order changes (Storyboard "Save order", Scenes & Pictures drag, move up/down, add, delete) and when a new result arrives. **Storyboard → Match folder names** does it on demand and shows what will change first. Every rename is logged in the project folder under `.rename-log/` (old name → new name). Nothing is deleted or overwritten.

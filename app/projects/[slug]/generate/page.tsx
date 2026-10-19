@@ -34,7 +34,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
   await backfillPositions();
   const [scenes, imgs, settings] = await Promise.all([
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true, attempts: { orderBy: { number: 'desc' } } } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: { include: { asset: true } }, attempts: { orderBy: { number: 'desc' }, include: { asset: true } } } }),
     getSettings(),
   ]);
   const chatgpt = settings.url_ChatGPT || 'https://chatgpt.com/';
@@ -118,7 +118,7 @@ export default async function Generate({ params, searchParams }: { params: { slu
                             {i.foodState && <div className="sm:col-span-2"><dt className="eyebrow">FOOD STATE</dt><dd>{i.foodState}</dd></div>}
                           </dl>
                         </div>
-                        {shown && <div className="w-[170px] shrink-0"><Thumb id={shown.assetId} alt={i.title} w={400} /><div className="mt-1 break-all font-mono text-[10.5px] text-ink-muted">{filename.replace(/_v\d+(\.\w+)$/, `_v${shown.number}$1`)}</div></div>}
+                        {shown && <div className="w-[170px] shrink-0"><Thumb id={shown.assetId} alt={i.title} w={400} /><div className="mt-1 break-all font-mono text-[10.5px] text-ink-muted">{(shown as any).asset?.displayName ?? filename.replace(/_v\d+(\.\w+)$/, `_v${shown.number}$1`)}</div></div>}
                       </div>
                       <div className="mt-3">
                         <div className="eyebrow">CHATGPT IMAGE PROMPT</div>
