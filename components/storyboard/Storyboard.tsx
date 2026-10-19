@@ -1,12 +1,19 @@
 'use client';
 // Storyboard tab: picture row + Scene Storyboard. Styles live in app/storyboard.css (import it once in layout or here).
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   SbBoard, addPicture, addScene, dotClass, flatten, movePicture, movePictureToScene,
   moveScene, renamePicture, renameScene, toSavePayload,
 } from '@/lib/storyboard-order';
 
+export type ClipInfo = { id: string; name: string };
+
 type Props = {
+  sceneClips?: Record<string, ClipInfo>;                                   // finished video clip on each scene (by scene id)
+  tray?: ClipInfo[];                                                       // clips not on any scene yet
+  onUploadClip?: (sceneId: string | null, file: File) => Promise<void>;   // save a video file into the project's Video Clips folder (and onto a scene)
+  onAssignClip?: (sceneId: string, assetId: string) => Promise<void>;
+  onUnassignClip?: (sceneId: string) => Promise<void>;
   initial: SbBoard;
   onSave: (payload: ReturnType<typeof toSavePayload>) => Promise<{ renamed?: number } | void>;
   onCheckFolder?: () => Promise<{ count: number; examples: string[] }>;   // how many files do not match this order yet
@@ -21,7 +28,7 @@ const FolderIcon = () => (
   </svg>
 );
 
-export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder }: Props) {
+export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip }: Props) {
   const [saved, setSaved] = useState<SbBoard>(initial);
   const [board, setBoard] = useState<SbBoard>(initial);
   const [dirty, setDirty] = useState(false);
@@ -35,6 +42,34 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
   const [picking, setPicking] = useState<string | null>(null);   // picture id with scene dropdown open
   const [opened, setOpened] = useState<string | null>(null);
 
+  // ---- video clips: drop a video file (or drag one from the tray) on a scene box ----
+  const dragClipRef = useRef<string | null>(null);                  // clip id being dragged (a ref: drag events can fire faster than React re-renders)
+  const [dragClip, setDragClipState] = useState<string | null>(null);
+  const setDragClip = (v: string | null) => { dragClipRef.current = v; setDragClipState(v); };
+  const [clipOver, setClipOver] = useState<string | null>(null);   // scene id a clip is hovering over
+  const [clipMsg, setClipMsg] = useState('');
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+  const flashClip = (m: string) => { setClipMsg(m); setTimeout(() => setClipMsg(''), 5000); };
+  const isVideo = (f: File) => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(f.name);
+  const uploadClips = async (sceneId: string | null, files: File[]) => {
+    if (!onUploadClip) return;
+    const vids = files.filter(isVideo);
+    if (!vids.length) { flashClip('Drop a video file (MP4, MOV, M4V or WebM).'); return; }
+    if (sceneId && sceneId.includes('_new_')) { flashClip('Press Save order first, then drop the clip on the new scene.'); return; }
+    try {
+      for (const [n, f] of vids.entries()) { flashClip(`Saving ${f.name}…`); await onUploadClip(n === 0 ? sceneId : null, f); }
+      flashClip(sceneId ? '✓ Clip saved in the Video Clips folder and put on the scene' : '✓ Clip saved in the Video Clips folder');
+    } catch (e: any) { flashClip(e?.message || 'Could not save that clip. Try again.'); }
+  };
+  const dropOnScene = (sceneId: string) => async (e: React.DragEvent) => {
+    e.preventDefault(); setClipOver(null);
+    const cid = dragClipRef.current; setDragClip(null);
+    if (hasFiles(e)) { await uploadClips(sceneId, Array.from(e.dataTransfer.files)); return; }
+    if (cid && onAssignClip) {
+      if (sceneId.includes('_new_')) { flashClip('Press Save order first, then drop the clip on the new scene.'); return; }
+      try { await onAssignClip(sceneId, cid); flashClip('✓ Clip put on the scene — the file was renamed to match the storyboard'); } catch (er: any) { flashClip(er?.message || 'Could not move that clip.'); }
+    }
+  };
   const change = (next: SbBoard) => { setBoard(next); setDirty(true); setMsg(''); };
   const cells = useMemo(() => flatten(board), [board]);
   const total = board.reduce((a, s) => a + s.pictures.length, 0);
@@ -209,11 +244,13 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
                 </div>
                 <div
                   data-testid="sb-scene-card" data-scene-id={s.id}
-                  className={'storyboard-scenes__card' + (dragScene === s.id ? ' is-dragging' : '')}
+                  className={'storyboard-scenes__card' + (dragScene === s.id ? ' is-dragging' : '') + (sceneClips[s.id] ? ' has-clip' : '') + (clipOver === s.id ? ' clip-over' : '')}
                   draggable={!isEditing}
                   onDragStart={e => { e.dataTransfer.setData('text/plain', s.id); e.dataTransfer.effectAllowed = 'move'; setDragScene(s.id); }}
                   onDragEnd={() => { setDragScene(null); setOverScene(null); }}
-                  onDragOver={overS(gk)} onDrop={dropScene(i)}
+                  onDragOver={e => { if (hasFiles(e) || dragClipRef.current) { e.preventDefault(); if (clipOver !== s.id) setClipOver(s.id); } else overS(gk)(e); }}
+                  onDragLeave={() => setClipOver(c => (c === s.id ? null : c))}
+                  onDrop={e => { if (hasFiles(e) || dragClipRef.current) void dropOnScene(s.id)(e); else dropScene(i)(e); }}
                 >
                   <div className="storyboard-scenes__thumbs">
                     {s.pictures.length === 0
@@ -227,6 +264,15 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
                     ? <input data-testid="sb-scene-input" className="storyboard-scenes__name-input" autoFocus value={draftText} onChange={e => setDraftText(e.target.value)} onBlur={commitEdit} onKeyDown={editKeys} />
                     : <button className="storyboard-scenes__name" data-testid="sb-scene-name" title="Click to rename" onClick={() => startEdit('s:' + s.id, s.title)}>{s.title}</button>}
                   <span className="storyboard-scenes__count">{s.pictures.length === 1 ? '1 picture' : `${s.pictures.length} pictures`}</span>
+                  {sceneClips[s.id] ? (
+                    <span className="storyboard-clip" data-testid="sb-scene-clip" data-clip-id={sceneClips[s.id].id}>
+                      <a className="storyboard-clip__thumb" href={`/api/files/${sceneClips[s.id].id}`} target="_blank" rel="noreferrer" title={`Open ${sceneClips[s.id].name}`} draggable onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('text/plain', sceneClips[s.id].id); e.dataTransfer.effectAllowed = 'move'; setDragClip(sceneClips[s.id].id); }} onDragEnd={() => { setDragClip(null); setClipOver(null); }}>
+                        <video src={`/api/files/${sceneClips[s.id].id}#t=0.1`} preload="metadata" muted playsInline /><span className="storyboard-clip__play">▶</span>
+                      </a>
+                      <span className="storyboard-clip__name" title={sceneClips[s.id].name}>{sceneClips[s.id].name}</span>
+                      {onUnassignClip && <button type="button" className="storyboard-clip__remove" data-testid="sb-clip-remove" title="Take this clip off the scene (the file stays in the folder)" onClick={async () => { try { await onUnassignClip(s.id); } catch (er: any) { flashClip(er?.message || 'Could not do that.'); } }}>×</button>}
+                    </span>
+                  ) : onUploadClip ? <span className="storyboard-clip__hint">Drop this scene’s video clip here</span> : null}
                 </div>
               </div>
             );
@@ -237,6 +283,32 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
           </div>
         </div>
       </div>
+
+      {/* ---------- Video clips tray ---------- */}
+      {onUploadClip && (
+        <div className="storyboard-clips" data-testid="sb-clips">
+          <div className="storyboard-scenes__head">
+            <h2 className="storyboard-scenes__title">Video Clips</h2>
+            <p className="storyboard-scenes__sub">Drag a finished video from Finder onto its scene box above — the box turns blue and shows the clip. Or drop it here to keep it for later. Clips are saved in the project’s “06 Video Clips” folder and named in storyboard order.</p>
+          </div>
+          <div className={'storyboard-clips__drop' + (clipOver === 'tray' ? ' is-over' : '')} data-testid="sb-clip-drop"
+            onDragOver={e => { if (hasFiles(e)) { e.preventDefault(); setClipOver('tray'); } }} onDragLeave={() => setClipOver(c => (c === 'tray' ? null : c))}
+            onDrop={e => { e.preventDefault(); setClipOver(null); if (hasFiles(e)) void uploadClips(null, Array.from(e.dataTransfer.files)); }}>
+            <span>Drop video clips here</span>
+            <label className="storyboard-clips__choose">or choose a file<input type="file" accept="video/*" multiple className="sr-only" data-testid="sb-clip-input" onChange={e => { void uploadClips(null, Array.from(e.target.files ?? [])); e.target.value = ''; }} /></label>
+          </div>
+          {clipMsg && <div className="storyboard-clips__msg" role="status" data-testid="sb-clip-msg">{clipMsg}</div>}
+          {tray.length > 0 && (
+            <div className="storyboard-clips__tray" data-testid="sb-clip-tray">
+              {tray.map(c => (
+                <div key={c.id} className="storyboard-clips__item" data-testid="sb-tray-clip" data-clip-id={c.id} draggable title="Drag onto a scene box above"
+                  onDragStart={e => { e.dataTransfer.setData('text/plain', c.id); e.dataTransfer.effectAllowed = 'move'; setDragClip(c.id); }} onDragEnd={() => { setDragClip(null); setClipOver(null); }}>
+                  <a className="storyboard-clip__thumb" href={`/api/files/${c.id}`} target="_blank" rel="noreferrer" draggable={false}><video src={`/api/files/${c.id}#t=0.1`} preload="metadata" muted playsInline /><span className="storyboard-clip__play">▶</span></a>
+                  <span className="storyboard-clip__name" title={c.name}>{c.name}</span>
+                </div>))}
+            </div>)}
+        </div>
+      )}
     </div>
   );
 }

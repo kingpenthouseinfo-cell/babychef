@@ -948,6 +948,7 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   const v2 = page.locator('[data-testid=video-prompt-row]').first();
   await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
 }
+await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (the responsive checks above end on a phone size)
 // ---- per-project pastel colour
 {
   await go('/projects/generate-plan-test/story');
@@ -1037,6 +1038,40 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   await tiles().first().dragTo(page.locator('[data-testid=sb-empty]').last());
   await save(); await go(U);
   ok('Storyboard: dropping a picture on an empty scene moves it into that scene', (await page.locator('[data-testid=sb-empty]').count()) === em0 && (await tiles().evaluateAll((els, id) => els.some(e => e.getAttribute('data-pic-id') === id), firstId)));
+}
+// ---- Storyboard video clips (drop on a scene box, Video Clips folder, storyboard-order names)
+{
+  const U = '/projects/generate-plan-test/storyboard';
+  const mp4 = Buffer.from('000000186674797069736f6d0000020069736f6d69736f32', 'hex');
+  fs.writeFileSync('/tmp/claude-0/clip-a.mp4', mp4);
+  const clipFiles = () => walk(STORE).filter(f => f.includes('06 Video Clips') && /\.mp4$/.test(f)).map(f => path.basename(f));
+  await go(U);
+  const cards = () => page.locator('[data-testid=sb-scene-card]');
+  ok('Video clips: tray drop area is on the Storyboard', (await page.locator('[data-testid=sb-clip-drop]').count()) === 1 && (await cards().count()) >= 2);
+  await page.locator('[data-testid=sb-clip-input]').setInputFiles('/tmp/claude-0/clip-a.mp4');
+  await page.waitForSelector('[data-testid=sb-tray-clip]', { timeout: 20000 }).catch(() => null);
+  ok('Video clips: an uploaded clip waits in the tray and is saved in the 06 Video Clips folder', (await page.locator('[data-testid=sb-tray-clip]').count()) === 1 && clipFiles().some(n => /^unassigned_clip-a\.mp4$/.test(n)), clipFiles().join('|'));
+  await page.waitForFunction(() => /Clip saved/.test(document.querySelector('[data-testid=sb-clip-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(1500);
+  await page.locator('[data-testid=sb-tray-clip]').first().dragTo(cards().nth(1));
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=sb-scene-clip]').length >= 1 && document.querySelectorAll('[data-testid=sb-tray-clip]').length === 0, null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(500);
+  ok('Video clips: dragging the clip onto a scene box turns it blue and shows the clip', (await cards().nth(1).getAttribute('class')).includes('has-clip') && (await cards().nth(1).locator('[data-testid=sb-scene-clip] video').count()) === 1 && (await page.locator('[data-testid=sb-tray-clip]').count()) === 0);
+  ok('Video clips: the file is renamed with the scene place (02_ …-CLIP_…)', clipFiles().some(n => /^02_[A-Z0-9]{2,5}-S\d+-CLIP.*\.mp4$/.test(n)), clipFiles().join('|'));
+  // drop a file straight from Finder onto the first scene box
+  await dropFile(cards().first(), 'second-clip.mp4', 'video/mp4', mp4);
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid=sb-scene-clip]').length >= 2, null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(600);
+  ok('Video clips: dropping a video file on a scene box saves it and puts it there', (await cards().first().getAttribute('class')).includes('has-clip') && clipFiles().some(n => /^01_[A-Z0-9]{2,5}-S\d+-CLIP.*\.mp4$/.test(n)), clipFiles().join('|'));
+  const link = await cards().first().locator('.storyboard-clip__thumb').getAttribute('href');
+  const rng = await page.request.get(BASE + link, { headers: { Range: 'bytes=0-9' } });
+  ok('Video file is served with byte ranges (plays and shows a thumbnail frame in Safari too)', rng.status() === 206 && (await rng.body()).length === 10);
+  // reorder scenes -> file prefixes follow the storyboard
+  await cards().first().dragTo(cards().nth(1), { targetPosition: { x: 150, y: 60 } });
+  await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(800);
+  await go(U);
+  const placed = await page.locator('[data-testid=sb-scene-card]').evaluateAll(els => els.map((e, i) => ({ i, name: e.querySelector('.storyboard-clip__name')?.textContent || '' })).filter(x => x.name));
+  ok('Video clips: after reordering the scenes the clip file names follow the new storyboard order', placed.length === 2 && placed.every(x => x.name.startsWith(String(x.i + 1).padStart(2, '0') + '_')), JSON.stringify(placed));
+  await page.locator('[data-testid=sb-clip-remove]').first().click(); await page.waitForTimeout(1500);
+  await go(U);
+  ok('Video clips: taking a clip off a scene returns it to the tray (file kept, renamed unassigned_)', (await page.locator('[data-testid=sb-tray-clip]').count()) === 1 && clipFiles().some(n => n.startsWith('unassigned_')) && clipFiles().length === 2, clipFiles().join('|'));
 }
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',

@@ -27,7 +27,7 @@ export async function projectFolder(projectId: string): Promise<string> {
   return name;
 }
 
-export const PROJECT_SUBFOLDERS = ['01 References/Baby', '01 References/Kitchen', '01 References/Products', '01 References/Food', '01 References/Actions', '01 References/Corrections', '02 Images', '03 Redos', '04 Kling', '05 Prompts', '06 Publishing'];
+export const PROJECT_SUBFOLDERS = ['01 References/Baby', '01 References/Kitchen', '01 References/Products', '01 References/Food', '01 References/Actions', '01 References/Corrections', '02 Images', '03 Redos', '04 Kling', '05 Prompts', '06 Publishing', '06 Video Clips'];
 
 /** Read pixel dimensions from PNG / JPEG / GIF / WEBP headers without native deps. */
 export function imageSize(buf: Buffer): { width: number; height: number } | null {

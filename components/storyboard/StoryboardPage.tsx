@@ -1,12 +1,13 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import Storyboard from './Storyboard';
+import Storyboard, { type ClipInfo } from './Storyboard';
+import { uploadSceneClip, assignSceneClip, unassignSceneClip } from '@/lib/actions/clips';
 import { saveOrder, countFolderMismatches, matchFolderToStoryboard } from '@/lib/actions/storyboard';
 import type { SbBoard } from '@/lib/storyboard-order';
 import type { toSavePayload } from '@/lib/storyboard-order';
 
 /** Client wrapper: wires Save order to the server and opens a picture on click. Remounts when the saved data changes (new items get their real ids). */
-export function StoryboardPage({ projectId, slug, board }: { projectId: string; slug: string; board: SbBoard }) {
+export function StoryboardPage({ projectId, slug, board, sceneClips, tray }: { projectId: string; slug: string; board: SbBoard; sceneClips: Record<string, ClipInfo>; tray: ClipInfo[] }) {
   const router = useRouter();
   const sig = board.map(s => `${s.id}:${s.title}:${s.pictures.map(p => `${p.id}~${p.title}~${p.status}~${p.imageUrl ?? ''}`).join(',')}`).join('|');
   return (
@@ -16,6 +17,11 @@ export function StoryboardPage({ projectId, slug, board }: { projectId: string; 
       onSave={async (payload: ReturnType<typeof toSavePayload>) => { const r = await saveOrder(projectId, payload); router.refresh(); return r; }}
       onCheckFolder={() => countFolderMismatches(projectId)}
       onMatchFolder={async () => { const r = await matchFolderToStoryboard(projectId); router.refresh(); return r; }}
+      sceneClips={sceneClips}
+      tray={tray}
+      onUploadClip={async (sceneId, file) => { const fd = new FormData(); fd.set('projectId', projectId); if (sceneId) fd.set('sceneId', sceneId); fd.set('file', file); await uploadSceneClip(fd); router.refresh(); }}
+      onAssignClip={async (sceneId, assetId) => { await assignSceneClip(projectId, sceneId, assetId); router.refresh(); }}
+      onUnassignClip={async sceneId => { await unassignSceneClip(projectId, sceneId); router.refresh(); }}
       onOpenPicture={id => router.push(`/projects/${slug}/images/${id}`)}
     />
   );

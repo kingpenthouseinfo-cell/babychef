@@ -267,6 +267,7 @@ model Scene {
   order          Int      // stable scene number (SC code) — never renumbered
   pos            Int      @default(0) // visible position; inserts/moves change this, not the stable number
   inserted       Boolean  @default(false) // added between existing scenes → shown as 4A, 4B…
+  videoAssetId   String?  // finished video clip for this scene (Asset id; the file lives in the project's 06 Video Clips folder)
   flagged        Boolean  @default(false) // marked NEED TO FIX
   flagNote       String?
   flaggedAt      DateTime?

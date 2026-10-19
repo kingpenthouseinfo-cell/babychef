@@ -1,0 +1,17 @@
+/* Video clips on the Storyboard: a scene box that has a clip turns light blue and shows a thumbnail linking to the file. Plain CSS; restyle freely. */
+.storyboard-scenes__card.has-clip { background: #E6F1FC; border-color: #A9C9EE; }
+.storyboard-scenes__card.clip-over { background: #D8EAFB; outline: 2px dashed #6A8FC7; outline-offset: -3px; }
+.storyboard-clip { display: flex; align-items: center; gap: 6px; margin-top: 6px; min-width: 0; }
+.storyboard-clip__thumb { position: relative; display: block; flex: none; width: 64px; height: 40px; overflow: hidden; border-radius: 8px; background: #1E1D22; }
+.storyboard-clip__thumb video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.storyboard-clip__play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+.storyboard-clip__name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #3E6290; }
+.storyboard-clip__remove { flex: none; width: 20px; height: 20px; border: 0; border-radius: 50%; background: rgba(255,255,255,.8); color: #6F6A75; font-size: 14px; line-height: 1; cursor: pointer; }
+.storyboard-clip__hint { margin-top: 6px; font-size: 11px; color: #8C8792; }
+.storyboard-clips { margin-top: 18px; padding: 16px; border: 1px solid #ECEAF0; border-radius: 16px; background: #fff; }
+.storyboard-clips__drop { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 18px; border: 2px dashed #B9CFEA; border-radius: 14px; background: #F4F9FE; color: #3E6290; font-weight: 600; }
+.storyboard-clips__drop.is-over { background: #E1EEFB; border-color: #6A8FC7; }
+.storyboard-clips__choose { padding: 6px 14px; border-radius: 999px; background: #fff; border: 1px solid #B9CFEA; cursor: pointer; font-size: 13px; }
+.storyboard-clips__msg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #46704F; }
+.storyboard-clips__tray { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.storyboard-clips__item { display: flex; align-items: center; gap: 8px; max-width: 280px; padding: 6px 10px 6px 6px; border: 1px solid #ECEAF0; border-radius: 12px; background: #FAF9FC; cursor: grab; }

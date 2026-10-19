@@ -1,8 +1,10 @@
 import path from 'node:path';
 import { db } from './db';
 import { storage } from './storage';
-import { orderedPictures } from './order';
-import { expectedFilename, parseResultFilename } from './naming';
+import { orderedPictures, SCENE_ORDER } from './order';
+import { expectedFilename, parseResultFilename, shortDesc } from './naming';
+import { effectiveCode } from './project-code';
+import { pad } from './util';
 import { logActivity } from './activity';
 
 /** The picture files in a project folder are named with their place in the storyboard (001_, 002_ …) so the folder lists them in the same order as the Storyboard.
@@ -12,8 +14,43 @@ export type FolderChange = { assetId: string; imageId: string; from: string; to:
 const flag = globalThis as unknown as { __bcsFolderSync?: boolean };
 export const folderSyncRunning = () => !!flag.__bcsFolderSync;
 
-/** What would be renamed (nothing is changed). */
+/** Video clips in the "06 Video Clips" folder: clips assigned to a scene are named with the scene's place in the storyboard (01_, 02_ …); unassigned ones are marked `unassigned_`. */
+export async function planClipNames(projectId: string): Promise<FolderChange[]> {
+  const project = await db.project.findUnique({ where: { id: projectId }, select: { slug: true, code: true, folderName: true } });
+  if (!project) return [];
+  const [scenes, clips] = await Promise.all([
+    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, title: true, videoAssetId: true } }),
+    db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: project.slug } }),
+  ]);
+  const code = effectiveCode({ slug: project.slug, code: project.code });
+  const out: FolderChange[] = [], assigned = new Set<string>();
+  const w = scenes.length > 99 ? 3 : 2;
+  scenes.forEach((sc, i) => {
+    const as = sc.videoAssetId ? clips.find(c => c.id === sc.videoAssetId) : null;
+    if (!as) return;
+    assigned.add(as.id);
+    const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
+    const d = shortDesc(sc.title);
+    const to = `${dir}/${pad(i + 1, w)}_${code}-S${pad(sc.order)}-CLIP${d ? '_' + d : ''}${ext}`;
+    if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
+  });
+  for (const as of clips) {
+    if (assigned.has(as.id)) continue;
+    const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
+    const base = (as.originalName || as.displayName).replace(/\.[^.]+$/, '').replace(/^unassigned_/, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'clip';
+    const to = `${dir}/unassigned_${base}${ext}`;
+    if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
+  }
+  return out;
+}
+
+/** What would be renamed (nothing is changed): pictures (and, when no single picture is asked for, video clips). */
 export async function planFolderNames(projectId: string, opts: { imageIds?: string[] } = {}): Promise<FolderChange[]> {
+  const pics = await planPictureNames(projectId, opts);
+  return opts.imageIds ? pics : [...pics, ...(await planClipNames(projectId))];
+}
+
+async function planPictureNames(projectId: string, opts: { imageIds?: string[] } = {}): Promise<FolderChange[]> {
   const project = await db.project.findUnique({ where: { id: projectId }, select: { slug: true, code: true } });
   if (!project) return [];
   const pics = await orderedPictures(projectId);

@@ -1,4 +1,5 @@
 import '@/app/storyboard.css';
+import '@/app/storyboard-clips.css';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getProjectBySlug } from '@/lib/queries';
@@ -35,6 +36,11 @@ export default async function Storyboard({ params }: { params: { slug: string } 
       return { id: i.id, title: i.title, status: status(i.status), imageUrl: a ? `/api/files/${a.assetId}?w=400` : null, assetId: a?.assetId ?? null };
     }),
   }));
+  const clipAssets = await db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: p.slug }, orderBy: { createdAt: 'asc' } });
+  const sceneClips: Record<string, { id: string; name: string }> = {};
+  for (const sc of scenes) { const a = clipAssets.find(c => c.id === (sc as any).videoAssetId); if (a) sceneClips[sc.id] = { id: a.id, name: a.displayName }; }
+  const used = new Set(Object.values(sceneClips).map(c => c.id));
+  const tray = clipAssets.filter(c => !used.has(c.id)).map(c => ({ id: c.id, name: c.displayName }));
   if (!scenes.length) return <Empty title="No scenes yet." hint="Add scenes first — then rearrange them here." />;
-  return <StoryboardPage projectId={p.id} slug={p.slug} board={board} />;
+  return <StoryboardPage projectId={p.id} slug={p.slug} board={board} sceneClips={sceneClips} tray={tray} />;
 }
