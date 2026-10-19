@@ -431,7 +431,7 @@ const c = await ctx.request.get(`${BASE}/api/projects/${slug}/export?format=csv&
 // ---- Responsive + console
 for (const [w, h, n] of [[1440, 900, 'desktop'], [820, 1100, 'tablet'], [390, 844, 'phone']]) {
   await page.setViewportSize({ width: w, height: h });
-  for (const u of [`/projects/${slug}/images`, `/projects/${slug}/image-prompts`, `/projects/${slug}/video-prompts`, img1Url.replace(BASE, ''), '/queue', `/projects/${slug}/builder?type=plan`]) {
+  for (const u of [`/projects/${slug}/images`, `/projects/${slug}/image-prompts`, `/projects/${slug}/storyboard`, `/projects/${slug}/video-prompts`, img1Url.replace(BASE, ''), '/queue', `/projects/${slug}/builder?type=plan`]) {
     await go(u);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
     ok(`No horizontal overflow @${n} ${u.split('/').slice(-1)[0].slice(0, 20)}`, !overflow);
@@ -947,6 +947,34 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   ok('FILL IN puts the prompt in the clip box', (await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes('IMPORTED TEST PROMPT'));
   const v2 = page.locator('[data-testid=video-prompt-row]').first();
   await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+}
+// ---- Storyboard tab
+{
+  await go('/projects/generate-plan-test/storyboard');
+  const tiles = () => page.locator('[data-testid=sb-tile]');
+  const ids = async () => (await tiles().evaluateAll(els => els.map(e => e.getAttribute('data-pic-id'))));
+  const before = await ids();
+  ok('Storyboard: tab exists and Scenes & Pictures is not highlighted with it', (await page.locator('[aria-label="Recipe video sections"] a:has-text("Storyboard")[aria-current=page]').count()) === 1 && (await page.locator('[aria-label="Recipe video sections"] a:has-text("Scenes & Pictures")[aria-current=page]').count()) === 0);
+  ok('Storyboard: one thumbnail tile per picture, grouped by scene', before.length >= 3 && (await page.locator('[data-testid=sb-scene]').count()) >= 1);
+  ok('Storyboard: every scene without pictures shows a placeholder', (await page.locator('[data-testid=sb-scene]').evaluateAll(els => els.every(e => e.querySelectorAll('[data-testid=sb-tile]').length > 0 || e.querySelectorAll('[data-testid=sb-empty]').length === 1))));
+  await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 120, y: 40 } });
+  await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
+  await go('/projects/generate-plan-test/storyboard');
+  const after = await ids();
+  ok('Storyboard: dragging a picture to the end saves the new order', after[after.length - 1] === before[0] && after[0] === before[1]);
+  await go('/projects/generate-plan-test/images');
+  ok('Storyboard order is the real order (Picture List follows it)', (await page.locator('div.card[data-drop] a.font-semibold').first().getAttribute('href')).includes(after[0]));
+  await go('/projects/generate-plan-test/storyboard');
+  await tiles().last().dragTo(tiles().first(), { targetPosition: { x: 10, y: 40 } });
+  await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
+  await go('/projects/generate-plan-test/storyboard');
+  ok('Storyboard: dragging it back restores the original order', JSON.stringify(await ids()) === JSON.stringify(before));
+  const n0 = (await tiles().count());
+  await page.locator('[data-testid=sb-tile]').first().locator('xpath=following-sibling::button').click();
+  await page.waitForFunction(() => /added/i.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null);
+  await go('/projects/generate-plan-test/storyboard');
+  const withNew = await ids();
+  ok('Storyboard: + adds a new picture right after that one', withNew.length === n0 + 1 && withNew[0] === before[0] && !before.includes(withNew[1]));
 }
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
