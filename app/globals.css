@@ -98,3 +98,5 @@ a { color: inherit; }
 @keyframes bcs-pulse { 0%, 100% { opacity: .35 } 50% { opacity: 1 } }
 @keyframes bcs-hold { from { width: 0 } to { width: 100% } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* each recipe video has its own pastel page colour: the project layout sets html/body background (see lib/project-color.ts) */

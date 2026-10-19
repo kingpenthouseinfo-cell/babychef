@@ -3,13 +3,14 @@ import { ProgressBar, fileUrl } from './ui';
 import { ConfirmForm } from './client';
 import { archiveProject, duplicateProject } from '@/lib/actions/project';
 import type { projectStats } from '@/lib/queries';
+import type { ProjectColor } from '@/lib/project-color';
 
 const GRADS = ['#E9C9A2,#A8774C', '#EBD2B4,#9E6E45', '#F1E3A8,#C9A64A', '#EBD3B8,#B08A5E', '#F0D6C0,#C98F6A'];
 const grad = (id: string) => { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `linear-gradient(150deg,${GRADS[h % GRADS.length].replace(',', ' 0%,')} 100%)`; };
 
-export function ProjectCard({ p, s, thumb, next }: { p: any; s: Awaited<ReturnType<typeof projectStats>>; thumb?: string | null; next?: { title: string; href: string } | null }) {
+export function ProjectCard({ p, s, thumb, next, color }: { color?: ProjectColor; p: any; s: Awaited<ReturnType<typeof projectStats>>; thumb?: string | null; next?: { title: string; href: string } | null }) {
   return (
-    <div className="relative flex flex-col overflow-hidden border border-line bg-white" style={{ borderRadius: 18, boxShadow: '0 14px 30px -26px rgba(40,36,60,.5)' }}>
+    <div className="relative flex flex-col overflow-hidden border border-line bg-white" data-testid="project-card" data-project-color={color?.key} style={{ borderRadius: 18, boxShadow: '0 14px 30px -26px rgba(40,36,60,.5)', ...(color ? { background: color.bg, borderColor: color.dot } : {}) }}>
       <Link href={`/projects/${p.slug}`} className="block">
         <div className="relative aspect-video w-full" style={{ background: grad(p.id) }}>{thumb && <img src={fileUrl(thumb, 640)} alt="" loading="lazy" className="h-full w-full object-cover" />}</div>
       </Link>

@@ -948,6 +948,28 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   const v2 = page.locator('[data-testid=video-prompt-row]').first();
   await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
 }
+// ---- per-project pastel colour
+{
+  await go('/projects/generate-plan-test/story');
+  const c1 = await page.locator('[data-testid=project-shell]').getAttribute('data-project-color');
+  const bg1 = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  await go(`/projects/${slug}/story`);
+  const c2 = await page.locator('[data-testid=project-shell]').getAttribute('data-project-color');
+  ok('Two different recipe videos have different page colours', !!c1 && !!c2 && c1 !== c2, `${c1} / ${c2}`);
+  await go('/projects/generate-plan-test/images');
+  ok('The colour follows the video on every screen (Picture List, same colour as Scenes)', (await page.locator('[data-testid=project-shell]').getAttribute('data-project-color')) === c1 && (await page.evaluate(() => getComputedStyle(document.body).backgroundColor)) === bg1);
+  ok('The page behind the content is actually tinted (not white)', bg1 !== 'rgb(255, 255, 255)');
+  await go('/projects');
+  ok('Outside a video (project list) the page is plain white again', (await page.evaluate(() => getComputedStyle(document.body).backgroundColor)) === 'rgb(255, 255, 255)');
+  await go('/projects/generate-plan-test/images');
+  await page.locator('[data-testid=project-color-btn]').click();
+  await page.locator('[data-testid=project-color-rose]').click(); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/fix');
+  ok('Choosing a colour in the header changes it on all screens', (await page.locator('[data-testid=project-shell]').getAttribute('data-project-color')) === 'rose');
+  await page.locator('[data-testid=project-color-btn]').click(); await page.locator('[data-testid=project-color-auto]').click(); await page.waitForTimeout(1200);
+  await go('/projects');
+  ok('Project cards carry their video colour', (await page.locator('[data-testid=project-card][data-project-color]').count()) >= 2);
+}
 // ---- Storyboard tab (design from Claude Design: flat picture row + scene storyboard, draft until "Save order")
 {
   const U = '/projects/generate-plan-test/storyboard';

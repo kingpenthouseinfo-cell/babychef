@@ -140,6 +140,7 @@ model Project {
   id               String    @id @default(cuid())
   slug             String    @unique
   code             String?   // 3-letter short name used in file names, e.g. JBP
+  color            String?   // pastel colour key (see lib/project-color.ts); empty = automatic
   folderName       String?
   title            String
   recipeName       String?
