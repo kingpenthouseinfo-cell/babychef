@@ -1,61 +1,65 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { isRedirectError } from 'next/dist/client/components/redirect';
 import { db } from '../db';
 import { backfillPositions } from '../order';
 import { logActivity } from '../activity';
-import { addPictureHere } from './insert';
+import { autoAttachReferences } from '../auto-refs';
+import { fillFromScene } from '../image-gen';
+import type { toSavePayload } from '../storyboard-order';
 
 const touch = () => revalidatePath('/', 'layout');
 
-/** Storyboard: save the whole new layout — scene order, and which pictures sit in which scene in which order. Stable codes (SC02, IMG-021) never change; only the order and a picture's scene do. */
-export async function saveStoryboard(projectId: string, layout: { sceneId: string; pictureIds: string[] }[]): Promise<{ savedAt: string }> {
+/** Storyboard "Save order": one transaction that creates the new scenes/pictures, renames, and stores the whole new order (scene order, which scene each picture is in, and the order inside it).
+ *  Stable codes (SC02, IMG-021) and file names never change — only order, scene membership and titles do. */
+export async function saveOrder(projectId: string, payload: ReturnType<typeof toSavePayload>): Promise<{ saved: true }> {
   await backfillPositions();
-  const [scenes, pics] = await Promise.all([
-    db.scene.findMany({ where: { projectId }, select: { id: true } }),
-    db.plannedImage.findMany({ where: { projectId }, select: { id: true, sceneId: true } }),
+  const [scenes, pics, maxScene, maxImg] = await Promise.all([
+    db.scene.findMany({ where: { projectId }, select: { id: true, title: true } }),
+    db.plannedImage.findMany({ where: { projectId }, select: { id: true, title: true, sceneId: true } }),
+    db.scene.aggregate({ where: { projectId }, _max: { order: true } }),
+    db.plannedImage.aggregate({ where: { projectId }, _max: { seq: true } }),
   ]);
-  const sceneSet = new Set(scenes.map(s => s.id)), picScene = new Map(pics.map(p => [p.id, p.sceneId]));
-  const seen = new Set<string>();
-  const ops: any[] = [];
-  let moved = 0;
-  const sceneOrder = layout.filter(l => sceneSet.has(l.sceneId));
-  // scenes the page did not mention keep their place at the end
-  const missing = scenes.map(s => s.id).filter(id => !sceneOrder.some(l => l.sceneId === id));
-  [...sceneOrder.map(l => l.sceneId), ...missing].forEach((id, k) => ops.push(db.scene.update({ where: { id }, data: { pos: k + 1 } })));
-  for (const l of sceneOrder) {
-    let k = 0;
-    for (const id of l.pictureIds) {
-      if (!picScene.has(id) || seen.has(id)) continue;
-      seen.add(id); k++;
-      if (picScene.get(id) !== l.sceneId) moved++;
-      ops.push(db.plannedImage.update({ where: { id }, data: { sceneId: l.sceneId, pos: k } }));
+  const haveScene = new Set(scenes.map(s => s.id)), havePic = new Map(pics.map(p => [p.id, p])), sceneTitle = new Map(scenes.map(s => [s.id, s.title]));
+  const clean = (t: string, fallback: string) => (t || '').trim().slice(0, 140) || fallback;
+  let moved = 0, renamed = 0;
+  const newPics: string[] = [];
+
+  await db.$transaction(async tx => {
+    // 1) new scenes get a real id (and a fresh stable scene number)
+    const idOf = new Map<string, string>();
+    let order = maxScene._max.order ?? 0;
+    for (const s of payload.scenes) {
+      if (haveScene.has(s.id)) { idOf.set(s.id, s.id); continue; }
+      if (!s.isNew) continue;
+      const row = await tx.scene.create({ data: { projectId, title: clean(s.title, 'New scene'), order: ++order, pos: 9999 } as any });
+      idOf.set(s.id, row.id);
     }
-  }
-  // pictures the page did not mention stay in their scene, after the others
-  for (const p of pics) if (!seen.has(p.id)) { const n = [...seen].filter(x => (sceneOrder.find(l => l.pictureIds.includes(x))?.sceneId) === p.sceneId).length; ops.push(db.plannedImage.update({ where: { id: p.id }, data: { pos: n + 1 + ops.length } })); }
-  await db.$transaction(ops);
-  if (moved) await logActivity(`Storyboard saved (${moved} picture${moved === 1 ? '' : 's'} moved to another scene)`, null, projectId);
+    // 2) scene titles + order
+    for (const s of payload.scenes) {
+      const id = idOf.get(s.id); if (!id) continue;
+      const data: any = { pos: s.order };
+      if (haveScene.has(s.id) && clean(s.title, '') && clean(s.title, '') !== sceneTitle.get(id)) { data.title = clean(s.title, ''); renamed++; }
+      await tx.scene.update({ where: { id }, data });
+    }
+    // 3) pictures: create the new ones, then store scene + position + title of every one
+    let seq = maxImg._max.seq ?? 0;
+    for (const p of payload.pictures) {
+      const sceneId = idOf.get(p.sceneId); if (!sceneId) continue;
+      if (p.isNew && !havePic.has(p.id)) {
+        const row = await tx.plannedImage.create({ data: { projectId, sceneId, seq: ++seq, pos: p.orderInScene, title: clean(p.title, 'New picture'), shotType: 'MAIN NARRATIVE SHOT' } as any });
+        newPics.push(row.id);
+        continue;
+      }
+      const cur = havePic.get(p.id); if (!cur) continue;
+      const data: any = { sceneId, pos: p.orderInScene };
+      if (cur.sceneId !== sceneId) moved++;
+      if (clean(p.title, '') && clean(p.title, '') !== cur.title) { data.title = clean(p.title, ''); renamed++; }
+      await tx.plannedImage.update({ where: { id: p.id }, data });
+    }
+  });
+  // new pictures: attach references and write their first prompt from the scene (best effort)
+  for (const id of newPics) { try { await autoAttachReferences(id); await fillFromScene(id); } catch { /* the picture exists; it can be filled in later */ } }
+  await logActivity(`Storyboard order saved${moved ? ` (${moved} picture${moved === 1 ? '' : 's'} moved to another scene)` : ''}${newPics.length ? `, ${newPics.length} new picture${newPics.length === 1 ? '' : 's'}` : ''}${renamed ? `, ${renamed} renamed` : ''}`, null, projectId);
   touch();
-  return { savedAt: new Date().toISOString() };
-}
-
-/** Storyboard: add a new picture in a scene, right after `afterImageId` ('START' = first, empty = end). Returns the new picture's id. */
-export async function addStoryboardPicture(projectId: string, sceneId: string, afterImageId: string | null): Promise<{ id: string }> {
-  const before = await db.plannedImage.aggregate({ where: { projectId }, _max: { seq: true } });
-  const fd = new FormData();
-  fd.set('projectId', projectId); fd.set('sceneId', sceneId); if (afterImageId) fd.set('afterImageId', afterImageId);
-  try { await addPictureHere(fd); } catch (e) { if (!isRedirectError(e)) throw e; }
-  const img = await db.plannedImage.findFirstOrThrow({ where: { projectId, seq: { gt: before._max.seq ?? 0 } }, orderBy: { seq: 'desc' } });
-  touch();
-  return { id: img.id };
-}
-
-/** Storyboard: rename a scene (click its title on the page). */
-export async function renameScene(sceneId: string, title: string): Promise<{ title: string }> {
-  const t = title.trim().slice(0, 140);
-  if (!t) throw new Error('A scene needs a name');
-  await db.scene.update({ where: { id: sceneId }, data: { title: t } });
-  touch();
-  return { title: t };
+  return { saved: true };
 }

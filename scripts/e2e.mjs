@@ -948,40 +948,62 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   const v2 = page.locator('[data-testid=video-prompt-row]').first();
   await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
 }
-// ---- Storyboard tab
+// ---- Storyboard tab (design from Claude Design: flat picture row + scene storyboard, draft until "Save order")
 {
-  await go('/projects/generate-plan-test/storyboard');
+  const U = '/projects/generate-plan-test/storyboard';
+  await go(U);
   const tiles = () => page.locator('[data-testid=sb-tile]');
   const ids = async () => (await tiles().evaluateAll(els => els.map(e => e.getAttribute('data-pic-id'))));
+  const save = async () => { await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(600); };
   const before = await ids();
-  ok('Storyboard: tab exists and Scenes & Pictures is not highlighted with it', (await page.locator('[aria-label="Recipe video sections"] a:has-text("Storyboard")[aria-current=page]').count()) === 1 && (await page.locator('[aria-label="Recipe video sections"] a:has-text("Scenes & Pictures")[aria-current=page]').count()) === 0);
-  ok('Storyboard: one thumbnail tile per picture in one flat run (not grouped by scene)', before.length >= 3 && (await page.locator('[data-testid=sb-scene]').count()) === 0 && (await page.locator('[data-testid=sb-tiles]').count()) === 1);
-  ok('Storyboard: tiles show scene.picture numbers in order', (await page.locator('[data-testid=sb-tile] .storyboard__code').first().textContent()).trim().length > 0);
-  const nm0 = (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim();
-  await page.locator('[data-testid=sb-scene-name]').first().click();
-  await page.fill('[data-testid=sb-scene-input]', 'Renamed on storyboard'); await page.keyboard.press('Enter'); await page.waitForTimeout(1200);
-  await go('/projects/generate-plan-test/storyboard');
-  ok('Clicking a scene title edits it and saves the new name', (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim() === 'Renamed on storyboard');
-  await page.locator('[data-testid=sb-scene-name]').first().click(); await page.fill('[data-testid=sb-scene-input]', nm0); await page.keyboard.press('Enter'); await page.waitForTimeout(1000);
-  ok('Each picture with an image has a small Open in folder button', (await page.locator('.storyboard__folder').count()) === (await page.locator('[data-testid=sb-tile] img').count()) && (await page.locator('.storyboard__folder').count()) >= 1);
-  await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 120, y: 40 } });
-  await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
-  await go('/projects/generate-plan-test/storyboard');
+  ok('Storyboard: tab exists, Scenes & Pictures is not highlighted with it', (await page.locator('[aria-label="Recipe video sections"] a:has-text("Storyboard")[aria-current=page]').count()) === 1 && (await page.locator('[aria-label="Recipe video sections"] a:has-text("Scenes & Pictures")[aria-current=page]').count()) === 0);
+  ok('Storyboard: every picture is one tile in a single flat row, Save order starts disabled', before.length >= 3 && (await page.locator('[data-testid=sb-flow]').count()) === 1 && (await page.locator('[data-testid=sb-save]').isDisabled()));
+  await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 20, y: 40 } });
+  ok('Storyboard: dragging is only a draft (Unsaved changes, Save enabled)', (await page.locator('[data-testid=sb-dirty]').count()) === 1 && !(await page.locator('[data-testid=sb-save]').isDisabled()));
+  await page.locator('[data-testid=sb-undo]').click();
+  ok('Storyboard: Undo changes puts everything back', JSON.stringify(await ids()) === JSON.stringify(before) && (await page.locator('[data-testid=sb-save]').isDisabled()));
+  await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 20, y: 40 } });
+  await save();
+  await go(U);
   const after = await ids();
-  ok('Storyboard: dragging a picture to the end saves the new order', after[after.length - 1] === before[0] && after[0] === before[1]);
+  ok('Storyboard: Save order stores the new order', after[0] === before[1] && after[1] === before[0]);
   await go('/projects/generate-plan-test/images');
   ok('Storyboard order is the real order (Picture List follows it)', (await page.locator('div.card[data-drop] a.font-semibold').first().getAttribute('href')).includes(after[0]));
-  await go('/projects/generate-plan-test/storyboard');
-  await tiles().last().dragTo(tiles().first(), { targetPosition: { x: 10, y: 40 } });
-  await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
-  await go('/projects/generate-plan-test/storyboard');
-  ok('Storyboard: dragging it back restores the original order', JSON.stringify(await ids()) === JSON.stringify(before));
+  await go(U);
+  await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 20, y: 40 } });
+  await save(); await go(U);
+  ok('Storyboard: moving it back restores the original order', JSON.stringify(await ids()) === JSON.stringify(before));
+  // rename a picture
+  const t0 = (await page.locator('[data-testid=sb-pic-title]').first().textContent()).trim();
+  await page.locator('[data-testid=sb-pic-title]').first().click();
+  await page.locator('.storyboard__title-input').fill('Renamed picture'); await page.keyboard.press('Enter');
+  await save(); await go(U);
+  ok('Storyboard: clicking a picture name renames it (after Save order)', (await page.locator('[data-testid=sb-pic-title]').first().textContent()).trim() === 'Renamed picture');
+  await page.locator('[data-testid=sb-pic-title]').first().click(); await page.locator('.storyboard__title-input').fill(t0); await page.keyboard.press('Enter'); await save(); await go(U);
+  ok('Each picture with an image has a Folder button', (await page.locator('[data-testid=sb-folder]').count()) === (await page.locator('[data-testid=sb-tile] img').count()) && (await page.locator('[data-testid=sb-folder]').count()) >= 1);
+  // add a picture between
   const n0 = (await tiles().count());
-  await page.locator('.storyboard__slot').first().locator(':scope > button').click();
-  await page.waitForFunction(() => /added/i.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null);
-  await go('/projects/generate-plan-test/storyboard');
-  const withNew = await ids();
-  ok('Storyboard: + adds a new picture right after that one', withNew.length === n0 + 1 && withNew[0] === before[0] && !before.includes(withNew[1]));
+  await page.locator('[data-testid=sb-add]').nth(1).click();
+  ok('Storyboard: + adds a draft "New picture" tile in that spot', (await tiles().count()) === n0 + 1 && (await page.locator('.storyboard__thumb-empty--new').count()) === 1);
+  await save(); await go(U);
+  ok('Storyboard: the new picture is saved', (await tiles().count()) === n0 + 1);
+  // scene storyboard: rename + add scene + empty placeholder
+  const sn0 = (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim();
+  await page.locator('[data-testid=sb-scene-name]').first().click();
+  await page.fill('[data-testid=sb-scene-input]', 'Scene renamed here'); await page.keyboard.press('Enter');
+  await save(); await go(U);
+  ok('Scene Storyboard: clicking a scene name renames it', (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim() === 'Scene renamed here');
+  await page.locator('[data-testid=sb-scene-name]').first().click(); await page.fill('[data-testid=sb-scene-input]', sn0); await page.keyboard.press('Enter'); await save(); await go(U);
+  const sc0 = await page.locator('[data-testid=sb-scene-card]').count();
+  const em0 = await page.locator('[data-testid=sb-empty]').count();
+  await page.locator('[data-testid=sb-add-scene]').click();
+  ok('Scene Storyboard: + Add scene adds an empty scene with a placeholder in the picture row', (await page.locator('[data-testid=sb-scene-card]').count()) === sc0 + 1 && (await page.locator('[data-testid=sb-empty]').count()) === em0 + 1);
+  await save(); await go(U);
+  ok('Storyboard: an empty scene is saved and keeps its placeholder', (await page.locator('[data-testid=sb-scene-card]').count()) === sc0 + 1 && (await page.locator('[data-testid=sb-empty]').count()) === em0 + 1);
+  const firstId = (await ids())[0];
+  await tiles().first().dragTo(page.locator('[data-testid=sb-empty]').last());
+  await save(); await go(U);
+  ok('Storyboard: dropping a picture on an empty scene moves it into that scene', (await page.locator('[data-testid=sb-empty]').count()) === em0 && (await tiles().evaluateAll((els, id) => els.some(e => e.getAttribute('data-pic-id') === id), firstId)));
 }
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',

@@ -1,0 +1,21 @@
+// Unit tests for lib/storyboard-order.ts (pure functions). Run: node --experimental-strip-types scripts/unit-storyboard.mjs
+import assert from 'node:assert/strict';
+import { movePicture, moveScene, movePictureToScene, addScene, addPicture, flatten, toSavePayload } from '../lib/storyboard-order.ts';
+const pic = id => ({ id, title: id, status: 'approved' });
+const board = () => [{ id: 'S1', title: 'one', pictures: [pic('a'), pic('b')] }, { id: 'S2', title: 'two', pictures: [pic('c')] }, { id: 'S3', title: 'three', pictures: [] }];
+const ids = b => b.map(s => `${s.id}:${s.pictures.map(p => p.id).join('')}`).join(' ');
+let n = 0; const t = (name, fn) => { fn(); n++; console.log('ok', name); };
+t('movePicture within a scene (down)', () => assert.equal(ids(movePicture(board(), 'a', 'S1', 2)), 'S1:ba S2:c S3:'));
+t('movePicture within a scene (up)', () => assert.equal(ids(movePicture(board(), 'b', 'S1', 0)), 'S1:ba S2:c S3:'));
+t('movePicture into another scene at an index', () => assert.equal(ids(movePicture(board(), 'a', 'S2', 0)), 'S1:b S2:ac S3:'));
+t('movePicture into an empty scene', () => assert.equal(ids(movePicture(board(), 'c', 'S3', 0)), 'S1:ab S2: S3:c'));
+t('movePicture does not mutate the input', () => { const b = board(); movePicture(b, 'a', 'S2', 0); assert.equal(ids(b), 'S1:ab S2:c S3:'); });
+t('movePictureToScene puts it at the end', () => assert.equal(ids(movePictureToScene(board(), 'a', 'S2')), 'S1:b S2:ca S3:'));
+t('movePictureToScene within its own scene moves it to the end', () => assert.equal(ids(movePictureToScene(board(), 'a', 'S1')), 'S1:ba S2:c S3:'));
+t('moveScene brings its pictures along', () => assert.equal(ids(moveScene(board(), 'S1', 3)), 'S2:c S3: S1:ab'));
+t('moveScene up', () => assert.equal(ids(moveScene(board(), 'S3', 0)), 'S3: S1:ab S2:c'));
+t('addScene inserts an empty scene', () => { const b = addScene(board(), 1); assert.equal(b.length, 4); assert.equal(b[1].pictures.length, 0); assert.ok(b[1].id.includes('_new_')); });
+t('addPicture inserts a new picture at an index', () => { const b = addPicture(board(), 'S1', 1); assert.equal(b[0].pictures.length, 3); assert.equal(b[0].pictures[1].isNew, true); });
+t('flatten: pictures in folder order + a placeholder for an empty scene', () => { const f = flatten(board()); assert.deepEqual(f.map(c => (c.kind === 'picture' ? c.picture.id : 'EMPTY:' + c.scene.id)), ['a', 'b', 'c', 'EMPTY:S3']); });
+t('toSavePayload: 1-based orders and scene of each picture', () => { const p = toSavePayload(movePicture(board(), 'a', 'S2', 0)); assert.deepEqual(p.scenes.map(s => s.order), [1, 2, 3]); assert.deepEqual(p.pictures.map(x => `${x.id}@${x.sceneId}#${x.orderInScene}`), ['b@S1#1', 'a@S2#1', 'c@S2#2']); });
+console.log(`${n} passed`);

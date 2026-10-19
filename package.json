@@ -15,7 +15,8 @@
     "dev:raw": "next dev",
     "start:raw": "next start",
     "make-app": "bash scripts/make-mac-app.sh",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "test:unit": "node --experimental-strip-types scripts/unit-storyboard.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
