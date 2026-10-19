@@ -26,7 +26,7 @@ export default async function StoryboardPage({ params }: { params: { slug: strin
   });
   return (
     <div className="storyboard-page">
-      <header className="storyboard-page__head"><h1 className="storyboard-page__title">Storyboard</h1><p className="storyboard-page__sub">All pictures in video order. Drag to rearrange — even into another scene — or press + to add one in between. What you see here is the saved order.</p></header>
+      <header className="storyboard-page__head"><h1 className="storyboard-page__title">Storyboard</h1><p className="storyboard-page__sub">All the pictures in video order. Drag to rearrange, or press + to add one in between. A picture takes the scene of the picture it lands next to. What you see here is the saved order.</p></header>
       {scenes.length === 0 ? <Empty title="No scenes yet." hint="Add scenes first — they show up here with a place for each picture." /> : <Storyboard projectId={p.id} slug={p.slug} initial={data} />}
     </div>
   );

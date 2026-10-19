@@ -50,3 +50,12 @@ export async function addStoryboardPicture(projectId: string, sceneId: string, a
   touch();
   return { id: img.id };
 }
+
+/** Storyboard: rename a scene (click its title on the page). */
+export async function renameScene(sceneId: string, title: string): Promise<{ title: string }> {
+  const t = title.trim().slice(0, 140);
+  if (!t) throw new Error('A scene needs a name');
+  await db.scene.update({ where: { id: sceneId }, data: { title: t } });
+  touch();
+  return { title: t };
+}

@@ -11,26 +11,24 @@ Existing look: white background, soft lavender-grey (#F4F3F7) areas, ink #1E1D22
 **Purpose:** see the **whole video at a glance** — only thumbnails, in order — and rearrange it. **The order you leave it in on this page is the saved order for the whole app** (scene order and picture order).
 
 ### What it shows
-- Page title "Storyboard" + one-line help ("All pictures in video order. Drag to rearrange — even into another scene — or press + to add one in between. What you see here is the saved order.")
-- A small status bar: `30 pictures · 12 scenes` and a message area ("Saving…", "Saved ✓", "Picture added ✓").
-- Then **one section per scene, in order**, each containing:
-  1. **Scene bar (header):** a drag grip `⠿` (drag the whole scene up/down), `Scene 4`, the scene title (e.g. "Add the palm jaggery"), `3 pictures`, and a `+ Add picture` button (adds at the end of that scene).
-  2. **A wrapping row of picture tiles** (the thumbnails), in order.
-     - **Tile:** small 4:3 thumbnail (~130px wide), under it the label `04.2` (scene.picture) with a small **status dot** (grey = not made, gold = made/waiting review, green = approved, red = needs fix), and the picture title (max 2 lines). Clicking the thumbnail opens that picture. If there is no image yet the tile shows a calm "No picture yet" placeholder.
-     - **Between tiles (and at the very start of the row): a small round `+` button** to add a new picture in that exact spot.
-     - **Empty scene:** a dashed **placeholder tile** across the row — "No picture yet · Drop a picture here · + Add one" — so every scene exists on the page even with no pictures.
-- Pictures are **draggable**: drag a tile before/after another tile, or onto another scene's row (that moves the picture into that scene), or onto an empty scene's placeholder. While dragging, the spot where it will land shows a thin blue marker (left/right edge of a tile; top/bottom edge of a scene bar when moving a scene).
+- Page title "Storyboard" + one-line help ("All the pictures in video order. Drag to rearrange, or press + to add one in between. A picture takes the scene of the picture it lands next to. What you see here is the saved order.")
+- A small status bar: `30 pictures` and a message area ("Saving…", "Saved ✓", "Picture added ✓").
+- Then **ONE flat wrapping grid of every picture, in order — NOT grouped by scene** (no scene headers or bars). Each item:
+  - **Tile:** small 4:3 thumbnail (~130px wide), under it the label `04.2` (scene.picture) with a small **status dot** (grey = not made, gold = made/waiting review, green = approved, red = needs fix), and the picture title (max 2 lines). Clicking the thumbnail opens that picture. If there is no image yet the tile shows a calm "No picture yet" placeholder.
+  - **Between tiles (and at the very start): a small round `+` button** to add a new picture in that exact spot.
+  - **A scene that exists but has no pictures yet** appears **inline in its place** as a dashed **placeholder tile**: `Scene 5` · `No picture yet` · the scene title · `+ Add one`. It is also a drop target.
+- Pictures are **draggable**: drag a tile before/after another tile. While dragging, the spot where it will land shows a thin blue marker on the left/right edge of the tile it is over. (Behind the scenes a picture joins the scene of the picture it lands next to; the label under the tile shows the scene number so this is visible.)
 
 ### States to design
 - **Default**, **hover** over a tile (lift / shadow, grab cursor), **dragging** (the tile being dragged is semi-transparent), **drop marker** (`.is-before` / `.is-after` classes), **saving/saved message**.
-- **Empty scene placeholder** and **tile without image placeholder**.
-- **Many pictures:** rows wrap; up to ~12 tiles per scene should still look tidy. 40+ pictures in total should still feel light and scannable.
+- **Empty-scene placeholder tile** and **tile without image placeholder**.
+- **Many pictures:** the grid wraps; 40+ pictures in total should still feel light and scannable.
 - **Phone width (390px):** tiles ~3 per row; `+` buttons still tappable (≥ 32px hit area). (Drag works with a mouse; on phones people open the picture instead.)
 
 ### Rules
 - **Calm, not busy.** Thumbnails are the hero; text is small and quiet. No heavy borders around every tile.
 - The `+` buttons must be discoverable but not noisy (quiet until hover/focus; always visible on touch).
-- Scene bars should make scene boundaries obvious at a glance without feeling heavy (a soft band or color tab per scene is fine).
+- No scene grouping. If you want to hint at scene changes, do it subtly through the `04.2` label only.
 - Status dots only — no big badges.
 
 ## The exact HTML and class names to style (don't rename them)
@@ -42,41 +40,33 @@ Existing look: white background, soft lavender-grey (#F4F3F7) areas, ink #1E1D22
   </header>
   <div class="storyboard">
     <div class="storyboard__bar">
-      <span class="storyboard__count">30 pictures · 12 scenes</span>
+      <span class="storyboard__count">30 pictures</span>
       <span class="storyboard__msg">Saved ✓</span>
     </div>
+    <div class="storyboard__tiles">                         <!-- ONE flat wrapping row of everything -->
+      <button class="storyboard__add storyboard__add--start">+</button>   <!-- very start -->
 
-    <section class="storyboard__scene">                       <!-- one per scene -->
-      <header class="storyboard__head [is-before|is-after]">  <!-- drop marker when a scene is dragged over -->
-        <span class="storyboard__grip" draggable>⠿</span>
-        <span class="storyboard__scene-label">Scene 4</span>
-        <span class="storyboard__scene-title">Add the palm jaggery</span>
-        <span class="storyboard__scene-count">3 pictures</span>
-        <button class="storyboard__add-end">+ Add picture</button>
-      </header>
-      <div class="storyboard__tiles">
-        <!-- empty scene: -->
-        <div class="storyboard__empty">
-          <span class="storyboard__empty-text">No picture yet</span>
-          <span class="storyboard__empty-hint">Drop a picture here</span>
-          <button class="storyboard__add">+ Add one</button>
+      <div class="storyboard__slot">                        <!-- one per picture -->
+        <div class="storyboard__tile [is-before|is-after]" draggable>
+          <a class="storyboard__thumb"><img/></a>           <!-- or <span class="storyboard__thumb-empty">No picture yet</span> -->
+          <div class="storyboard__code">04.2 <span class="storyboard__dot storyboard__dot--approved"></span></div>
+          <div class="storyboard__title">Add the jaggery to the coconut milk</div>
         </div>
-        <!-- each picture: -->
-        <div class="storyboard__slot">
-          <button class="storyboard__add storyboard__add--start">+</button>   <!-- first tile only -->
-          <div class="storyboard__tile [is-before|is-after]" draggable>
-            <a class="storyboard__thumb"><img/></a>          <!-- or <span class="storyboard__thumb-empty">No picture yet</span> -->
-            <div class="storyboard__code">04.2 <span class="storyboard__dot storyboard__dot--approved"></span></div>
-            <div class="storyboard__title">Add the jaggery to the coconut milk</div>
-          </div>
-          <button class="storyboard__add">+</button>        <!-- after every tile -->
-        </div>
+        <button class="storyboard__add">+</button>          <!-- after every tile -->
       </div>
-    </section>
+
+      <!-- a scene with no pictures, in its place in the run -->
+      <div class="storyboard__empty">
+        <span class="storyboard__empty-scene">Scene 5</span>
+        <span class="storyboard__empty-text">No picture yet</span>
+        <span class="storyboard__empty-title">Add the cardamom</span>
+        <button class="storyboard__add">+ Add one</button>
+      </div>
+    </div>
   </div>
 </div>
 ```
-Status dot modifiers in use: `--approved`, `--redo`, `--needs-revision`, `--review`, `--generating`; anything else is the default grey. Drop markers: `.is-before` / `.is-after` on `.storyboard__tile` and `.storyboard__head`.
+Status dot modifiers in use: `--approved`, `--redo`, `--needs-revision`, `--review`, `--generating`; anything else is the default grey. Drop markers: `.is-before` / `.is-after` on `.storyboard__tile`.
 
 ## What I want back
-A single CSS file (plain CSS, those class names only, light theme, responsive at 390px and 1280px) — plus 2 mockups (a project with many pictures, and one with an empty scene) so I can check it. Optional: suggestions to make the page calmer or quicker to scan.
+A single CSS file (plain CSS, those class names only, light theme, responsive at 390px and 1280px) — plus 2 mockups (a project with many pictures, and one with an empty-scene placeholder in the middle) so I can check it. Optional: suggestions to make the page calmer or quicker to scan.

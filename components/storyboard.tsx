@@ -2,12 +2,35 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { saveStoryboard, addStoryboardPicture } from '@/lib/actions/storyboard';
+import { saveStoryboard, addStoryboardPicture, renameScene } from '@/lib/actions/storyboard';
+import { RevealButton } from './image-workspace';
 
 export type SbPic = { id: string; seq: number; code: string; title: string; assetId: string | null; status: string };
 export type SbScene = { id: string; label: string; title: string; pics: SbPic[] };
 
-/** Storyboard: every picture as a thumbnail in video order, grouped by scene. Drag a picture to move it (even into another scene), drag a scene bar to move the whole scene, "+" to add a picture in between. The order you leave it in is the saved order. */
+/** The scene's name: click it to edit (Enter or click away saves, Esc cancels). */
+function SceneTitle({ sceneId, label, title, onSaved }: { sceneId: string; label: string; title: string; onSaved: (t: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(title);
+  const [err, setErr] = useState('');
+  const [, start] = useTransition();
+  const done = (save: boolean) => {
+    setEditing(false);
+    if (!save || v.trim() === title.trim()) { setV(title); return; }
+    start(async () => { try { const r = await renameScene(sceneId, v); onSaved(r.title); setErr(''); } catch (e: any) { setErr(e?.message || 'Could not rename'); setV(title); } });
+  };
+  return (
+    <span className="storyboard__scene-tag" data-testid="sb-scene-tag">
+      <span className="storyboard__scene-no">Scene {label}</span>
+      {editing
+        ? <input className="storyboard__scene-input" data-testid="sb-scene-input" autoFocus aria-label={`Name of scene ${label}`} value={v} onChange={e => setV(e.target.value)} onBlur={() => done(true)} onKeyDown={e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); }} />
+        : <button type="button" className="storyboard__scene-name" data-testid="sb-scene-name" title="Click to rename this scene" onClick={() => { setV(title); setEditing(true); }}>{title}</button>}
+      {err && <span className="storyboard__scene-err" role="alert">{err}</span>}
+    </span>
+  );
+}
+
+/** Storyboard: every picture as a thumbnail in one flat run, in video order (no scene grouping). Drag a picture to move it — it joins the scene of the picture it lands next to. "+" adds a picture in between; a scene with no pictures shows a placeholder in its place. The order you leave it in is the saved order. */
 export function Storyboard({ projectId, slug, initial }: { projectId: string; slug: string; initial: SbScene[] }) {
   const router = useRouter();
   const [scenes, setScenes] = useState<SbScene[]>(initial);
@@ -36,52 +59,36 @@ export function Storyboard({ projectId, slug, initial }: { projectId: string; sl
     lane.pics.splice(Math.max(0, at), 0, pic);
     persist(next);
   };
-  const dropScene = (targetSceneId: string, after: boolean) => {
-    const d = drag.current; drag.current = null; setHint('');
-    if (!d || d.kind !== 'scene' || d.id === targetSceneId) return;
-    const moving = scenes.find(s => s.id === d.id)!; const rest = scenes.filter(s => s.id !== d.id);
-    let at = rest.findIndex(s => s.id === targetSceneId); if (after) at += 1;
-    rest.splice(at, 0, moving); persist(rest);
-  };
   const side = (e: React.DragEvent, horizontal: boolean) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); return horizontal ? e.clientX > r.left + r.width / 2 : e.clientY > r.top + r.height / 2; };
   const total = scenes.reduce((n, s) => n + s.pics.length, 0);
 
+  const firstScene = scenes.find(sc => sc.pics.length > 0);
   return (
     <div className="storyboard" data-testid="storyboard">
-      <div className="storyboard__bar"><span className="storyboard__count">{total} picture{total === 1 ? '' : 's'} · {scenes.length} scene{scenes.length === 1 ? '' : 's'}</span><span className="storyboard__msg" role="status" data-testid="sb-msg">{busy && !msg ? 'Saving…' : msg}</span></div>
-      {scenes.map(sc => (
-        <section key={sc.id} className="storyboard__scene" data-testid="sb-scene" data-scene-id={sc.id}
-          onDragOver={e => { const d = drag.current; if (d?.kind === 'scene') { e.preventDefault(); setHint(`s:${sc.id}:${side(e, false) ? 'a' : 'b'}`); } }}
-          onDrop={e => { if (drag.current?.kind === 'scene') { e.preventDefault(); dropScene(sc.id, side(e, false)); } }}>
-          <header className={`storyboard__head ${hint === `s:${sc.id}:b` ? 'is-before' : hint === `s:${sc.id}:a` ? 'is-after' : ''}`}>
-            <span className="storyboard__grip" draggable data-testid="sb-scene-grip" title="Drag to move the whole scene" aria-label={`Move scene ${sc.label}`} onDragStart={e => { drag.current = { kind: 'scene', id: sc.id }; e.dataTransfer.setData('text/plain', sc.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { drag.current = null; setHint(''); }}>⠿</span>
-            <span className="storyboard__scene-label">Scene {sc.label}</span><span className="storyboard__scene-title">{sc.title}</span>
-            <span className="storyboard__scene-count">{sc.pics.length} picture{sc.pics.length === 1 ? '' : 's'}</span>
-            <button type="button" className="storyboard__add-end" data-testid="sb-add-end" onClick={() => add(sc.id, null)} disabled={busy}>+ Add picture</button>
-          </header>
-          <div className="storyboard__tiles"
-            onDragOver={e => { if (drag.current?.kind === 'pic') { e.preventDefault(); } }}
-            onDrop={e => { if (drag.current?.kind === 'pic' && e.target === e.currentTarget) { e.preventDefault(); dropPic(sc.id, null, true); } }}>
-            {sc.pics.length === 0 && (
-              <div className="storyboard__empty" data-testid="sb-empty" onDragOver={e => { if (drag.current?.kind === 'pic') e.preventDefault(); }} onDrop={e => { e.preventDefault(); e.stopPropagation(); dropPic(sc.id, null, true); }}>
-                <span className="storyboard__empty-text">No picture yet</span><span className="storyboard__empty-hint">Drop a picture here</span>
-                <button type="button" className="storyboard__add" data-testid="sb-add" onClick={() => add(sc.id, null)} disabled={busy}>+ Add one</button>
-              </div>)}
-            {sc.pics.map((p, i) => (
-              <div key={p.id} className="storyboard__slot">
-                {i === 0 && <button type="button" className="storyboard__add storyboard__add--start" data-testid="sb-add" aria-label="Add a picture before this one" title="Add a picture here" onClick={() => add(sc.id, 'START')} disabled={busy}>+</button>}
-                <div className={`storyboard__tile ${hint === `p:${p.id}:b` ? 'is-before' : hint === `p:${p.id}:a` ? 'is-after' : ''}`} data-testid="sb-tile" data-pic-id={p.id} draggable
-                  onDragStart={e => { drag.current = { kind: 'pic', id: p.id }; e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { drag.current = null; setHint(''); }}
-                  onDragOver={e => { if (drag.current?.kind === 'pic' && drag.current.id !== p.id) { e.preventDefault(); e.stopPropagation(); setHint(`p:${p.id}:${side(e, true) ? 'a' : 'b'}`); } }}
-                  onDrop={e => { if (drag.current?.kind === 'pic') { e.preventDefault(); e.stopPropagation(); dropPic(sc.id, p.id, side(e, true)); } }}>
-                  <Link href={`/projects/${slug}/images/${p.id}`} className="storyboard__thumb" draggable={false} title={`${p.code} · ${p.title}`}>{p.assetId ? <img src={`/api/files/${p.assetId}?w=240`} alt={p.title} loading="lazy" draggable={false} /> : <span className="storyboard__thumb-empty">No picture yet</span>}</Link>
-                  <div className="storyboard__code">{p.code}<span className={`storyboard__dot storyboard__dot--${p.status.toLowerCase().replace(/[^a-z]+/g, '-')}`} title={p.status} /></div>
-                  <div className="storyboard__title">{p.title}</div>
-                </div>
-                <button type="button" className="storyboard__add" data-testid="sb-add" aria-label="Add a picture after this one" title="Add a picture here" onClick={() => add(sc.id, p.id)} disabled={busy}>+</button>
-              </div>))}
-          </div>
-        </section>))}
+      <div className="storyboard__bar"><span className="storyboard__count">{total} picture{total === 1 ? '' : 's'}</span><span className="storyboard__msg" role="status" data-testid="sb-msg">{busy && !msg ? 'Saving…' : msg}</span></div>
+      <div className="storyboard__tiles" data-testid="sb-tiles">
+        {firstScene && <button type="button" className="storyboard__add storyboard__add--start" data-testid="sb-add" aria-label="Add a picture at the very start" title="Add a picture at the start" onClick={() => add(firstScene.id, 'START')} disabled={busy}>+</button>}
+        {scenes.flatMap(sc => sc.pics.length === 0 ? [(
+          <div key={`empty-${sc.id}`} className="storyboard__empty" data-testid="sb-empty" data-scene-id={sc.id} onDragOver={e => { if (drag.current?.kind === 'pic') e.preventDefault(); }} onDrop={e => { e.preventDefault(); dropPic(sc.id, null, true); }}>
+            <SceneTitle sceneId={sc.id} label={sc.label} title={sc.title} onSaved={t => setScenes(a => a.map(x => x.id === sc.id ? { ...x, title: t } : x))} /><span className="storyboard__empty-text">No picture yet</span>
+            <button type="button" className="storyboard__add" data-testid="sb-add" onClick={() => add(sc.id, null)} disabled={busy}>+ Add one</button>
+          </div>)] : sc.pics.map((p, pi) => (
+          <div key={p.id} className="storyboard__slot">
+            <div className="storyboard__col">
+            {pi === 0 ? <SceneTitle sceneId={sc.id} label={sc.label} title={sc.title} onSaved={t => setScenes(a => a.map(x => x.id === sc.id ? { ...x, title: t } : x))} /> : <span className="storyboard__scene-tag storyboard__scene-tag--spacer" aria-hidden />}
+            <div className={`storyboard__tile ${hint === `p:${p.id}:b` ? 'is-before' : hint === `p:${p.id}:a` ? 'is-after' : ''}`} data-testid="sb-tile" data-pic-id={p.id} data-scene-id={sc.id} draggable
+              onDragStart={e => { drag.current = { kind: 'pic', id: p.id }; e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { drag.current = null; setHint(''); }}
+              onDragOver={e => { if (drag.current?.kind === 'pic' && drag.current.id !== p.id) { e.preventDefault(); setHint(`p:${p.id}:${side(e, true) ? 'a' : 'b'}`); } }}
+              onDrop={e => { if (drag.current?.kind === 'pic') { e.preventDefault(); dropPic(sc.id, p.id, side(e, true)); } }}>
+              <Link href={`/projects/${slug}/images/${p.id}`} className="storyboard__thumb" draggable={false} title={`${p.code} · ${p.title}`}>{p.assetId ? <img src={`/api/files/${p.assetId}?w=240`} alt={p.title} loading="lazy" draggable={false} /> : <span className="storyboard__thumb-empty">No picture yet</span>}</Link>
+              <div className="storyboard__code">{p.code}<span className={`storyboard__dot storyboard__dot--${p.status.toLowerCase().replace(/[^a-z]+/g, '-')}`} title={p.status} /></div>
+              <div className="storyboard__title">{p.title}</div>
+              {p.assetId && <RevealButton assetId={p.assetId} label="Open in folder" className="storyboard__folder" />}
+            </div>
+            </div>
+            <button type="button" className="storyboard__add" data-testid="sb-add" aria-label="Add a picture after this one" title="Add a picture here" onClick={() => add(sc.id, p.id)} disabled={busy}>+</button>
+          </div>)))}
+      </div>
     </div>
   );
 }

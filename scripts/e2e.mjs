@@ -955,8 +955,15 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   const ids = async () => (await tiles().evaluateAll(els => els.map(e => e.getAttribute('data-pic-id'))));
   const before = await ids();
   ok('Storyboard: tab exists and Scenes & Pictures is not highlighted with it', (await page.locator('[aria-label="Recipe video sections"] a:has-text("Storyboard")[aria-current=page]').count()) === 1 && (await page.locator('[aria-label="Recipe video sections"] a:has-text("Scenes & Pictures")[aria-current=page]').count()) === 0);
-  ok('Storyboard: one thumbnail tile per picture, grouped by scene', before.length >= 3 && (await page.locator('[data-testid=sb-scene]').count()) >= 1);
-  ok('Storyboard: every scene without pictures shows a placeholder', (await page.locator('[data-testid=sb-scene]').evaluateAll(els => els.every(e => e.querySelectorAll('[data-testid=sb-tile]').length > 0 || e.querySelectorAll('[data-testid=sb-empty]').length === 1))));
+  ok('Storyboard: one thumbnail tile per picture in one flat run (not grouped by scene)', before.length >= 3 && (await page.locator('[data-testid=sb-scene]').count()) === 0 && (await page.locator('[data-testid=sb-tiles]').count()) === 1);
+  ok('Storyboard: tiles show scene.picture numbers in order', (await page.locator('[data-testid=sb-tile] .storyboard__code').first().textContent()).trim().length > 0);
+  const nm0 = (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim();
+  await page.locator('[data-testid=sb-scene-name]').first().click();
+  await page.fill('[data-testid=sb-scene-input]', 'Renamed on storyboard'); await page.keyboard.press('Enter'); await page.waitForTimeout(1200);
+  await go('/projects/generate-plan-test/storyboard');
+  ok('Clicking a scene title edits it and saves the new name', (await page.locator('[data-testid=sb-scene-name]').first().textContent()).trim() === 'Renamed on storyboard');
+  await page.locator('[data-testid=sb-scene-name]').first().click(); await page.fill('[data-testid=sb-scene-input]', nm0); await page.keyboard.press('Enter'); await page.waitForTimeout(1000);
+  ok('Each picture with an image has a small Open in folder button', (await page.locator('.storyboard__folder').count()) === (await page.locator('[data-testid=sb-tile] img').count()) && (await page.locator('.storyboard__folder').count()) >= 1);
   await tiles().first().dragTo(tiles().last(), { targetPosition: { x: 120, y: 40 } });
   await page.waitForFunction(() => /Saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 15000 }).catch(() => null);
   await go('/projects/generate-plan-test/storyboard');
@@ -970,7 +977,7 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   await go('/projects/generate-plan-test/storyboard');
   ok('Storyboard: dragging it back restores the original order', JSON.stringify(await ids()) === JSON.stringify(before));
   const n0 = (await tiles().count());
-  await page.locator('[data-testid=sb-tile]').first().locator('xpath=following-sibling::button').click();
+  await page.locator('.storyboard__slot').first().locator(':scope > button').click();
   await page.waitForFunction(() => /added/i.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null);
   await go('/projects/generate-plan-test/storyboard');
   const withNew = await ids();
