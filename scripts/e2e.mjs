@@ -1073,6 +1073,137 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   await go(U);
   ok('Video clips: taking a clip off a scene returns it to the tray (file kept, renamed unassigned_)', (await page.locator('[data-testid=sb-tray-clip]').count()) === 1 && clipFiles().some(n => n.startsWith('unassigned_')) && clipFiles().length === 2, clipFiles().join('|'));
 }
+// ---- EXPORT FULL VIDEO (real FFmpeg, real files, isolated test project)
+{
+  const { execFileSync, spawnSync } = await import('node:child_process');
+  const { createRequire } = await import('node:module');
+  const crypto = await import('node:crypto');
+  const req = createRequire(import.meta.url);
+  const FF = req('ffmpeg-static'), FP = req('ffprobe-static').path;
+  const X = '/tmp/claude-0/export-fixtures'; fs.mkdirSync(X, { recursive: true });
+  const mk = (name, color, size, fps, dur, audio, adur) => {
+    const a = ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', `color=c=${color}:s=${size}:r=${fps}:d=${dur}`];
+    if (audio) a.push('-f', 'lavfi', '-i', `sine=f=${audio}:d=${adur ?? dur}`);
+    a.push('-c:v', 'libx264', '-pix_fmt', 'yuv420p'); if (audio) a.push('-c:a', 'aac');
+    execFileSync(FF, [...a, path.join(X, name)]);
+  };
+  mk('red.mp4', 'red', '1920x1080', 30, 1.0, 440);
+  mk('green.mp4', 'lime', '3840x2160', 24, 1.5, 0);
+  mk('blue.mp4', 'blue', '720x1280', 60, 1.0, 880, 1.4);   // vertical, 60 fps, sound longer than the picture
+  mk('magenta.mp4', 'magenta', '1280x720', 25, 1.0, 660);
+  mk('aa-gold.mp4', 'yellow', '1280x720', 25, 0.8, 330);
+  mk('bb-cyan.mp4', 'cyan', '1920x1080', 30, 0.8, 0);
+  const probeJson = f => JSON.parse(execFileSync(FP, ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', f]).toString());
+  const pixel = (f, t) => { const r = spawnSync(FF, ['-v', 'error', '-ss', String(t), '-i', f, '-frames:v', '1', '-vf', 'scale=64:36,crop=1:1:32:18', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { encoding: 'buffer' }); return [...r.stdout.subarray(0, 3)]; };
+  const nearest = (rgb) => { const P = { red: [255, 0, 0], green: [0, 255, 0], blue: [0, 0, 255], magenta: [255, 0, 255], yellow: [255, 255, 0], cyan: [0, 255, 255] }; let best = '', d = 1e9; for (const [n, c] of Object.entries(P)) { const dd = c.reduce((s, v, i) => s + (v - rgb[i]) ** 2, 0); if (dd < d) { d = dd; best = n; } } return best; };
+  const sha = f => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+  const hashes = dir => Object.fromEntries(fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => !n.startsWith('.')).map(n => [n, sha(path.join(dir, n))]) : []);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await go('/projects/new'); await page.fill('input[name=title]', 'Export test');
+  await page.click('button:has-text("Create video")'); await page.waitForURL(/\/projects\/export-test/); await page.waitForLoadState('networkidle');
+  await go('/projects/export-test/fill');
+  await page.fill('textarea', 'SCENE\n\nTitle: Red scene\n\nSCENE\n\nTitle: Green scene\n\nSCENE\n\nTitle: Blue scene\n\nSCENE\n\nTitle: Magenta scene\n');
+  await page.click('button:has-text("Check it")'); await page.waitForSelector('button:has-text("Fill in form")');
+  await page.click('button:has-text("Fill in form")'); await page.waitForURL(/filled=1/); await page.waitForLoadState('networkidle');
+  const SB = '/projects/export-test/storyboard';
+  await go(SB);
+  const cards = () => page.locator('[data-testid=sb-scene-card]');
+  const drop = async (i, file) => { await dropFile(cards().nth(i), file, 'video/mp4', fs.readFileSync(path.join(X, file))); await page.waitForFunction(n => document.querySelectorAll('[data-testid=sb-scene-clip]').length >= n, i + 1, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(400); };
+  await drop(0, 'red.mp4'); await drop(1, 'green.mp4'); await drop(2, 'blue.mp4'); await drop(3, 'magenta.mp4');
+  for (const f of ['aa-gold.mp4', 'bb-cyan.mp4']) { await page.locator('[data-testid=sb-clip-input]').setInputFiles(path.join(X, f)); await page.waitForTimeout(1500); }
+  await go(SB);
+  const exportName = fs.readdirSync(STORE).find(d => d.startsWith('Export test'));
+  const clipDir = path.join(STORE, exportName, '06 Video Clips'), finalDir = path.join(STORE, exportName, 'Final Videos');
+  const before = hashes(clipDir);
+  ok('Export setup: 4 scene clips + 2 unassigned clips are in the Video Clips folder', Object.keys(before).length === 6 && Object.keys(before).filter(n => n.startsWith('unassigned_')).length === 2, Object.keys(before).join('|'));
+  const E = '/api/projects/export-test/video-export';
+  const plan = async inc => (await (await page.request.get(`${BASE}${E}?includeUnassigned=${inc ? 1 : 0}`)).json());
+  const pl = await plan(false), pl2 = await plan(true);
+  ok('Export plan: scene clips in storyboard order, unassigned excluded by default', pl.assignedCount === 4 && pl.unassignedCount === 2 && pl.includedCount === 4 && Math.abs(pl.totalSeconds - 4.5) < 0.2 && pl.clips.filter(c => c.included).every(c => c.kind === 'scene'), JSON.stringify([pl.assignedCount, pl.unassignedCount, pl.includedCount, pl.totalSeconds]));
+  ok('Export plan: unassigned clips are added at the end (file-name order) when asked', pl2.includedCount === 6 && pl2.clips.slice(4).every(c => c.kind === 'unassigned') && pl2.clips[4].name.includes('aa-gold') && pl2.clips[5].name.includes('bb-cyan'));
+  const run = async (o) => {
+    const r = await page.request.post(BASE + E, { data: o }); const j = await r.json();
+    if (!r.ok()) return { error: j.error };
+    let st; for (let i = 0; i < 240; i++) { st = await (await page.request.get(`${BASE}${E}/${j.id}`)).json(); if (st.status !== 'RUNNING') break; await page.waitForTimeout(500); }
+    return { id: j.id, ...st };
+  };
+  const check = (st, w, h, fps, dur, colors) => {
+    const f = path.join(finalDir, st.fileName); const info = probeJson(f); const v = info.streams.find(x => x.codec_type === 'video'), a = info.streams.find(x => x.codec_type === 'audio');
+    const dec = spawnSync(FF, ['-v', 'error', '-i', f, '-f', 'null', '-']);
+    const times = []; let acc = 0; for (const d of colors.durs) { times.push(acc + d / 2); acc += d; }
+    const got = times.map(t => nearest(pixel(f, t)));
+    return { dims: v.width === w && v.height === h, fps: v.r_frame_rate === `${fps}/1`, dur: Math.abs(parseFloat(info.format.duration) - dur) < 0.35, sync: !!a && Math.abs(parseFloat(a.duration) - parseFloat(v.duration)) < 0.12, plays: dec.status === 0 && dec.stderr.length === 0, order: JSON.stringify(got) === JSON.stringify(colors.names), got, codec: v.codec_name + '/' + a?.codec_name };
+  };
+  // 1) 1080p, unassigned excluded
+  const e1 = await run({ resolution: '1080p', fps: 30, includeUnassigned: false });
+  const c1 = e1.status === 'DONE' ? check(e1, 1920, 1080, 30, 4.5, { names: ['red', 'green', 'blue', 'magenta'], durs: [1, 1.5, 1, 1] }) : {};
+  ok('Export 1080p: finishes, is 1920×1080 H.264/AAC MP4, plays, right length, audio in sync', e1.status === 'DONE' && c1.dims && c1.plays && c1.dur && c1.sync && c1.codec === 'h264/aac', JSON.stringify([e1.status, e1.error, c1]));
+  ok('Export order: clips are joined in the storyboard order (mixed 4K / vertical / 60 fps / no-audio sources)', c1.order, JSON.stringify(c1.got));
+  ok('Export saved in the project Final Videos folder with a versioned name', /^export-test_full_1080p_v1\.mp4$/.test(e1.fileName || '') && fs.existsSync(path.join(finalDir, e1.fileName)));
+  ok('Export: the original clips are untouched', JSON.stringify(hashes(clipDir)) === JSON.stringify(before));
+  // 2) again -> v2, v1 not overwritten
+  const v1hash = sha(path.join(finalDir, e1.fileName));
+  const e2 = await run({ resolution: '1080p', fps: 30, includeUnassigned: true });
+  const c2 = e2.status === 'DONE' ? check(e2, 1920, 1080, 30, 6.1, { names: ['red', 'green', 'blue', 'magenta', 'yellow', 'cyan'], durs: [1, 1.5, 1, 1, 0.8, 0.8] }) : {};
+  ok('Export again does not overwrite (v2 is a new file, v1 unchanged)', e2.fileName === 'export-test_full_1080p_v2.mp4' && sha(path.join(finalDir, e1.fileName)) === v1hash);
+  ok('Export with unassigned clips: they come after the last scene clip, in file-name order', e2.status === 'DONE' && c2.order && c2.dur && c2.plays, JSON.stringify([e2.status, e2.error, c2.got]));
+  // 3) 4K
+  const e3 = await run({ resolution: '4k', fps: 30, includeUnassigned: false });
+  const c3 = e3.status === 'DONE' ? check(e3, 3840, 2160, 30, 4.5, { names: ['red', 'green', 'blue', 'magenta'], durs: [1, 1.5, 1, 1] }) : {};
+  ok('Export 4K UHD: finishes, is 3840×2160, plays, right length, audio in sync', e3.status === 'DONE' && c3.dims && c3.plays && c3.dur && c3.sync, JSON.stringify([e3.status, e3.error, c3]));
+  // 4) reorder scenes on the storyboard, 24 fps -> export follows the NEW order
+  await go(SB);
+  await cards().first().dragTo(cards().nth(2), { targetPosition: { x: 150, y: 60 } }); // dropped before scene 3 = scene 1 moves after scene 2
+  await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1000);
+  const e4 = await run({ resolution: '1080p', fps: 24, includeUnassigned: false });
+  const c4 = e4.status === 'DONE' ? check(e4, 1920, 1080, 24, 4.5, { names: ['green', 'red', 'blue', 'magenta'], durs: [1.5, 1, 1, 1] }) : {};
+  ok('Export after reordering scenes follows the new order (and 24 fps works)', e4.status === 'DONE' && c4.order && c4.fps && c4.plays && c4.dur, JSON.stringify([e4.status, e4.error, c4]));
+  const e5 = await run({ resolution: '1080p', fps: 60, includeUnassigned: false });
+  const c5 = e5.status === 'DONE' ? check(e5, 1920, 1080, 60, 4.5, { names: ['green', 'red', 'blue', 'magenta'], durs: [1.5, 1, 1, 1] }) : {};
+  ok('Export at 60 fps works', e5.status === 'DONE' && c5.fps && c5.plays && c5.sync, JSON.stringify([e5.status, e5.error, c5]));
+  // 5) the Export panel (the real buttons)
+  await go('/projects/export-test/kling');
+  await page.locator('[data-testid=export-open]').click(); await page.waitForSelector('[data-testid=export-options]');
+  ok('Export panel: shows clip counts, quality options and the two unassigned choices (excluded is the default)', (await page.locator('[data-testid=export-assigned]').textContent()) === '4' && (await page.locator('[data-testid=export-unassigned]').textContent()) === '2' && (await page.locator('[data-testid=export-res-1080p]').count()) === 1 && (await page.locator('[data-testid=export-res-4k]').count()) === 1 && (await page.locator('[data-testid=export-unassigned-no]').isChecked()) === true);
+  await page.locator('[data-testid=export-view-clips]').click();
+  ok('Export panel: VIEW CLIPS INCLUDED lists the clips in the reordered storyboard order', (await page.locator('[data-testid=export-clip-list] li').count()) === 4 && (await page.locator('[data-testid=export-clip-list] li').first().textContent()).includes('Green scene'));
+  await page.locator('[data-testid=export-res-4k]').check(); await page.locator('[data-testid=export-fps]').selectOption('30'); await page.locator('[data-testid=export-unassigned-yes]').check(); await page.waitForTimeout(800);
+  ok('Export panel: including unassigned clips shows all 6', (await page.locator('[data-testid=export-clip-list] li').count()) === 6);
+  await page.locator('[data-testid=export-unassigned-no]').check(); await page.waitForTimeout(500);
+  await page.locator('[data-testid=export-start]').click();
+  await page.waitForSelector('[data-testid=export-running], [data-testid=export-done]', { timeout: 20000 });
+  await page.waitForSelector('[data-testid=export-done]', { timeout: 120000 });
+  ok('Export panel: VIDEO READY with play, show in folder and export again', (await page.locator('[data-testid=export-play]').count()) === 1 && (await page.locator('[data-testid=export-reveal]').count()) === 1 && (await page.locator('[data-testid=export-again]').count()) === 1 && (await page.locator('[data-testid=export-done]').textContent()).includes('4K UHD'));
+  const playHref = await page.locator('[data-testid=export-play]').getAttribute('href');
+  const rg = await page.request.get(BASE + playHref, { headers: { Range: 'bytes=0-99' } });
+  ok('Export panel: the finished video plays from the app (served with byte ranges)', rg.status() === 206);
+  await page.locator('[data-testid=export-close]').click(); await go('/projects/export-test/kling'); await page.locator('[data-testid=export-open]').click(); await page.waitForSelector('[data-testid=export-options]');
+  ok('Export panel: remembers the last choices (4K, 30 fps, unassigned excluded)', (await page.locator('[data-testid=export-res-4k]').isChecked()) && (await page.locator('[data-testid=export-fps]').inputValue()) === '30' && (await page.locator('[data-testid=export-unassigned-no]').isChecked()));
+  await page.locator('[data-testid=export-close]').click();
+  // 6) missing file -> clear error, nothing exported
+  const gone = path.join(clipDir, fs.readdirSync(clipDir).find(n => /^0\d_.*CLIP/.test(n))); const keep = fs.readFileSync(gone); fs.rmSync(gone);
+  const plM = await plan(false);
+  const finalsBefore = fs.readdirSync(finalDir).length;
+  const eM = await run({ resolution: '1080p', fps: 30, includeUnassigned: false });
+  ok('A missing clip is reported by name and nothing is exported', plM.missing.length === 1 && !!eM.error && eM.error.includes(plM.missing[0]) && fs.readdirSync(finalDir).length === finalsBefore, JSON.stringify([plM.missing, eM.error]));
+  fs.writeFileSync(gone, keep);
+  // 7) cancel: a long 4K clip so there is time to cancel
+  execFileSync(FF, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=3840x2160:r=30:d=30', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', path.join(X, 'zz-long.mp4')]);
+  await page.locator('[data-testid=sb-clip-input]').count();
+  await go(SB); await page.locator('[data-testid=sb-clip-input]').setInputFiles(path.join(X, 'zz-long.mp4')); await page.waitForFunction(() => document.querySelectorAll('[data-testid=sb-tray-clip]').length >= 3, null, { timeout: 60000 }).catch(() => null); await page.waitForTimeout(1500);
+  const beforeCancel = hashes(clipDir), finalsNow = fs.readdirSync(finalDir).filter(n => !n.startsWith('.')).sort().join('|');
+  const rr = await page.request.post(BASE + E, { data: { resolution: '4k', fps: 60, includeUnassigned: true } }); const jr = await rr.json();
+  await page.waitForTimeout(2500);
+  const mid = await (await page.request.get(`${BASE}${E}/${jr.id}`)).json();
+  await page.request.post(`${BASE}${E}/${jr.id}/cancel`);
+  let stc; for (let i = 0; i < 40; i++) { stc = await (await page.request.get(`${BASE}${E}/${jr.id}`)).json(); if (stc.status !== 'RUNNING') break; await page.waitForTimeout(500); }
+  ok('Cancel: the export was really running, then stops (CANCELED)', mid.status === 'RUNNING' && stc.status === 'CANCELED', JSON.stringify([mid.status, mid.progress, stc.status]));
+  ok('Cancel: no unfinished or new file is left and the original clips are unchanged', fs.readdirSync(finalDir).filter(n => !n.startsWith('.')).sort().join('|') === finalsNow && !fs.readdirSync(finalDir).some(n => n.endsWith('.partial')) && JSON.stringify(hashes(clipDir)) === JSON.stringify(beforeCancel));
+  const after = await run({ resolution: '1080p', fps: 30, includeUnassigned: false });
+  ok('After a cancel the app still exports normally', after.status === 'DONE');
+  await page.setViewportSize({ width: 1440, height: 900 });
+}
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,

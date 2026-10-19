@@ -1,3 +1,4 @@
+import { ExportVideo } from '@/components/export-video';
 import { VideoDrop } from '@/components/drop-zone';
 import type { ReactNode, CSSProperties } from 'react';
 function VideoWrap({ klingId, children, ...rest }: { klingId?: string; className?: string; style?: CSSProperties; children: ReactNode }) { return klingId ? <VideoDrop klingId={klingId} hint="Drop the video here to save it as this clip" {...rest}>{children}</VideoDrop> : <section {...rest}>{children}</section>; }
@@ -30,7 +31,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
   let opened = false;
   return (
     <div className="max-w-[1000px] space-y-4">
-      <div><h1 className="text-[34px] md:text-[40px]">Video Clips</h1><p className="mt-1 text-[14px] text-ink-secondary">Each scene gathers the pictures that look good. Make the prompt, then make the clip in Kling.</p></div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-[34px] md:text-[40px]">Video Clips</h1><p className="mt-1 text-[14px] text-ink-secondary">Each scene gathers the pictures that look good. Make the prompt, then make the clip in Kling.</p></div><ExportVideo slug={p.slug} projectTitle={p.title} /></div>
       {scenes.length === 0 && <Empty title="No scenes yet." hint="Add scenes first — each scene becomes one video clip." />}
       {scenes.map((sc, i) => {
         const pics = imgs.filter(x => x.sceneId === sc.id);

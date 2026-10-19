@@ -19,6 +19,21 @@ if (!fs.existsSync(dbFile) && fs.existsSync(legacy)) {
   fs.copyFileSync(legacy, dbFile);
   console.log(`\nMoved your data to ${dbFile}\n(the old copy at ${legacy} was left where it was)\n`);
 }
+// before the database structure changes (an update added something), keep a copy of your data
+try {
+  const crypto = await import('node:crypto');
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(appDir, 'prisma', 'schema.prisma'))).digest('hex');
+  const stampFile = path.join(dataDir, '.schema-hash');
+  const before = fs.existsSync(stampFile) ? fs.readFileSync(stampFile, 'utf8').trim() : '';
+  if (fs.existsSync(dbFile) && before !== hash) {
+    const when = new Date().toISOString().replace(/[:.]/g, '-');
+    const copy = path.join(root, 'Backups', `before-update-${when}.db`);
+    fs.copyFileSync(dbFile, copy);
+    if (fs.statSync(copy).size === fs.statSync(dbFile).size) console.log(`\nBacked up your data to ${copy}\n`);
+    else { console.error('Backup copy did not match; stopping so nothing is changed.'); process.exit(1); }
+  }
+  fs.writeFileSync(stampFile, hash);
+} catch (e) { console.error('Could not make the safety backup:', e?.message || e); process.exit(1); }
 const env = { ...process.env, DATABASE_URL: `file:${dbFile}` };
 console.log(`Database: ${dbFile}`);
 const push = spawnSync('npx', ['prisma', 'db', 'push', '--skip-generate'], { cwd: appDir, env, stdio: 'inherit' });
