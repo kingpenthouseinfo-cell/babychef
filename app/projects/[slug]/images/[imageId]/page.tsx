@@ -13,6 +13,7 @@ import { MakePictureButton } from '@/components/make-picture';
 import { AiReferences } from '@/components/ai-references';
 import { aiReferencesFor, aiRefOptions } from '@/lib/ai-refs';
 import { getSettings } from '@/lib/settings';
+import { removeVersion, removeOldVersions } from '@/lib/actions/pictures';
 import { deleteAttempt, pickReferencesForMe, makeFixPrompt, approveAttempt, attachRef, deleteImage, detachRef, moveRef, redoAttempt, rejectAttempt, restorePrompt, saveChecklist, saveImage, setImageStatus, updateRef, usePreviousApproved } from '@/lib/actions/image';
 import { CORRECTION_CATEGORIES, CROP_GUIDANCE, CROP_LEVELS, IMAGE_REF_ROLES, IMAGE_STATUSES, PRIORITIES, PROMPT_STATUSES, REVIEW_CHECKS, SEVERITIES, SHOT_TYPES, WAITING_REASONS } from '@/lib/constants';
 import { fmtDate, imageCode, lines, parseJson, sceneCode } from '@/lib/util';
@@ -144,7 +145,7 @@ export default async function ImagePage({ params, searchParams }: { params: { sl
                 </Link>
               ))}
               <AddResultButton label="+ Add finished picture" className="btn btn-sm" />
-              {selected && <ConfirmForm action={deleteAttempt} message={`Delete version ${selected.number} of this picture? The file already saved in the folder stays there.`}><input type="hidden" name="attemptId" value={selected.id} /><button className="btn btn-sm btn-ghost text-[#A5473A]">Delete this version</button></ConfirmForm>}
+              {selected && <ConfirmForm action={removeVersion} message={`Remove version ${selected.number} of this picture? The file is moved to the Unassigned tab (nothing is deleted there until you choose Delete for good).`}><input type="hidden" name="attemptId" value={selected.id} /><button className="btn btn-sm btn-ghost text-[#A5473A]">Remove this version</button></ConfirmForm>}
             </div>
           )}
 

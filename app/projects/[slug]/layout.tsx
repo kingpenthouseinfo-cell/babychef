@@ -21,6 +21,13 @@ export default async function ProjectLayout({ children, params }: { children: Re
     db.project.findMany({ select: { id: true, createdAt: true } }),
   ]);
   const color = projectColor(p as any, allProjects);
+  const [looseFiles, clipAssets, usedClips] = await Promise.all([
+    db.unmatchedFile.count({ where: { status: 'OPEN', relPath: { startsWith: `${folder}/` } } }),
+    db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: p.slug }, select: { id: true } }),
+    db.scene.findMany({ where: { projectId: p.id, videoAssetId: { not: null } } as any, select: { videoAssetId: true } as any }),
+  ]);
+  const used = new Set((usedClips as any[]).map(x => x.videoAssetId));
+  const unassignedN = looseFiles + clipAssets.filter(c => !used.has(c.id)).length;
   const shown = `${root.replace(/^\/(Users|home)\/[^/]+\//, '').split('/').filter(Boolean).join(' / ')} / ${folder}`;
   const watching = s.watchProjectFolders !== 'false';
   return (
@@ -40,7 +47,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         </div>
         {watching && <span className="hidden items-center gap-2 whitespace-nowrap rounded-full border border-line-strong px-3 py-1.5 text-[12.5px] text-ink-secondary sm:inline-flex"><span className="h-[7px] w-[7px] rounded-full bg-[#6E9A76]" />Watching Pictures folder</span>}
       </div>
-      <ProjectTabs slug={p.slug} missing={open} flagged={flaggedN} />
+      <ProjectTabs slug={p.slug} missing={open} flagged={flaggedN} unassigned={unassignedN} />
       {children}
     </div>
   );

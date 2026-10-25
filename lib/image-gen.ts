@@ -1,3 +1,4 @@
+import { addonsFor, withAddons } from './addons';
 import { db } from './db';
 import { planScene } from './image-plan';
 import { writePrompt, camOf } from './image-prompt-auto';
@@ -40,7 +41,9 @@ export async function composePromptFor(imageId: string): Promise<string> {
 export async function writePromptFor(imageId: string, reason: string) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: imageId } });
   if (img.promptStatus === 'LOCKED') return;
-  const text = await composePromptFor(imageId);
+  // the permanent sentences ("add to every prompt") stay in when a prompt is written again
+  let text = await composePromptFor(imageId);
+  try { text = withAddons(text, await addonsFor(img.projectId)); } catch (e) { console.error('[addons]', e); } // never let the extra sentences stop a prompt from being written
   await versionPrompt(imageId, 'FULL', img.fullPrompt ?? '', text, reason);
   await db.plannedImage.update({ where: { id: imageId }, data: { fullPrompt: text, promptStatus: 'READY', ...(img.status === 'PLANNED' || img.status === 'PROMPT DRAFT' ? { status: 'READY' } : {}) } });
 }

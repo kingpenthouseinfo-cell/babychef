@@ -324,6 +324,8 @@ model PlannedImage {
   foodState       String?  // exact food state at this moment
   why             String?  // WHY THIS IMAGE IS NEEDED
   flagged         Boolean  @default(false) // marked NEED TO FIX
+  stepNote        String?  // which step of the scene this picture shows (plain words); empty = taken from the picture's purpose
+  dialogueLine    String?  // the line of dialogue this picture goes with; empty = suggested from the scene's dialogue
   flagNote        String?
   flaggedAt       DateTime?
   fixHelpers      String?  // JSON: NEED TO FIX picks {picked:[keys], notes:{key:text}} so they are not lost
@@ -712,4 +714,14 @@ model VideoExport {
   finishedAt       DateTime?
 
   @@index([projectId])
+}
+
+/// A sentence that is added to every picture prompt (beginning or end), for all projects or only the chosen ones.
+model PromptAddon {
+  id         String   @id @default(cuid())
+  text       String
+  position   String   @default("END")   // START | END
+  projectIds String   @default("[]")    // JSON array of project ids; empty = all projects
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
 }

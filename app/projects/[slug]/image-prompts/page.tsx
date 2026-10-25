@@ -10,6 +10,8 @@ import { imageCode } from '@/lib/util';
 import { Empty, fileUrl } from '@/components/ui';
 import { PromptRow } from '@/components/prompt-row';
 import { PromptImport } from '@/components/prompt-import';
+import { PromptAddons } from '@/components/prompt-addons';
+import { listAddons } from '@/lib/addons';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,12 +24,14 @@ export default async function ImagePrompts({ params }: { params: { slug: string 
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
     db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true, attempts: { orderBy: { number: 'desc' }, take: 1 } } }),
   ]);
+  const [addons, allProjects] = await Promise.all([listAddons(), db.project.findMany({ where: { deletedAt: null }, orderBy: { title: 'asc' }, select: { id: true, title: true } })]);
   const lab = sceneLabels(scenes);
   const idxIn = (i: (typeof imgs)[number]) => imgs.filter(x => x.sceneId === i.sceneId).findIndex(x => x.id === i.id) + 1;
   const b = `/projects/${p.slug}`;
   return (
     <div className="prompt-page prompt-page--images" data-testid="image-prompts">
       <header className="prompt-page__head"><h1 className="prompt-page__title">Image Prompts</h1><p className="prompt-page__sub">{imgs.length} picture{imgs.length === 1 ? '' : 's'} · one prompt per row · copy, edit or clear any of them</p></header>
+      <PromptAddons addons={addons.map(a => ({ id: a.id, text: a.text, position: a.position, projectIds: a.projectIds, enabled: a.enabled }))} projects={allProjects} currentProjectId={p.id} slug={p.slug} babyChefId={p.babyChefId ?? null} />
       <PromptImport kind="image" projectId={p.id} />
       {imgs.length === 0 && <Empty title="No pictures yet." hint="Add scenes first — each scene gets its pictures and prompts automatically." />}
       <ul className="prompt-page__list">

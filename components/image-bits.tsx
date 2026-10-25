@@ -7,6 +7,7 @@ import { AiReferences } from './ai-references';
 import { PictureArrange } from './picture-arrange';
 import { FlagButton } from './flag-button';
 import { ImageDrop } from './drop-zone';
+import { PictureNotes, PictureUse } from './picture-notes';
 import type { AiRefSet } from '@/lib/ai-refs';
 import { imageCode, sceneCode } from '@/lib/util';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
@@ -41,7 +42,7 @@ export function ChecklistText({ list }: { list: ChecklistEntry[] }) {
   );
 }
 
-export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts, chatgpt, arrange }: { arrange?: { scenes: { id: string; label: string }[]; pictures: { id: string; label: string }[] }; ai?: AiRefSet; aiOpts?: { images: { value: string; label: string }[]; refs: { value: string; label: string }[] }; chatgpt?: string; img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
+export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts, chatgpt, arrange, notes }: { notes?: import('@/lib/step-dialogue').StepInfo | null; arrange?: { scenes: { id: string; label: string }[]; pictures: { id: string; label: string }[] }; ai?: AiRefSet; aiOpts?: { images: { value: string; label: string }[]; refs: { value: string; label: string }[] }; chatgpt?: string; img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
   const code = imageCode(img.seq);
   const thumb = img.approvedAttempt?.assetId ?? img.attempts?.[img.attempts.length - 1]?.assetId;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
@@ -57,6 +58,8 @@ export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts,
       <div className="relative"><Link href={href}><Thumb id={thumb} alt={img.title} w={480} /></Link><div className="absolute right-2 top-2"><FlagButton kind="image" id={img.id} flagged={!!img.flagged} /></div>{img.flagged && <div className="absolute bottom-2 left-2 rounded-full bg-[#E5493A] px-2 py-0.5 text-[11px] font-semibold text-white">NEED TO FIX</div>}</div>
       <Link href={href} className="font-semibold leading-tight hover:underline">{img.title}</Link>
       <div className="text-xs text-ink-secondary">{img.shotType}</div>
+      {notes && <PictureNotes id={img.id} info={notes} stepNote={img.stepNote ?? null} dialogueLine={img.dialogueLine ?? null} />}
+      <PictureUse id={img.id} status={img.status} versions={(img.attempts ?? []).length} />
       {!ai && <RefThumbs list={checklist} />}
       {ai && (img.contPrompt || img.fullPrompt) && <details className="text-[12.5px]"><summary className="cursor-pointer text-ink-secondary">Show prompt</summary><div className="mt-1 max-h-[160px] overflow-y-auto whitespace-pre-wrap rounded-md border border-line bg-surface p-2">{img.contPrompt || img.fullPrompt}</div></details>}
       {blocked && <div className="text-xs font-semibold text-[#8A6216]">Waiting for {imageCode(img.dependsOn.seq)}.</div>}

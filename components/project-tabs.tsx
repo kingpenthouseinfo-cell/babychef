@@ -2,14 +2,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/storyboard', 'Storyboard'], ['/generate', 'Images to Generate'], ['/images', 'Picture List'], ['/image-prompts', 'Image Prompts'], ['/fix', 'NEED TO FIX'], ['/kling', 'Video Clips'], ['/video-prompts', 'Video Prompts'], ['/publishing', 'Post Video']];
+const PRIMARY: [string, string][] = [['', 'Overview'], ['/start', 'Start to Finish'], ['/questions', 'Missing Info'], ['/recipe', 'Recipe'], ['/story', 'Scenes & Pictures'], ['/storyboard', 'Storyboard'], ['/generate', 'Images to Generate'], ['/images', 'Picture List'], ['/image-prompts', 'Image Prompts'], ['/fix', 'NEED TO FIX'], ['/kling', 'Video Clips'], ['/video-prompts', 'Video Prompts'], ['/unassigned', 'Unassigned'], ['/publishing', 'Post Video']];
 const MORE: { head: string; items: [string, string, boolean?][] }[] = [
   { head: 'Style', items: [['/settings/bible', 'My Video Style', true], ['/continuity', 'Keep It Consistent'], ['/references', 'Example Pictures']] },
   { head: 'Work', items: [['/ingredients', 'Ingredients'], ['/script', 'Script'], ['/short', 'Short/Reel'], ['/queue', 'Pictures to Make', true], ['/files', 'Files']] },
   { head: 'Advanced', items: [['/builder', 'Write a Prompt'], ['/overrides', 'Special Rules'], ['/scenes', 'Scene details'], ['/prompts', 'Prompt templates'], ['/notes', 'Notes']] },
 ];
 
-export function ProjectTabs({ slug, missing, flagged = 0 }: { slug: string; missing: number; flagged?: number }) {
+export function ProjectTabs({ slug, missing, flagged = 0, unassigned = 0 }: { slug: string; missing: number; flagged?: number; unassigned?: number }) {
   const path = usePathname();
   const base = `/projects/${slug}`;
   const active = (s: string) => (s === '' ? path === base : s === '/images' ? path === base + '/images' : s === '/story' ? path === base + '/story' || path.startsWith(base + '/story/') || path.startsWith(base + '/images/') : path.startsWith(base + s));
@@ -17,6 +17,7 @@ export function ProjectTabs({ slug, missing, flagged = 0 }: { slug: string; miss
   const tab = ([s, l]: [string, string]) => (
     <Link key={s} href={base + s} aria-current={active(s) ? 'page' : undefined} className={`relative inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-3.5 text-[14px] transition ${active(s) ? 'font-semibold text-ink' : 'font-medium text-ink-secondary hover:text-ink'}`} style={active(s) ? { boxShadow: 'inset 0 -2px 0 #1E1D22' } : undefined}>
       {l}{s === '/fix' && flagged > 0 && <span className="inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#F5D9D3] px-1.5 text-[12px] font-semibold text-[#A5473A]" data-testid="flag-count">{flagged}</span>}{s === '/questions' && missing > 0 && <span className="inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#F4E8CF] px-1.5 text-[12px] font-semibold text-[#8E6720]">{missing}</span>}
+    {s === '/unassigned' && unassigned > 0 && <span className="inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#E3EAF2] px-1.5 text-[12px] font-semibold text-[#46638A]" data-testid="unassigned-count">{unassigned}</span>}
     </Link>
   );
   return (

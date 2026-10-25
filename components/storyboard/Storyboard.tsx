@@ -13,6 +13,10 @@ type Props = {
   tray?: ClipInfo[];                                                       // clips not on any scene yet
   onUploadClip?: (sceneId: string | null, file: File) => Promise<void>;   // save a video file into the project's Video Clips folder (and onto a scene)
   onAssignClip?: (sceneId: string, assetId: string) => Promise<void>;
+  onSetUsed?: (pictureId: string, used: boolean) => Promise<void>;       // "Don't use this picture" / "Use it again"
+  onRemoveOld?: (pictureId: string) => Promise<void>;                     // move all but the picture in use to the Unassigned tab
+  onCleanAll?: () => Promise<{ versions: number; pictures: number }>;     // count of old versions in the whole project
+  onCleanAllDo?: () => Promise<void>;
   onReplacePicture?: (pictureId: string, file: File) => Promise<void>;   // drop an image file on a picture tile: it becomes that picture's photo (older versions are kept)
   onUnassignClip?: (sceneId: string) => Promise<void>;
   initial: SbBoard;
@@ -29,7 +33,7 @@ const FolderIcon = () => (
   </svg>
 );
 
-export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip, onReplacePicture }: Props) {
+export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip, onReplacePicture, onSetUsed, onRemoveOld, onCleanAll, onCleanAllDo }: Props) {
   const [saved, setSaved] = useState<SbBoard>(initial);
   const [board, setBoard] = useState<SbBoard>(initial);
   const [dirty, setDirty] = useState(false);
@@ -53,6 +57,17 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
   const [fileOver, setFileOver] = useState<string | null>(null);
   const [picMsg, setPicMsg] = useState('');
   const flashPic = (m: string) => { setPicMsg(m); setTimeout(() => setPicMsg(''), 5000); };
+  const guard = async (what: string, fn: () => Promise<void>) => {
+    if (dirty) { flashPic('Save order (or Undo changes) first, then do that.'); return; }
+    try { flashPic(`${what}…`); await fn(); flashPic(`✓ ${what} — done`); } catch (e: any) { flashPic(e?.message || 'That did not work.'); }
+  };
+  const cleanAll = async () => {
+    if (!onCleanAll || !onCleanAllDo) return;
+    if (dirty) { flashPic('Save order (or Undo changes) first, then do that.'); return; }
+    const c = await onCleanAll();
+    if (!c.versions) { flashPic('✓ There are no old versions to remove'); return; }
+    if (window.confirm(`Remove ${c.versions} old picture version${c.versions === 1 ? '' : 's'} from ${c.pictures} picture${c.pictures === 1 ? '' : 's'}?\n\nFor each picture only the one in use stays. The others are moved to the Unassigned tab — nothing is deleted.`)) await guard('Removing old versions', onCleanAllDo);
+  };
   const replacePhoto = async (p: { id: string; title: string; isNew?: boolean }, files: File[]) => {
     setFileOver(null);
     if (!onReplacePicture) return;
@@ -158,6 +173,7 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
           {!dirty && msg && <span className="storyboard__msg" data-testid="sb-msg">{msg}</span>}
           {picMsg && <span className="storyboard__msg" role="status" data-testid="sb-photo-msg">{picMsg}</span>}
           {dirty && <button className="storyboard__undo" data-testid="sb-undo" onClick={undo}>Undo changes</button>}
+          {!dirty && onCleanAll && <button className="storyboard__undo" data-testid="sb-clean-all" onClick={() => void cleanAll()} title="Move every picture's older versions out of the way (to the Unassigned tab)">Remove old versions</button>}
           {!dirty && onMatchFolder && <button className="storyboard__undo" data-testid="sb-match-folder" onClick={matchFolder} title="Rename the picture files in your folder so they list in this order">Match folder names</button>}
           <button className="storyboard__save" data-testid="sb-save" disabled={!dirty} onClick={save}>Save order</button>
         </div>
@@ -187,7 +203,7 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
               </div>
               <div
                 data-testid="sb-tile" data-pic-id={p.id}
-                className={'storyboard__tile' + (drag === p.id ? ' is-dragging' : '') + (fileOver === p.id ? ' is-file-over' : '')}
+                className={'storyboard__tile' + (drag === p.id ? ' is-dragging' : '') + (fileOver === p.id ? ' is-file-over' : '') + (p.skipped ? ' is-skipped' : '')} title={p.info}
                 draggable={!isEditing}
                 onDragStart={e => { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; setDrag(p.id); }}
                 onDragEnd={() => { setDrag(null); setOver(null); }}
@@ -233,6 +249,12 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
                   <button className="storyboard__scene-name" data-testid="sb-pic-scene" title="Click to move to another scene" onClick={() => setPicking(p.id)}>
                     Scene {c.sceneNumber} · {c.scene.title}
                   </button>
+                )}
+                {!p.isNew && (onSetUsed || onRemoveOld) && (
+                  <div className="storyboard__tools">
+                    {onSetUsed && <button className="storyboard__tool" data-testid="sb-use-toggle" onClick={() => void guard(p.skipped ? 'Using the picture again' : 'Not using the picture', () => onSetUsed(p.id, !!p.skipped))}>{p.skipped ? 'Use again' : 'Don’t use'}</button>}
+                    {onRemoveOld && (p.versions ?? 0) > 1 && <button className="storyboard__tool" data-testid="sb-remove-old" title="Keep only the picture in use; move the other versions to the Unassigned tab" onClick={() => { if (window.confirm(`Remove the ${(p.versions ?? 1) - 1} older version${(p.versions ?? 1) - 1 === 1 ? '' : 's'} of “${p.title}”?\n\nOnly the one in use stays. The others are moved to the Unassigned tab — nothing is deleted.`)) void guard('Removing old versions', () => onRemoveOld(p.id)); }}>Old versions ({(p.versions ?? 1) - 1}) ✕</button>}
+                  </div>
                 )}
               </div>
             </div>

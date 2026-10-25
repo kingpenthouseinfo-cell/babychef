@@ -1221,6 +1221,125 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   ok('After a cancel the app still exports normally', after.status === 'DONE');
   await page.setViewportSize({ width: 1440, height: 900 });
 }
+// ---- don't use / old versions / step & dialogue / Unassigned tab
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const P = '/projects/generate-plan-test';
+  // step + dialogue
+  await go(`${P}/story`);
+  await page.locator('[data-testid=pic-notes-edit-btn]').first().click();
+  await page.fill('[data-testid=pic-step-input]', 'Pinch the butter into the flour');
+  await page.fill('[data-testid=pic-dialogue-input]', 'Now we rub the butter in');
+  await page.locator('[data-testid=pic-notes-save]').click(); await page.waitForTimeout(1500);
+  const note0 = await page.locator('[data-testid=pic-notes]').first().textContent();
+  ok('Scenes & Pictures: each picture shows its step number and the step it shows', /Step 1 of \d+:/.test(note0) && note0.includes('Pinch the butter into the flour'), note0);
+  ok('Scenes & Pictures: each picture shows the dialogue it goes with (editable)', note0.includes('Says:') && note0.includes('Now we rub the butter in'));
+  await go(`${P}/images`);
+  ok('Picture List also shows step and dialogue', (await page.locator('[data-testid=pic-notes]').count()) >= 1 && (await page.locator('[data-testid=pic-notes]').first().textContent()).includes('Pinch the butter'));
+  // don't use / use again (approved picture)
+  const approvedCard = () => page.locator('div.card[data-drop]:has([data-testid=pic-skip])').filter({ hasText: 'APPROVED' }).first();
+  const apprId = (await approvedCard().locator('a.font-semibold').first().getAttribute('href')).split('/').pop();
+  await approvedCard().locator('[data-testid=pic-skip]').click(); await page.waitForTimeout(1500);
+  await go(`${P}/images`);
+  ok('An approved picture can be marked "don\'t use" (kept, but no longer used)', (await page.locator(`div.card[data-drop]:has(a[href$="${apprId}"])`).first().locator('[data-testid=pic-unskip]').count()) === 1);
+  await go(`${P}/story`);
+  ok('Scenes & Pictures shows it as Not used and leaves it out of the count', (await page.locator(`#pic-${apprId}`).textContent()).includes('Not used'));
+  await go(`${P}/storyboard`);
+  ok('Storyboard shows a not-used picture dimmed', (await page.locator(`[data-testid=sb-tile][data-pic-id="${apprId}"].is-skipped`).count()) === 1);
+  await page.locator(`[data-testid=sb-tile][data-pic-id="${apprId}"] [data-testid=sb-use-toggle]`).click(); await page.waitForTimeout(2500);
+  ok('Use again from the Storyboard brings it back', (await page.locator(`[data-testid=sb-tile][data-pic-id="${apprId}"].is-skipped`).count()) === 0);
+  // old versions: the picture replaced earlier has several versions
+  await go(`${P}/storyboard`);
+  const many = page.locator('[data-testid=sb-tile]:has([data-testid=sb-remove-old])').first();
+  const manyId = await many.getAttribute('data-pic-id');
+  const unBefore = (await (await page.request.get(`${BASE}${P}/unassigned`)).text()).length;
+  await many.locator('[data-testid=sb-remove-old]').click(); await page.waitForTimeout(3000);
+  await go(`${P}/storyboard`);
+  ok('Remove old versions keeps only the picture in use', (await page.locator(`[data-testid=sb-tile][data-pic-id="${manyId}"] [data-testid=sb-remove-old]`).count()) === 0);
+  await go(`${P}/unassigned`);
+  const photoN = await page.locator('[data-testid=un-photo]').count();
+  ok('Removed versions are not deleted: they are on the Unassigned tab', photoN >= 1 && (await page.locator('[data-testid=un-photo]').first().textContent()).includes('Removed from'), String(photoN));
+  ok('The Unassigned tab has a count badge', (await page.locator('[aria-label="Recipe video sections"] [data-testid=unassigned-count]').count()) === 1);
+  // drag an unassigned photo onto a picture slot
+  await page.locator('[data-testid=un-photo]').first().dragTo(page.locator(`[data-testid=un-slot][data-id="${manyId}"]`));
+  await page.waitForFunction(() => /Added to/.test(document.querySelector('[data-testid=un-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1200);
+  await go(`${P}/unassigned`);
+  ok('Dragging an unassigned photo onto a picture slot assigns it (it leaves the Unassigned list)', (await page.locator('[data-testid=un-photo]').count()) === photoN - 1);
+  // loose files in the project folder: detect, delete for good, move to another project
+  const root = path.join(STORE, 'Generate plan test'); const png3 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  fs.writeFileSync(path.join(root, 'loose-delete-me.png'), png3); fs.writeFileSync(path.join(root, 'loose-move-me.png'), png3);
+  await page.waitForTimeout(4500);
+  await go(`${P}/unassigned`); await page.locator('[data-testid=un-scan]').click(); await page.waitForTimeout(2500); await go(`${P}/unassigned`);
+  const card = n => page.locator('[data-testid=un-photo]', { hasText: n }).first();
+  ok('Loose pictures in the project folder show up as unassigned', (await card('loose-delete-me').count()) === 1 && (await card('loose-move-me').count()) === 1);
+  await card('loose-delete-me').locator('[data-testid=un-delete]').click(); await page.waitForTimeout(2500);
+  ok('Delete for good removes the photo from the folder', !fs.existsSync(path.join(root, 'loose-delete-me.png')) && (await page.locator('[data-testid=un-photo]', { hasText: 'loose-delete-me' }).count()) === 0);
+  await go(`${P}/unassigned`);
+  await card('loose-move-me').locator('[data-testid=un-move-select]').selectOption({ label: 'Export test' });
+  await card('loose-move-me').locator('[data-testid=un-move]').click(); await page.waitForTimeout(2500);
+  ok('A photo can be moved to another project folder', !fs.existsSync(path.join(root, 'loose-move-me.png')) && walk(path.join(STORE, 'Export test')).some(f => f.includes('Unassigned Pictures') && f.endsWith('loose-move-me.png')));
+  // unassigned video clips (Export test project has loose clips)
+  await go('/projects/export-test/unassigned');
+  const clipsN = await page.locator('[data-testid=un-clip]').count();
+  ok('Unassigned video clips are listed', clipsN >= 2, String(clipsN));
+  await page.locator('[data-testid=un-clip]').first().dragTo(page.locator('[data-testid=un-scene]').nth(3));
+  await page.waitForFunction(() => /Clip is now on Scene/.test(document.querySelector('[data-testid=un-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1200);
+  await go('/projects/export-test/unassigned');
+  ok('Dragging a clip onto a scene assigns it (and the file is renamed to the scene place)', (await page.locator('[data-testid=un-clip]').count()) === clipsN - 1 && walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => !path.basename(f).startsWith('unassigned_')).length >= 4);
+  const before2 = walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => path.basename(f).startsWith('unassigned_')).length;
+  await page.locator('[data-testid=un-clip]').first().locator('[data-testid=un-clip-delete]').click(); await page.waitForTimeout(2500);
+  ok('A loose video clip can be deleted for good', walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => path.basename(f).startsWith('unassigned_')).length === before2 - 1);
+}
+// ---- sentences added to every prompt
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const P = '/projects/generate-plan-test';
+  await go(`${P}/image-prompts`);
+  ok('Image Prompts has a PROMPT SETTINGS button with links to what shapes the prompts', (await page.locator('[data-testid=prompt-settings-btn]').count()) === 1);
+  await page.locator('[data-testid=prompt-settings-btn]').click();
+  ok('PROMPT SETTINGS lists the video style, special rules and more', (await page.locator('[data-testid=prompt-settings] a[href="/settings/bible"]').count()) === 1 && (await page.locator(`[data-testid=prompt-settings] a[href="${P}/overrides"]`).count()) === 1);
+  await page.locator('[data-testid=addons-panel] summary').click();
+  const SENT = 'Make sure the image is not too contrasty and the baby skin has realistic texture, not too smooth.';
+  const first = () => page.locator('[data-testid=image-prompt-row] textarea').first();
+  const before = await first().inputValue();
+  await page.fill('[data-testid=addon-text]', SENT);
+  ok('The add-a-sentence form asks beginning or end (end is the default) and which projects', (await page.locator('[data-testid=addon-pos-end]').isChecked()) && (await page.locator('[data-testid=addon-pos-start]').count()) === 1 && (await page.locator('[data-testid=addon-scope-all]').isChecked()));
+  await page.locator('[data-testid=addon-save-apply]').click();
+  await page.waitForFunction(() => /Saved and added to/.test(document.querySelector('[data-testid=addon-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1500);
+  await go(`${P}/image-prompts`);
+  const after = await first().inputValue();
+  ok('The sentence is added to the BOTTOM of the existing prompts in the Image Prompts list', after.startsWith(before.trimEnd()) && after.trimEnd().endsWith(SENT), after.slice(-140));
+  ok('It is added to every picture prompt of the project', (await page.locator('[data-testid=image-prompt-row] textarea').evaluateAll((els, t) => els.filter(e => e.value.trim()).every(e => e.value.includes(t)), SENT)));
+  // applying again does not duplicate it
+  await page.locator('[data-testid=addons-panel] summary').click();
+  await page.locator('[data-testid=addon-apply]').first().click(); await page.waitForTimeout(2500);
+  await go(`${P}/image-prompts`);
+  ok('Adding it again does not repeat it', (await first().inputValue()).split(SENT).length === 2);
+  // a sentence for the beginning, only for another project
+  await page.locator('[data-testid=addons-panel] summary').click();
+  await page.fill('[data-testid=addon-text]', 'START SENTENCE for the Export test project only.');
+  await page.locator('[data-testid=addon-pos-start]').check(); await page.locator('[data-testid=addon-scope-pick]').check();
+  await page.locator('[data-testid=addon-proj]').first().uncheck();
+  const labels = await page.locator('[data-testid=addon-proj]').evaluateAll(els => els.map(e => e.closest('label').textContent.trim()));
+  const iExport = labels.findIndex(l => l.includes('Export test'));
+  await page.locator('[data-testid=addon-proj]').nth(iExport).check();
+  await page.locator('[data-testid=addon-save]').click(); await page.waitForTimeout(1500);
+  ok('A sentence can be saved for chosen projects only and kept for good (unlimited sentences)', (await page.locator('[data-testid=addon-item]').count()) === 2);
+  // a rewritten prompt keeps the permanent sentence
+  await go(`${P}/generate`);
+  await page.locator('button:has-text("REGENERATE PROMPT")').first().click(); await page.waitForLoadState('networkidle'); await page.waitForTimeout(1500);
+  await go(`${P}/image-prompts`);
+  ok('A prompt that is written again keeps the permanent sentence', (await first().inputValue()).trimEnd().endsWith(SENT));
+  ok('The sentence for another project did not touch this project', !(await first().inputValue()).includes('START SENTENCE'));
+  // take it out again
+  await page.locator('[data-testid=addons-panel] summary').click();
+  await page.locator('[data-testid=addon-item]').first().locator('[data-testid=addon-takeout]').click(); await page.waitForTimeout(2500);
+  await go(`${P}/image-prompts`);
+  ok('TAKE OUT OF PROMPTS removes it again', !(await first().inputValue()).includes(SENT));
+  // clean up so later checks are unaffected
+  await page.locator('[data-testid=addons-panel] summary').click();
+  while (await page.locator('[data-testid=addon-delete]').count()) { await page.locator('[data-testid=addon-delete]').first().click(); await page.waitForTimeout(1200); }
+}
 const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/new', chefUrl.replace(BASE, ''), chefUrl.replace(BASE, '') + '?tab=details', '/queue', '/queue?show=waiting', '/references', '/corrections', '/templates', '/settings', '/settings/bible', '/search?q=oil',
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { getProjectBySlug } from '@/lib/queries';
 import { SCENE_ORDER, IMAGE_ORDER, backfillPositions } from '@/lib/order';
+import { stepInfo } from '@/lib/step-dialogue';
 import { Empty } from '@/components/ui';
 import { StoryboardPage } from '@/components/storyboard/StoryboardPage';
 import type { SbBoard, PictureStatus } from '@/lib/storyboard-order';
@@ -27,13 +28,16 @@ export default async function Storyboard({ params }: { params: { slug: string } 
   await backfillPositions();
   const [scenes, imgs] = await Promise.all([
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
-    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true, attempts: { orderBy: { number: 'desc' }, take: 1 } } }),
+    db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: true, attempts: { orderBy: { number: 'desc' }, take: 1 }, _count: { select: { attempts: true } } } }),
   ]);
   const board: SbBoard = scenes.map(s => ({
     id: s.id, title: s.title,
-    pictures: imgs.filter(i => i.sceneId === s.id).map(i => {
+    pictures: imgs.filter(i => i.sceneId === s.id).map((i, _n, all) => {
       const a = i.approvedAttempt ?? i.attempts[0] ?? null;
-      return { id: i.id, title: i.title, status: status(i.status), imageUrl: a ? `/api/files/${a.assetId}?w=400` : null, assetId: a?.assetId ?? null };
+      const act = all.filter(x => x.status !== 'SKIPPED'), idx = act.indexOf(i);
+      const si = idx >= 0 ? stepInfo(i as any, s as any, idx, act.length) : null;
+      const info = si ? `Step ${si.stepNo} of ${si.stepOf}: ${si.step}${si.says ? `\n${si.saysKind === 'scene' ? 'Scene says' : 'Says'}: “${si.says}”` : ''}` : 'Not used';
+      return { id: i.id, title: i.title, status: status(i.status), imageUrl: a ? `/api/files/${a.assetId}?w=400` : null, assetId: a?.assetId ?? null, skipped: i.status === 'SKIPPED', versions: (i as any)._count.attempts, info };
     }),
   }));
   const clipAssets = await db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: p.slug }, orderBy: { createdAt: 'asc' } });

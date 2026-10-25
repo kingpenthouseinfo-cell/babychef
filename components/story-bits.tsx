@@ -1,3 +1,4 @@
+import { skipPicture, unskipPicture, removeOldVersions } from '@/lib/actions/pictures';
 import Link from 'next/link';
 import { addPictureHere, addSceneHere, movePictureUpDown, moveSceneUpDown, duplicatePicture, duplicateScene, deleteSceneHere, deletePictureHere, splitScene, resolveNotice } from '@/lib/actions/insert';
 import { SubmitBtn, ConfirmForm } from './client';
@@ -65,7 +66,7 @@ export function SceneMenu({ projectId, scene, images, first, last, ctx }: { ctx?
   );
 }
 
-export function PictureMenu({ id, first, last, href, code, projectId, sceneId, prevId, ctx }: { ctx?: PicCtx; id: string; first: boolean; last: boolean; href: string; code?: string; projectId?: string; sceneId?: string; prevId?: string | null }) {
+export function PictureMenu({ id, first, last, href, code, projectId, sceneId, prevId, ctx, status, versions }: { status?: string; versions?: number; ctx?: PicCtx; id: string; first: boolean; last: boolean; href: string; code?: string; projectId?: string; sceneId?: string; prevId?: string | null }) {
   return (
     <details className="relative">
       <summary className="btn btn-sm btn-ghost list-none" aria-label="Picture menu">⋯</summary>
@@ -81,6 +82,10 @@ export function PictureMenu({ id, first, last, href, code, projectId, sceneId, p
           <div className="px-1"><InsertPicture projectId={projectId} sceneId={sceneId} afterImageId={id} label="Quick add after" quick ctx={ctx} /></div>
         </>}
         <Link className={menuBtn} href={`${href}#results`}>Replace picture</Link>
+        {status === 'SKIPPED'
+          ? <form action={unskipPicture}>{hid('id', id)}<button className={menuBtn}>Use this picture again</button></form>
+          : <ConfirmForm action={skipPicture} message="Stop using this picture? It stays in the plan and its files are kept; it just no longer counts or goes into the video clip. You can use it again any time.">{hid('id', id)}<button className={menuBtn}>Don’t use this picture</button></ConfirmForm>}
+        {(versions ?? 0) > 1 && <ConfirmForm action={removeOldVersions} message="Remove the older versions of this picture? Only the one in use stays. The others are moved to the Unassigned tab (nothing is deleted).">{hid('id', id)}<button className={menuBtn}>Remove old versions ({(versions ?? 1) - 1})</button></ConfirmForm>}
         <ConfirmForm action={deletePictureHere} message="Delete this picture from the plan? Files already saved in the folder stay there.">{hid('id', id)}<button className={`${menuBtn} text-[#A5473A]`}>Delete</button></ConfirmForm>
       </div>
     </details>

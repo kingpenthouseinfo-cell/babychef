@@ -19,3 +19,12 @@ t('addPicture inserts a new picture at an index', () => { const b = addPicture(b
 t('flatten: pictures in folder order + a placeholder for an empty scene', () => { const f = flatten(board()); assert.deepEqual(f.map(c => (c.kind === 'picture' ? c.picture.id : 'EMPTY:' + c.scene.id)), ['a', 'b', 'c', 'EMPTY:S3']); });
 t('toSavePayload: 1-based orders and scene of each picture', () => { const p = toSavePayload(movePicture(board(), 'a', 'S2', 0)); assert.deepEqual(p.scenes.map(s => s.order), [1, 2, 3]); assert.deepEqual(p.pictures.map(x => `${x.id}@${x.sceneId}#${x.orderInScene}`), ['b@S1#1', 'a@S2#1', 'c@S2#2']); });
 console.log(`${n} passed`);
+// step & dialogue helpers
+const { dialogueLines, stepInfo } = await import('../lib/step-dialogue.ts');
+t('dialogueLines splits sentences and strips speaker names', () => assert.deepEqual(dialogueLines('Baby: Hello everyone! Today we make cake. Let us start.'), ['Hello everyone!', 'Today we make cake.', 'Let us start.']));
+t('dialogueLines splits lines', () => assert.deepEqual(dialogueLines('One\nTwo\nThree'), ['One', 'Two', 'Three']));
+t('stepInfo: a line you wrote always wins', () => assert.equal(stepInfo({ title: 'x', dialogueLine: 'Mine' }, { dialogue: 'A. B. C.' }, 0, 3).says, 'Mine'));
+t('stepInfo: enough lines are shared out in order (marked suggested)', () => { const s = (i) => stepInfo({ title: 'x' }, { dialogue: 'A one. B two. C three. D four.' }, i, 2); assert.equal(s(0).says, 'A one. B two.'); assert.equal(s(1).says, 'C three. D four.'); assert.equal(s(0).saysKind, 'suggested'); });
+t('stepInfo: fewer lines than pictures shows the scene dialogue as the scene’s', () => { const s = stepInfo({ title: 'x' }, { dialogue: 'Only one line.' }, 1, 3); assert.equal(s.saysKind, 'scene'); assert.equal(s.says, 'Only one line.'); });
+t('stepInfo: step comes from your note, then purpose, then why, then title', () => { assert.equal(stepInfo({ title: 'T', stepNote: 'S', purpose: 'P' }, {}, 0, 1).step, 'S'); assert.equal(stepInfo({ title: 'T', purpose: 'P' }, {}, 0, 1).step, 'P'); assert.equal(stepInfo({ title: 'T' }, {}, 2, 5).step, 'T'); assert.equal(stepInfo({ title: 'T' }, {}, 2, 5).stepNo, 3); });
+console.log(`${n} passed (with step helpers)`);

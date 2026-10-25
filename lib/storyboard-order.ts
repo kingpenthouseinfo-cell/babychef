@@ -12,6 +12,9 @@ export interface SbPicture {
   filePath?: string | null;   // (unused here) absolute path on disk
   assetId?: string | null;    // file record id: "Show in Finder" asks the server to reveal this asset
   isNew?: boolean;            // added on this page, not saved yet
+  skipped?: boolean;          // marked "don't use"
+  versions?: number;          // how many versions of this picture exist
+  info?: string;              // "Step 2 of 4: … · Says: …" (shown on hover)
 }
 export interface SbScene { id: string; title: string; pictures: SbPicture[]; }
 export type SbBoard = SbScene[];
