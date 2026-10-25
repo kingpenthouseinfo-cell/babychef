@@ -1015,6 +1015,23 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   ok('Storyboard: clicking a picture name renames it (after Save order)', (await page.locator('[data-testid=sb-pic-title]').first().textContent()).trim() === 'Renamed picture');
   await page.locator('[data-testid=sb-pic-title]').first().click(); await page.locator('.storyboard__title-input').fill(t0); await page.keyboard.press('Enter'); await save(); await go(U);
   ok('Each picture with an image has a Folder button', (await page.locator('[data-testid=sb-folder]').count()) === (await page.locator('[data-testid=sb-tile] img').count()) && (await page.locator('[data-testid=sb-folder]').count()) >= 1);
+  // drag an image file from Finder onto a picture tile = replace its photo
+  {
+    const png2 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const withImg = page.locator('[data-testid=sb-tile]:has(img)').first();
+    const tid = await withImg.getAttribute('data-pic-id');
+    const srcBefore = await withImg.locator('img').getAttribute('src');
+    const filesBefore = walk(STORE).filter(f => f.includes('Generate plan test') && f.includes('02 Images') && /\.png$/.test(f)).length;
+    await dropFile(withImg, 'replacement.png', 'image/png', png2);
+    await page.waitForFunction(() => /New photo saved/.test(document.querySelector('[data-testid=sb-photo-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null);
+    await page.waitForTimeout(1500);
+    const srcAfter = await page.locator(`[data-testid=sb-tile][data-pic-id="${tid}"] img`).getAttribute('src');
+    const filesAfter = walk(STORE).filter(f => f.includes('Generate plan test') && f.includes('02 Images') && /\.png$/.test(f)).length;
+    ok('Storyboard: dropping an image file on a picture tile replaces its photo (new version, old one kept)', srcAfter !== srcBefore && filesAfter === filesBefore + 1, `${srcBefore} -> ${srcAfter}; files ${filesBefore} -> ${filesAfter}`);
+    await dropFile(withImg, 'notes.txt', 'text/plain', Buffer.from('hi'));
+    await page.waitForTimeout(600);
+    ok('Storyboard: dropping something that is not a picture says so', (await page.locator('[data-testid=sb-photo-msg]').textContent()).includes('Drop a PNG, JPG or WebP'));
+  }
   // add a picture between
   const n0 = (await tiles().count());
   await page.locator('[data-testid=sb-add]').nth(1).click();

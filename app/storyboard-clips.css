@@ -15,3 +15,8 @@
 .storyboard-clips__msg { margin-top: 10px; font-size: 13px; font-weight: 600; color: #46704F; }
 .storyboard-clips__tray { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .storyboard-clips__item { display: flex; align-items: center; gap: 8px; max-width: 280px; padding: 6px 10px 6px 6px; border: 1px solid #ECEAF0; border-radius: 12px; background: #FAF9FC; cursor: grab; }
+
+/* drop an image file on a picture tile to replace its photo */
+.storyboard__tile.is-file-over { outline: 3px dashed #6A8FC7; outline-offset: 2px; background: #E6F1FC; border-radius: 14px; }
+.storyboard__tile.is-file-over::after { content: 'Drop to replace the photo'; position: absolute; left: 6px; right: 6px; top: 6px; padding: 4px 6px; border-radius: 8px; background: rgba(62,98,144,.92); color: #fff; font-size: 12px; font-weight: 600; text-align: center; pointer-events: none; }
+.storyboard__tile { position: relative; }

@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Storyboard, { type ClipInfo } from './Storyboard';
+import { uploadToCard, approveLatest } from '@/lib/actions/generate';
 import { uploadSceneClip, assignSceneClip, unassignSceneClip } from '@/lib/actions/clips';
 import { saveOrder, countFolderMismatches, matchFolderToStoryboard } from '@/lib/actions/storyboard';
 import type { SbBoard } from '@/lib/storyboard-order';
@@ -22,6 +23,7 @@ export function StoryboardPage({ projectId, slug, board, sceneClips, tray }: { p
       onUploadClip={async (sceneId, file) => { const fd = new FormData(); fd.set('projectId', projectId); if (sceneId) fd.set('sceneId', sceneId); fd.set('file', file); await uploadSceneClip(fd); router.refresh(); }}
       onAssignClip={async (sceneId, assetId) => { await assignSceneClip(projectId, sceneId, assetId); router.refresh(); }}
       onUnassignClip={async sceneId => { await unassignSceneClip(projectId, sceneId); router.refresh(); }}
+      onReplacePicture={async (pictureId, file) => { const fd = new FormData(); fd.set('imageId', pictureId); fd.set('file', file); await uploadToCard(fd); const a = new FormData(); a.set('imageId', pictureId); await approveLatest(a); router.refresh(); }}
       onOpenPicture={id => router.push(`/projects/${slug}/images/${id}`)}
     />
   );

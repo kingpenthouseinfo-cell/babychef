@@ -13,6 +13,7 @@ type Props = {
   tray?: ClipInfo[];                                                       // clips not on any scene yet
   onUploadClip?: (sceneId: string | null, file: File) => Promise<void>;   // save a video file into the project's Video Clips folder (and onto a scene)
   onAssignClip?: (sceneId: string, assetId: string) => Promise<void>;
+  onReplacePicture?: (pictureId: string, file: File) => Promise<void>;   // drop an image file on a picture tile: it becomes that picture's photo (older versions are kept)
   onUnassignClip?: (sceneId: string) => Promise<void>;
   initial: SbBoard;
   onSave: (payload: ReturnType<typeof toSavePayload>) => Promise<{ renamed?: number } | void>;
@@ -28,7 +29,7 @@ const FolderIcon = () => (
   </svg>
 );
 
-export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip }: Props) {
+export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip, onReplacePicture }: Props) {
   const [saved, setSaved] = useState<SbBoard>(initial);
   const [board, setBoard] = useState<SbBoard>(initial);
   const [dirty, setDirty] = useState(false);
@@ -48,6 +49,20 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
   const setDragClip = (v: string | null) => { dragClipRef.current = v; setDragClipState(v); };
   const [clipOver, setClipOver] = useState<string | null>(null);   // scene id a clip is hovering over
   const [clipMsg, setClipMsg] = useState('');
+  // ---- drop an image file from Finder on a picture tile: replace (or add) that picture's photo ----
+  const [fileOver, setFileOver] = useState<string | null>(null);
+  const [picMsg, setPicMsg] = useState('');
+  const flashPic = (m: string) => { setPicMsg(m); setTimeout(() => setPicMsg(''), 5000); };
+  const replacePhoto = async (p: { id: string; title: string; isNew?: boolean }, files: File[]) => {
+    setFileOver(null);
+    if (!onReplacePicture) return;
+    if (dirty) { flashPic('Save order (or Undo changes) first, then drop the photo.'); return; }
+    if (p.isNew || p.id.includes('_new_')) { flashPic('Press Save order first, then drop the photo on the new picture.'); return; }
+    if (files.some(f => /\.(heic|heif)$/i.test(f.name))) { flashPic('HEIC photos are not supported yet. Export as JPG or PNG first.'); return; }
+    const pic = files.find(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(f.name));
+    if (!pic) { flashPic('Drop a PNG, JPG or WebP picture.'); return; }
+    try { flashPic(`Replacing the photo of “${p.title}”…`); await onReplacePicture(p.id, pic); flashPic(`✓ New photo saved for “${p.title}” (the old one is kept as an earlier version)`); } catch (e: any) { flashPic(e?.message || 'Could not replace the photo.'); }
+  };
   const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
   const flashClip = (m: string) => { setClipMsg(m); setTimeout(() => setClipMsg(''), 5000); };
   const isVideo = (f: File) => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm)$/i.test(f.name);
@@ -141,6 +156,7 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
           <span className="storyboard__count">{total} pictures · {board.length} scenes</span>
           {dirty && <span className="storyboard__msg storyboard__msg--dirty" data-testid="sb-dirty">Unsaved changes</span>}
           {!dirty && msg && <span className="storyboard__msg" data-testid="sb-msg">{msg}</span>}
+          {picMsg && <span className="storyboard__msg" role="status" data-testid="sb-photo-msg">{picMsg}</span>}
           {dirty && <button className="storyboard__undo" data-testid="sb-undo" onClick={undo}>Undo changes</button>}
           {!dirty && onMatchFolder && <button className="storyboard__undo" data-testid="sb-match-folder" onClick={matchFolder} title="Rename the picture files in your folder so they list in this order">Match folder names</button>}
           <button className="storyboard__save" data-testid="sb-save" disabled={!dirty} onClick={save}>Save order</button>
@@ -171,11 +187,13 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
               </div>
               <div
                 data-testid="sb-tile" data-pic-id={p.id}
-                className={'storyboard__tile' + (drag === p.id ? ' is-dragging' : '')}
+                className={'storyboard__tile' + (drag === p.id ? ' is-dragging' : '') + (fileOver === p.id ? ' is-file-over' : '')}
                 draggable={!isEditing}
                 onDragStart={e => { e.dataTransfer.setData('text/plain', p.id); e.dataTransfer.effectAllowed = 'move'; setDrag(p.id); }}
                 onDragEnd={() => { setDrag(null); setOver(null); }}
-                onDragOver={over_(key)} onDrop={dropPic(c.scene.id, c.indexInScene)}
+                onDragOver={e => { if (hasFiles(e)) { e.preventDefault(); if (fileOver !== p.id) setFileOver(p.id); } else over_(key)(e); }}
+                onDragLeave={() => setFileOver(f => (f === p.id ? null : f))}
+                onDrop={e => { if (hasFiles(e)) { e.preventDefault(); void replacePhoto(p, Array.from(e.dataTransfer.files)); } else dropPic(c.scene.id, c.indexInScene)(e); }}
               >
                 {p.imageUrl ? (
                   <>
