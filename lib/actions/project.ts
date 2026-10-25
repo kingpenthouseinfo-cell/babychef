@@ -207,3 +207,31 @@ export async function addNote(fd: FormData) {
 }
 export async function deleteNote(fd: FormData) { await db.projectNote.delete({ where: { id: str(fd, 'id')! } }); revalidatePath('/', 'layout'); }
 void int;
+
+/** Words that mark a line of a production plan, never an ingredient. */
+const PLAN_LINE = /^(title|purpose|dialogue|baby action|adult action|food (before|during|after)|camera|asmr|short keep)\b/i;
+function looksLikeJunk(i: any) {
+  if (i.quantity || i.brand || i.product || i.packageSize) return false;
+  const n = (i.name || '').trim();
+  return PLAN_LINE.test(n) || n.length > 90 || /[.!?"”]$/.test(n) || n.split(/\s+/).length >= 9;
+}
+export async function junkIngredientIds(projectId: string) {
+  const all = await db.ingredient.findMany({ where: { projectId }, include: { references: { where: { deletedAt: null }, select: { id: true } } } });
+  return all.filter(i => !i.references.length && looksLikeJunk(i)).map(i => i.id);
+}
+/** Remove only the rows that are clearly sentences from a production plan (never ones with a photo, brand or amount). */
+export async function removeJunkIngredients(fd: FormData) {
+  const projectId = str(fd, 'projectId')!;
+  const ids = await junkIngredientIds(projectId);
+  if (ids.length) await db.ingredient.deleteMany({ where: { id: { in: ids } } });
+  await logActivity(`${ids.length} wrongly imported ingredient lines removed`, null, projectId);
+  revalidatePath('/', 'layout');
+}
+/** Remove one whole ingredient group (e.g. a heading that came from the plan). Rows with photos or brands are kept. */
+export async function removeIngredientGroup(fd: FormData) {
+  const projectId = str(fd, 'projectId')!, group = strRaw(fd, 'group');
+  const rows = await db.ingredient.findMany({ where: { projectId, group: group || null }, include: { references: { where: { deletedAt: null }, select: { id: true } } } });
+  const ids = rows.filter(i => !i.references.length && !i.brand && !i.product && !i.packageSize).map(i => i.id);
+  if (ids.length) await db.ingredient.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath('/', 'layout');
+}

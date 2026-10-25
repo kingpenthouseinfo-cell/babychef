@@ -86,7 +86,11 @@ export function parseImport(raw: string): ParsedImport {
   for (const s of out.scenes) for (const im of [...s.images]) if (im.sceneRef && im.sceneRef !== out.scenes.indexOf(s) + 1 && out.scenes[im.sceneRef - 1]) { s.images.splice(s.images.indexOf(im), 1); out.scenes[im.sceneRef - 1].images.push(im); }
   // structured recipe: title / yield / ingredient groups / method sections (the free-text recipe region is everything before the first scene or picture)
   const firstBlock = lines.findIndex(l => (SCENE_HEAD.test(l) && (RegExp.$2 || RegExp.$1)) || (IMG_HEAD.test(l) && (RegExp.$2 || RegExp.$1)));
-  const region = (firstBlock > -1 ? lines.slice(0, firstBlock) : lines).join('\n');
+  // a production plan (Title:/Dialogue:/Baby Action:/FOOD DURING: …) is never part of the recipe, so the recipe region stops at its first marker
+  const PLAN_MARK = /^\s*(?:[-*•]\s*)?(?:title|purpose|dialogue|baby action|adult action|food (?:before|during|after)(?: rest)?|camera|asmr|short keep)\s*:/i;
+  const firstPlan = lines.findIndex(l => PLAN_MARK.test(l));
+  const cutAt = [firstBlock, firstPlan].filter(n => n > -1).reduce((a, n) => Math.min(a, n), Infinity);
+  const region = (cutAt !== Infinity ? lines.slice(0, cutAt) : lines).join('\n');
   const rp = parseRecipeText(region);
   if (hasRecipeStructure(rp)) {
     out.recipeStructured = rp; out.suspicious = rp.suspicious;

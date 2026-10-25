@@ -4,7 +4,7 @@ import { getProjectBySlug } from '@/lib/queries';
 import { DirtyForm, SubmitBtn, ConfirmForm } from '@/components/client';
 import { Area, Check, Chip, Empty, Section, Sel, Text } from '@/components/ui';
 import { ReferenceCard, UploadReferenceForm } from '@/components/refs';
-import { saveIngredient, deleteIngredient, moveIngredient, quickAddIngredients } from '@/lib/actions/project';
+import { saveIngredient, deleteIngredient, moveIngredient, quickAddIngredients, junkIngredientIds, removeJunkIngredients, removeIngredientGroup } from '@/lib/actions/project';
 import { ProductPhotoPanel } from '@/components/product-photo-panel';
 import { INGREDIENT_IMPORTANCE, INGREDIENT_REF_TYPES } from '@/lib/constants';
 
@@ -31,8 +31,15 @@ export default async function Ingredients({ params, searchParams }: { params: { 
   if (!p) notFound();
   const ings = await db.ingredient.findMany({ where: { projectId: p.id }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { references: { where: { deletedAt: null }, include: { asset: true, ingredient: true }, orderBy: { createdAt: 'asc' } } } });
   const opts = ings.map(i => ({ id: i.id, label: [i.quantity, i.unit, i.name].filter(Boolean).join(' '), brand: i.brand ?? '', product: i.product ?? '', packageSize: i.packageSize ?? '', importance: i.importance, packageVisible: i.packageVisible, photos: i.references.length }));
+  const junk = (await junkIngredientIds(p.id)).length;
+  const groups = new Map<string, number>(); for (const i of ings) groups.set(i.group ?? '', (groups.get(i.group ?? '') ?? 0) + 1);
   return (
     <div className="space-y-4">
+      {(junk > 0 || ings.length > 60) && <Section title="Clean up wrongly added lines">
+        <p className="mb-2 text-sm">If a production plan was pasted by mistake, its sentences may have been added as ingredients. Nothing is removed until you press a button, and rows with a photo, brand or amount are always kept.</p>
+        {junk > 0 && <ConfirmForm action={removeJunkIngredients} message={`Remove ${junk} lines that look like sentences from a production plan? Ingredients with an amount, brand or photo are kept.`} className="mb-3"><input type="hidden" name="projectId" value={p.id} /><button className="btn btn-sm btn-danger">Remove {junk} sentence-like lines…</button></ConfirmForm>}
+        <div className="space-y-1">{[...groups].map(([g, n]) => <ConfirmForm key={g} action={removeIngredientGroup} message={`Remove the group “${g || 'no group'}” (${n} lines)? Rows with a photo or brand are kept.`} className="flex items-center gap-2 text-sm"><input type="hidden" name="projectId" value={p.id} /><input type="hidden" name="group" value={g} /><span className="flex-1">{g || '(no group)'} — {n} line{n === 1 ? '' : 's'}</span><button className="btn btn-sm">Remove this group…</button></ConfirmForm>)}</div>
+      </Section>}
       <Section title="Quick add ingredients" right={<a href={`/projects/${p.slug}/fill`} className="btn btn-sm btn-copy-secondary">FILL FROM TEXT</a>}><form action={quickAddIngredients} className="space-y-2"><input type="hidden" name="projectId" value={p.id} />
         <label className="block"><span className="label">Paste or type your ingredients — one per line</span><textarea name="text" rows={5} className="input font-mono text-[13px]" placeholder={'2 cups flour, sifted\n1 can coconut milk | Brand: Grace\n1 tsp salt'} /></label>
         <p className="text-[12px] text-ink-secondary">I’ll split each line into amount, unit, ingredient and note. Add “| Brand: Grace” to a line to save the brand too. You can fix anything afterwards.</p>
