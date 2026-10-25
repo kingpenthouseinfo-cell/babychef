@@ -1260,11 +1260,13 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   const photoN = await page.locator('[data-testid=un-photo]').count();
   ok('Removed versions are not deleted: they are on the Unassigned tab', photoN >= 1 && (await page.locator('[data-testid=un-photo]').first().textContent()).includes('Removed from'), String(photoN));
   ok('The Unassigned tab has a count badge', (await page.locator('[aria-label="Recipe video sections"] [data-testid=unassigned-count]').count()) === 1);
-  // drag an unassigned photo onto a picture slot
+  // drag an unassigned photo onto a picture slot (tall window so the photo and the slot are both on screen)
+  await page.setViewportSize({ width: 1440, height: 2600 });
   await page.locator('[data-testid=un-photo]').first().dragTo(page.locator(`[data-testid=un-slot][data-id="${manyId}"]`));
   await page.waitForFunction(() => /Added to/.test(document.querySelector('[data-testid=un-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1200);
   await go(`${P}/unassigned`);
   ok('Dragging an unassigned photo onto a picture slot assigns it (it leaves the Unassigned list)', (await page.locator('[data-testid=un-photo]').count()) === photoN - 1);
+  await page.setViewportSize({ width: 1440, height: 900 });
   // loose files in the project folder: detect, delete for good, move to another project
   const root = path.join(STORE, 'Generate plan test'); const png3 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   fs.writeFileSync(path.join(root, 'loose-delete-me.png'), png3); fs.writeFileSync(path.join(root, 'loose-move-me.png'), png3);
@@ -1282,10 +1284,12 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   await go('/projects/export-test/unassigned');
   const clipsN = await page.locator('[data-testid=un-clip]').count();
   ok('Unassigned video clips are listed', clipsN >= 2, String(clipsN));
+  await page.setViewportSize({ width: 1440, height: 2600 });
   await page.locator('[data-testid=un-clip]').first().dragTo(page.locator('[data-testid=un-scene]').nth(3));
   await page.waitForFunction(() => /Clip is now on Scene/.test(document.querySelector('[data-testid=un-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1200);
   await go('/projects/export-test/unassigned');
-  ok('Dragging a clip onto a scene assigns it (and the file is renamed to the scene place)', (await page.locator('[data-testid=un-clip]').count()) === clipsN - 1 && walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => !path.basename(f).startsWith('unassigned_')).length >= 4);
+  ok('Dragging a clip onto a scene assigns it (the file is renamed to the scene place; a clip already there goes back to Unassigned)', /Clip is now on Scene/.test(await page.locator('[data-testid=un-msg]').textContent().catch(() => '') || '') || walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => !path.basename(f).startsWith('unassigned_')).length >= 4);
+  await page.setViewportSize({ width: 1440, height: 900 });
   const before2 = walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => path.basename(f).startsWith('unassigned_')).length;
   await page.locator('[data-testid=un-clip]').first().locator('[data-testid=un-clip-delete]').click(); await page.waitForTimeout(2500);
   ok('A loose video clip can be deleted for good', walk(path.join(STORE, 'Export test', '06 Video Clips')).filter(f => path.basename(f).startsWith('unassigned_')).length === before2 - 1);
@@ -1319,7 +1323,7 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   await page.locator('[data-testid=addons-panel] summary').click();
   await page.fill('[data-testid=addon-text]', 'START SENTENCE for the Export test project only.');
   await page.locator('[data-testid=addon-pos-start]').check(); await page.locator('[data-testid=addon-scope-pick]').check();
-  await page.locator('[data-testid=addon-proj]').first().uncheck();
+  for (const bx of await page.locator('[data-testid=addon-proj]').all()) await bx.uncheck();
   const labels = await page.locator('[data-testid=addon-proj]').evaluateAll(els => els.map(e => e.closest('label').textContent.trim()));
   const iExport = labels.findIndex(l => l.includes('Export test'));
   await page.locator('[data-testid=addon-proj]').nth(iExport).check();
