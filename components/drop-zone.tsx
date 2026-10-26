@@ -3,6 +3,7 @@ import { useRef, useState, useTransition, type HTMLAttributes } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadToCard } from '@/lib/actions/generate';
 import { recordKlingAttempt } from '@/lib/actions/kling';
+import { uploadSceneClip } from '@/lib/actions/clips';
 
 const isFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
 const IMG = /\.(png|jpe?g|webp)$/i, VID = /\.(mp4|mov|m4v|webm)$/i;
@@ -58,6 +59,18 @@ export function VideoDrop({ klingId, hint = 'Drop the video here', children, ...
       const fd = new FormData(); fd.set('klingId', klingId); fd.set('file', vids[0]); fd.set('externalName', vids[0].name);
       await recordKlingAttempt(fd);
       return 'VIDEO SAVED ✓';
+    }}>{children}</Zone>
+  );
+}
+
+/** Drop finished video files onto a scene (or, with no scene, onto the strip at the top): they are saved in the project's 06 Video Clips folder and, for a scene, added to that scene's clips in play order. */
+export function SceneClipDrop({ projectId, sceneId = null, hint, children, ...rest }: HTMLAttributes<HTMLDivElement> & { projectId: string; sceneId?: string | null; hint: string }) {
+  return (
+    <Zone {...rest} hint={hint} onFiles={async files => {
+      const vids = files.filter(f => f.type.startsWith('video/') || VID.test(f.name));
+      if (!vids.length) return 'Drop a video file (MP4, MOV, M4V or WebM).';
+      for (const f of vids) { const fd = new FormData(); fd.set('projectId', projectId); if (sceneId) fd.set('sceneId', sceneId); fd.set('file', f); await uploadSceneClip(fd); }
+      return sceneId ? `✓ ${vids.length} clip${vids.length === 1 ? '' : 's'} added to this scene` : `✓ ${vids.length} clip${vids.length === 1 ? '' : 's'} saved (see the Unassigned tab or the Storyboard)`;
     }}>{children}</Zone>
   );
 }

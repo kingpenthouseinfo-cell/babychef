@@ -14,7 +14,7 @@ import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneM
 import { Sortable, Handle } from '@/components/sortable';
 import { PictureNotes, QuickApprove } from '@/components/picture-notes';
 import { stepInfosForScene } from '@/lib/step-dialogue';
-import { PictureMerge } from '@/components/picture-merge';
+import { PictureMerge, MergedBack } from '@/components/picture-merge';
 import { unskipPicture } from '@/lib/actions/pictures';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
 
@@ -54,11 +54,13 @@ export default async function Story({ params, searchParams }: { params: { slug: 
           <div className="flex items-center gap-3"><span className="h-px flex-1 bg-line" /><InsertScene projectId={p.id} beforeSceneId={scenes[0].id} label="+ Add scene here" /><span className="h-px flex-1 bg-line" /></div>
           <Sortable onSave={reorderScenes.bind(null, p.id)}>
             {scenes.map((s, si) => {
-              const list = imgs.filter(i => i.sceneId === s.id);
+              const listAll = imgs.filter(i => i.sceneId === s.id);
+              const list = listAll.filter(i => !(i as any).mergedInto); // pictures merged into another are tucked away below
+              const mergedAway = listAll.filter(i => (i as any).mergedInto).map(i => ({ id: i.id, label: `${imageCode(i.seq)} · ${i.title}`, into: imageCode(listAll.find(x => x.id === (i as any).mergedInto)?.seq ?? 0) }));
               const active = list.filter(i => i.status !== 'SKIPPED'); // pictures marked "don't use" do not count
-              const infos = stepInfosForScene(list as any, s as any);
+              const infos = stepInfosForScene(listAll as any, s as any);
               const stepOf = (i: (typeof imgs)[number]) => infos.get(i.id) ?? null;
-              const mergeProps = (i: (typeof imgs)[number]) => ({ siblings: list.filter(y => y.id !== i.id && y.status !== 'SKIPPED' && !(y as any).mergedInto).map(y => ({ id: y.id, label: `${imageCode(y.seq)} · ${y.title}` })), merged: list.filter(y => (y as any).mergedInto === i.id).map(y => ({ id: y.id, label: imageCode(y.seq) })) });
+              const mergeProps = (i: (typeof imgs)[number]) => ({ siblings: list.filter(y => y.id !== i.id && y.status !== 'SKIPPED').map(y => ({ id: y.id, label: `${imageCode(y.seq)} · ${y.title}` })), merged: listAll.filter(y => (y as any).mergedInto === i.id).map(y => ({ id: y.id, label: imageCode(y.seq) })) });
               const ok = active.filter(i => i.status === 'APPROVED').length;
               const fixing = list.filter(i => i.status === 'REDO').length;
               const allDone = active.length > 0 && ok === active.length;
@@ -94,7 +96,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                 </ImageDrop>);
                             })}
                           </Sortable>
-                          <div className="mt-2"><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} label="+ Add picture here" ctx={ctxOf(s)} /></div>
+                          <div className="mt-2"><MergedBack items={mergedAway} /><InsertPicture projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} label="+ Add picture here" ctx={ctxOf(s)} /></div>
                         </div>
                       ) : (
                         <Sortable className="grid grid-cols-2 gap-3 px-4 pb-4 md:grid-cols-3 xl:grid-cols-5" onSave={reorderPictures.bind(null, s.id)}>
@@ -120,6 +122,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                               </ImageDrop>
                             );
                           })}
+                          <div className="col-span-full"><MergedBack items={mergedAway} /></div>
                           <InsertTile projectId={p.id} sceneId={s.id} afterImageId={list.length ? list[list.length - 1].id : ''} ctx={ctxOf(s)} />
                         </Sortable>
                       )}

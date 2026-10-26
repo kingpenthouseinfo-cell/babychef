@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { mergePictures, unmergePictures } from '@/lib/actions/pictures';
+import { mergePictures, unmergePictures, unmergeOne } from '@/lib/actions/pictures';
 
 /** Merge the other steps of a scene into this picture (you only need the photo for this one). Plain buttons so it works inside the batch form. */
 export function PictureMerge({ imageId, siblings, merged }: { imageId: string; siblings: { id: string; label: string }[]; merged: { id: string; label: string }[] }) {
@@ -30,5 +30,23 @@ export function PictureMerge({ imageId, siblings, merged }: { imageId: string; s
         </details>
       )}
     </div>
+  );
+}
+
+/** Small, closed-by-default list of pictures that were merged away, with a button to add one back. */
+export function MergedBack({ items }: { items: { id: string; label: string; into: string }[] }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  if (!items.length) return null;
+  return (
+    <details className="mt-2 text-[12.5px] text-ink-secondary" data-testid="merged-back">
+      <summary className="cursor-pointer font-semibold">Merged pictures ({items.length}) — add one back</summary>
+      <ul className="mt-1 space-y-1">
+        {items.map(m => (
+          <li key={m.id} className="flex flex-wrap items-center gap-2"><span className="min-w-0 flex-1 truncate">{m.label} <span className="text-ink-muted">· merged into {m.into}</span></span>
+            <button type="button" className="btn btn-sm" disabled={busy} data-testid="merged-add-back" onClick={() => start(async () => { const fd = new FormData(); fd.set('id', m.id); await unmergeOne(fd); router.refresh(); })}>Add back</button></li>
+        ))}
+      </ul>
+    </details>
   );
 }

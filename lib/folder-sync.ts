@@ -33,7 +33,7 @@ export async function planClipNames(projectId: string): Promise<FolderChange[]> 
       assigned.add(as.id);
       const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
       const d = shortDesc(sc.title);
-      const to = `${dir}/${pad(i + 1, w)}_${code}-S${pad(sc.order)}-CLIP${ids.length > 1 ? k + 1 : ''}${d ? '_' + d : ''}${ext}`;
+      const to = `${dir}/${pad(i + 1, w)}.${k + 1}_${code}-S${pad(sc.order)}-CLIP${ids.length > 1 ? k + 1 : ''}${d ? '_' + d : ''}${ext}`;
       if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
     });
   });

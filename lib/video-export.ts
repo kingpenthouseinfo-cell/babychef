@@ -62,7 +62,7 @@ export async function planExport(projectId: string, includeUnassigned: boolean):
       if (!a) { warnings.push(`Scene ${labels.get(sc.id)} points to a clip that is no longer in the project.`); continue; }
       const c = await make(a, 'scene', { sceneId: sc.id, sceneLabel: labels.get(sc.id) ?? '', title: ids.length > 1 ? `${sc.title} (clip ${k + 1} of ${ids.length})` : sc.title });
       if (!c) continue;
-      const m = /^(\d{2,3})_/.exec(a.displayName);
+      const m = /^(\d{2,3})(?:\.\d+)?_/.exec(a.displayName);
       if (m && parseInt(m[1], 10) !== i + 1) { c.warn = `The file name says ${m[1]} but this scene is number ${String(i + 1).padStart(w, '0')} in the storyboard — the storyboard order is used.`; warnings.push(`${a.displayName}: file number differs from the storyboard order (storyboard order is used).`); }
       c.included = true; clips.push(c);
     }

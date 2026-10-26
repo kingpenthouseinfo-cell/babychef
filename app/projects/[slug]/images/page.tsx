@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { buildChecklist, getProjectBySlug, imageInclude, refPool, shotSummary } from '@/lib/queries';
 import { Empty, Section, Sel, Text, Field, Chip } from '@/components/ui';
 import { stepInfosForScene, type StepInfo } from '@/lib/step-dialogue';
+import { MergedBack } from '@/components/picture-merge';
 import { ImageCard } from '@/components/image-bits';
 import { CopyButton, SubmitBtn } from '@/components/client';
 import { createImage, batchImages } from '@/lib/actions/image';
@@ -42,7 +43,8 @@ export default async function Images({ params, searchParams }: { params: { slug:
   const arrange = { scenes: scenes.map(s => ({ id: s.id, label: `Scene ${lab.get(s.id)} · ${s.title}` })), pictures: all.map((i, n) => ({ id: i.id, label: `Picture ${n + 1} · ${i.title}` })) };
   const nextSeq = all.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
   const st = searchParams.status;
-  const list = all.filter(i =>
+  const mergedAway = all.filter(i => (i as any).mergedInto).map(i => ({ id: i.id, label: `${imageCode(i.seq)} · ${i.title}`, into: imageCode(all.find(x => x.id === (i as any).mergedInto)?.seq ?? 0) }));
+  const list = all.filter(i => !(i as any).mergedInto &&
     (!st || st === 'ALL' || i.status === st || (st === 'PLANNED' && i.status === 'PROMPT DRAFT')) &&
     (!searchParams.scene || i.sceneId === searchParams.scene) && (!searchParams.shot || i.shotType === searchParams.shot) &&
     (!searchParams.ingredient || (i.ingredients || '').toLowerCase().includes(searchParams.ingredient.toLowerCase())) &&
@@ -82,6 +84,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} arrange={arrange} merge={mergeOf.get(i.id)} notes={notesOf.get(i.id) ?? null} />)}</div>
         </form>
       )}
+      <MergedBack items={mergedAway} />
 
       <section id="add" className="card">
         <h2 className="mb-3">+ Add planned image</h2>

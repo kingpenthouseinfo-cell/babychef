@@ -1,7 +1,7 @@
 import { ExportVideo } from '@/components/export-video';
-import { VideoDrop } from '@/components/drop-zone';
+import { SceneClipDrop } from '@/components/drop-zone';
 import type { ReactNode, CSSProperties } from 'react';
-function VideoWrap({ klingId, children, ...rest }: { klingId?: string; className?: string; style?: CSSProperties; children: ReactNode }) { return klingId ? <VideoDrop klingId={klingId} hint="Drop the video here to save it as this clip" {...rest}>{children}</VideoDrop> : <section {...rest}>{children}</section>; }
+function VideoWrap({ projectId, sceneId, children, ...rest }: { projectId: string; sceneId: string; className?: string; style?: CSSProperties; children: ReactNode }) { return <SceneClipDrop projectId={projectId} sceneId={sceneId} hint="Drop the finished video here to put it on this scene" {...rest}>{children}</SceneClipDrop>; }
 import { sceneLabels } from '@/lib/scene-label';
 import { effectiveCode } from '@/lib/project-code';
 import { notFound } from 'next/navigation';
@@ -32,6 +32,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
   return (
     <div className="max-w-[1000px] space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-[34px] md:text-[40px]">Video Clips</h1><p className="mt-1 text-[14px] text-ink-secondary">Each scene gathers the pictures that look good. Make the prompt, then make the clip in Kling.</p></div><ExportVideo slug={p.slug} projectTitle={p.title} /></div>
+      {scenes.length > 0 && <SceneClipDrop projectId={p.id} hint="Drop the video clips here to save them" className="rounded-[14px] border-2 border-dashed border-[#B9CFEA] bg-[#F4F9FE] px-4 py-3 text-center text-[13.5px] text-[#3E6290]" data-testid="clips-top-drop">Drag finished video clips from Finder onto a scene below to put them on that scene (in play order), or drop them here to save them for later.</SceneClipDrop>}
       {scenes.length === 0 && <Empty title="No scenes yet." hint="Add scenes first — each scene becomes one video clip." />}
       {scenes.map((sc, i) => {
         const pics = imgs.filter(x => x.sceneId === sc.id);
@@ -44,7 +45,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
         const open = ready && !opened && !clip?.status.match(/APPROVED/); if (open) opened = true;
         const clipName = `${effectiveCode(p)}-S${String(sc.order).padStart(2, '0')}-CLIP_v1.mp4`;
         return (
-          <VideoWrap key={sc.id} klingId={clip?.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
+          <VideoWrap key={sc.id} projectId={p.id} sceneId={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
             <details open={open}>
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-4">
                 <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {lab.get(sc.id)} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>

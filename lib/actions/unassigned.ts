@@ -83,7 +83,7 @@ export async function moveUnassignedClip(projectId: string, assetId: string, tar
   const a = await db.asset.findFirst({ where: { id: assetId, kind: 'VIDEO_CLIP', projectSlug: p.slug } });
   if (!a) throw new Error('That clip was not found');
   if (await sceneHasClip(projectId, assetId)) throw new Error('That clip is on a scene. Take it off the scene first.');
-  const dest = await freeName(`${await projectFolder(target.id)}/06 Video Clips`, a.displayName.replace(/^(unassigned_|\d{2,3}_)/, 'unassigned_'));
+  const dest = await freeName(`${await projectFolder(target.id)}/06 Video Clips`, a.displayName.replace(/^(unassigned_|\d{2,3}(?:\.\d+)?_)/, 'unassigned_'));
   await storage.move(a.relPath, dest);
   const nm = dest.split('/').pop()!;
   await db.asset.update({ where: { id: a.id }, data: { relPath: dest, displayName: nm, internalName: nm, projectSlug: target.slug } });

@@ -143,3 +143,14 @@ export async function unmergePictures(fd: FormData) {
   await logActivity(`Merge undone on ${imageCode(keep.seq)}`, null, keep.projectId);
   touch();
 }
+
+/** Bring ONE merged picture back as its own picture (the others stay merged). */
+export async function unmergeOne(fd: FormData) {
+  const id = str(fd, 'id')!;
+  const r: any = await db.plannedImage.findUniqueOrThrow({ where: { id }, include: { attempts: { orderBy: { number: 'desc' } } } });
+  const was = r.attempts.find((a: any) => a.status === 'APPROVED');
+  const status = r.mergedPrev && r.mergedPrev !== 'SKIPPED' ? r.mergedPrev : was ? 'APPROVED' : r.attempts.length ? 'REVIEW' : r.fullPrompt?.trim() ? 'READY' : 'PLANNED';
+  await db.plannedImage.update({ where: { id }, data: { status, mergedInto: null, mergedPrev: null, ...(status === 'APPROVED' && was ? { approvedAttemptId: was.id } : {}) } as any });
+  await logActivity(`${imageCode(r.seq)} added back (was merged)`, null, r.projectId);
+  touch();
+}
