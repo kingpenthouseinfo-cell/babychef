@@ -1,3 +1,4 @@
+import { sceneClipIds } from '@/lib/scene-clips';
 import '@/app/unassigned.css';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
@@ -25,9 +26,9 @@ export default async function Unassigned({ params }: { params: { slug: string } 
   ]);
   const lab = sceneLabels(scenes);
   const slots = scenes.flatMap(sc => imgs.filter(i => i.sceneId === sc.id).map((i, n) => ({ id: i.id, code: imageLabel(lab.get(sc.id) ?? '', n), title: i.title, sceneLabel: lab.get(sc.id) ?? '', sceneTitle: sc.title, assetId: (i.approvedAttempt ?? i.attempts[0])?.assetId ?? null, status: i.status })));
-  const onScene = new Map(scenes.filter(s => (s as any).videoAssetId).map(s => [(s as any).videoAssetId as string, s.id]));
+  const onScene = new Map(scenes.flatMap(s => sceneClipIds(s as any).map(id => [id, s.id] as [string, string])));
   const assetOf = new Map(clips.map(c => [c.id, c]));
-  const sceneBoxes = scenes.map(s => { const a = (s as any).videoAssetId ? assetOf.get((s as any).videoAssetId) : null; return { id: s.id, label: lab.get(s.id) ?? '', title: s.title, clip: a ? { id: a.id, name: a.displayName } : null }; });
+  const sceneBoxes = scenes.map(s => { const ids = sceneClipIds(s as any); const a = ids[0] ? assetOf.get(ids[0]) : null; return { id: s.id, label: lab.get(s.id) ?? '', title: s.title, clip: a ? { id: a.id, name: ids.length > 1 ? `${a.displayName} (+${ids.length - 1} more)` : a.displayName } : null }; });
   const looseClips = clips.filter(c => !onScene.has(c.id)).map(c => ({ id: c.id, name: c.displayName, size: c.size }));
   const photoAssets = await db.asset.findMany({ where: { id: { in: photos.map(x => x.assetId).filter(Boolean) as string[] } }, select: { id: true, width: true, height: true } });
   const photoItems = photos.map(u => { const a = photoAssets.find(x => x.id === u.assetId); return { id: u.id, name: u.name, assetId: u.assetId, reason: u.reason, size: u.size, folder: u.folder, dims: a?.width ? `${a.width}×${a.height}` : '' }; });

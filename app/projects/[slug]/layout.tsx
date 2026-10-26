@@ -1,3 +1,4 @@
+import { sceneClipIds } from '@/lib/scene-clips';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProjectBySlug } from '@/lib/queries';
@@ -24,9 +25,9 @@ export default async function ProjectLayout({ children, params }: { children: Re
   const [looseFiles, clipAssets, usedClips] = await Promise.all([
     db.unmatchedFile.count({ where: { status: 'OPEN', relPath: { startsWith: `${folder}/` } } }),
     db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: p.slug }, select: { id: true } }),
-    db.scene.findMany({ where: { projectId: p.id, videoAssetId: { not: null } } as any, select: { videoAssetId: true } as any }),
+    db.scene.findMany({ where: { projectId: p.id }, select: { videoAssetId: true, clipIds: true } }),
   ]);
-  const used = new Set((usedClips as any[]).map(x => x.videoAssetId));
+  const used = new Set((usedClips as any[]).flatMap(x => sceneClipIds(x)));
   const unassignedN = looseFiles + clipAssets.filter(c => !used.has(c.id)).length;
   const shown = `${root.replace(/^\/(Users|home)\/[^/]+\//, '').split('/').filter(Boolean).join(' / ')} / ${folder}`;
   const watching = s.watchProjectFolders !== 'false';

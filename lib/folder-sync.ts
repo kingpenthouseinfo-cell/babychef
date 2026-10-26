@@ -6,6 +6,7 @@ import { expectedFilename, parseResultFilename, shortDesc } from './naming';
 import { effectiveCode } from './project-code';
 import { pad } from './util';
 import { logActivity } from './activity';
+import { sceneClipIds } from './scene-clips';
 
 /** The picture files in a project folder are named with their place in the storyboard (001_, 002_ …) so the folder lists them in the same order as the Storyboard.
  *  This renames files on disk (same folder, same picture, same version — only the name changes), updates the records, and keeps a log of every old → new name. */
@@ -19,20 +20,22 @@ export async function planClipNames(projectId: string): Promise<FolderChange[]> 
   const project = await db.project.findUnique({ where: { id: projectId }, select: { slug: true, code: true, folderName: true } });
   if (!project) return [];
   const [scenes, clips] = await Promise.all([
-    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, title: true, videoAssetId: true } }),
+    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, title: true, videoAssetId: true, clipIds: true } }),
     db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: project.slug } }),
   ]);
   const code = effectiveCode({ slug: project.slug, code: project.code });
   const out: FolderChange[] = [], assigned = new Set<string>();
   const w = scenes.length > 99 ? 3 : 2;
-  scenes.forEach((sc, i) => {
-    const as = sc.videoAssetId ? clips.find(c => c.id === sc.videoAssetId) : null;
-    if (!as) return;
-    assigned.add(as.id);
-    const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
-    const d = shortDesc(sc.title);
-    const to = `${dir}/${pad(i + 1, w)}_${code}-S${pad(sc.order)}-CLIP${d ? '_' + d : ''}${ext}`;
-    if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
+  scenes.forEach((sc: any, i) => {
+    const ids = sceneClipIds(sc).filter(id => clips.some(c => c.id === id));
+    ids.forEach((id, k) => {
+      const as = clips.find(c => c.id === id)!;
+      assigned.add(as.id);
+      const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
+      const d = shortDesc(sc.title);
+      const to = `${dir}/${pad(i + 1, w)}_${code}-S${pad(sc.order)}-CLIP${ids.length > 1 ? k + 1 : ''}${d ? '_' + d : ''}${ext}`;
+      if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
+    });
   });
   for (const as of clips) {
     if (assigned.has(as.id)) continue;

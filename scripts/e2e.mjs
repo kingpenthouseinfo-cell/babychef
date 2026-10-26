@@ -1089,6 +1089,23 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   await page.locator('[data-testid=sb-clip-remove]').first().click(); await page.waitForTimeout(1500);
   await go(U);
   ok('Video clips: taking a clip off a scene returns it to the tray (file kept, renamed unassigned_)', (await page.locator('[data-testid=sb-tray-clip]').count()) === 1 && clipFiles().some(n => n.startsWith('unassigned_')) && clipFiles().length === 2, clipFiles().join('|'));
+
+  // several clips on ONE scene, in order; the blue box shows only the clips
+  const blue = page.locator('[data-testid=sb-scene-card].has-clip').first();
+  await page.locator('[data-testid=sb-tray-clip]').first().dragTo(blue);
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-testid=sb-scene-card].has-clip')].some(c => c.querySelectorAll('[data-testid=sb-scene-clip]').length === 2), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(800);
+  const two = page.locator('[data-testid=sb-scene-card]', { has: page.locator('[data-testid=sb-clip-num]') }).first();
+  ok('A scene can hold more than one video clip (numbered 1, 2)', (await two.locator('[data-testid=sb-scene-clip]').count()) === 2 && (await two.locator('[data-testid=sb-clip-num]').count()) === 2);
+  ok('A scene with clips shows only the clips (no picture thumbnails)', (await two.locator('.storyboard-scenes__thumbs').count()) === 0 && (await two.locator('.storyboard-scenes__mini').count()) === 0);
+  const namesOf = () => two.locator('.storyboard-clip__name').evaluateAll(els => els.map(e => e.textContent));
+  const before = await namesOf();
+  ok('Several clips on a scene are named -CLIP1, -CLIP2 in play order', /-CLIP1/.test(before[0]) && /-CLIP2/.test(before[1]), before.join('|'));
+  const firstId = await two.locator('[data-testid=sb-scene-clip]').first().getAttribute('data-clip-id');
+  await two.locator('[data-testid=sb-clip-later]').first().click(); await page.waitForTimeout(2500);
+  await go(U);
+  const two2 = page.locator('[data-testid=sb-scene-card]', { has: page.locator('[data-testid=sb-clip-num]') }).first();
+  ok('Clips can be put in order (earlier / later) and the files are renamed to match', (await two2.locator('[data-testid=sb-scene-clip]').nth(1).getAttribute('data-clip-id')) === firstId && /-CLIP2/.test((await two2.locator('.storyboard-clip__name').nth(1).textContent()) || ''));
+  await two2.locator('[data-testid=sb-clip-remove]').first().click(); await page.waitForTimeout(1500); await go(U);
 }
 // ---- EXPORT FULL VIDEO (real FFmpeg, real files, isolated test project)
 {

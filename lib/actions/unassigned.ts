@@ -9,6 +9,7 @@ import { assignUnmatched } from './watch';
 import { approveLatest } from './generate';
 import { assignSceneClip } from './clips';
 import { scanProjectFolders } from '../watcher';
+import { sceneHasClip } from '../scene-clips';
 
 const touch = () => revalidatePath('/', 'layout');
 
@@ -69,7 +70,7 @@ export async function deleteUnassignedClip(projectId: string, assetId: string): 
   const p = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   const a = await db.asset.findFirst({ where: { id: assetId, kind: 'VIDEO_CLIP', projectSlug: p.slug } });
   if (!a) throw new Error('That clip was not found');
-  if (await db.scene.count({ where: { projectId, videoAssetId: assetId } })) throw new Error('That clip is on a scene. Take it off the scene first.');
+  if (await sceneHasClip(projectId, assetId)) throw new Error('That clip is on a scene. Take it off the scene first.');
   await storage.remove(a.relPath);
   await db.asset.delete({ where: { id: a.id } }).catch(() => undefined);
   await logActivity(`Unassigned video clip deleted: ${a.displayName}`, null, projectId);
@@ -81,7 +82,7 @@ export async function moveUnassignedClip(projectId: string, assetId: string, tar
   const target = await db.project.findUniqueOrThrow({ where: { id: targetProjectId } });
   const a = await db.asset.findFirst({ where: { id: assetId, kind: 'VIDEO_CLIP', projectSlug: p.slug } });
   if (!a) throw new Error('That clip was not found');
-  if (await db.scene.count({ where: { projectId, videoAssetId: assetId } })) throw new Error('That clip is on a scene. Take it off the scene first.');
+  if (await sceneHasClip(projectId, assetId)) throw new Error('That clip is on a scene. Take it off the scene first.');
   const dest = await freeName(`${await projectFolder(target.id)}/06 Video Clips`, a.displayName.replace(/^(unassigned_|\d{2,3}_)/, 'unassigned_'));
   await storage.move(a.relPath, dest);
   const nm = dest.split('/').pop()!;

@@ -1,3 +1,4 @@
+import { sceneClipIds } from './scene-clips';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -37,7 +38,7 @@ export async function loadSettings(projectId: string): Promise<ExportOptions> {
 export async function planExport(projectId: string, includeUnassigned: boolean): Promise<ExportPlan> {
   const project = await db.project.findUniqueOrThrow({ where: { id: projectId }, select: { id: true, title: true, slug: true } });
   const [scenes, assets] = await Promise.all([
-    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, pos: true, inserted: true, title: true, videoAssetId: true } }),
+    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, pos: true, inserted: true, title: true, videoAssetId: true, clipIds: true } }),
     db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: project.slug } }),
   ]);
   const labels = sceneLabels(scenes);
@@ -55,13 +56,16 @@ export async function planExport(projectId: string, includeUnassigned: boolean):
     return { order: 0, kind, included: false, assetId: a.id, title: a.displayName, name: a.displayName, rel: a.relPath, abs, missing: !exists || !info, duration: info?.duration ?? 0, width: info?.width ?? 0, height: info?.height ?? 0, fps: info?.fps ?? 0, hasAudio: !!info?.hasAudio, ...(exists && !info ? { warn: 'This file could not be read as a video' } : {}), ...extra };
   };
   for (const [i, sc] of scenes.entries()) {
-    const a = sc.videoAssetId ? byId.get(sc.videoAssetId) : undefined;
-    if (!a) { if (sc.videoAssetId) warnings.push(`Scene ${labels.get(sc.id)} points to a clip that is no longer in the project.`); continue; }
-    const c = await make(a, 'scene', { sceneId: sc.id, sceneLabel: labels.get(sc.id) ?? '', title: sc.title });
-    if (!c) continue;
-    const m = /^(\d{2,3})_/.exec(a.displayName);
-    if (m && parseInt(m[1], 10) !== i + 1) { c.warn = `The file name says ${m[1]} but this scene is number ${String(i + 1).padStart(w, '0')} in the storyboard — the storyboard order is used.`; warnings.push(`${a.displayName}: file number differs from the storyboard order (storyboard order is used).`); }
-    c.included = true; clips.push(c);
+    const ids = sceneClipIds(sc as any);
+    for (const [k, id] of ids.entries()) {
+      const a = byId.get(id);
+      if (!a) { warnings.push(`Scene ${labels.get(sc.id)} points to a clip that is no longer in the project.`); continue; }
+      const c = await make(a, 'scene', { sceneId: sc.id, sceneLabel: labels.get(sc.id) ?? '', title: ids.length > 1 ? `${sc.title} (clip ${k + 1} of ${ids.length})` : sc.title });
+      if (!c) continue;
+      const m = /^(\d{2,3})_/.exec(a.displayName);
+      if (m && parseInt(m[1], 10) !== i + 1) { c.warn = `The file name says ${m[1]} but this scene is number ${String(i + 1).padStart(w, '0')} in the storyboard — the storyboard order is used.`; warnings.push(`${a.displayName}: file number differs from the storyboard order (storyboard order is used).`); }
+      c.included = true; clips.push(c);
+    }
   }
   const loose = assets.filter(a => !seen.has(a.id)).sort((x, y) => x.displayName.localeCompare(y.displayName, undefined, { numeric: true }));
   for (const a of loose) { const c = await make(a, 'unassigned', {}); if (c) { c.included = includeUnassigned; clips.push(c); } }

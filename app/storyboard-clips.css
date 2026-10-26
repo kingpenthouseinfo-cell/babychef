@@ -31,3 +31,11 @@
 /* quick approve: deliberately loud green so it is never missed */
 .storyboard__approve { margin-top: 6px; width: 100%; border: 0; border-radius: 8px; padding: 7px 10px; background: #16A34A; color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 0 2px #BBF7D0; }
 .storyboard__approve:hover { background: #15803D; }
+
+/* several clips on one scene: numbered, in play order, with earlier/later buttons. The scene box shows only the clips (no picture thumbnails). */
+.storyboard-clips-list { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.storyboard-clip__num { flex: none; width: 18px; height: 18px; border-radius: 50%; background: #3E6290; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.storyboard-clip__order { flex: none; display: flex; gap: 2px; }
+.storyboard-clip__move { width: 20px; height: 20px; border: 0; border-radius: 6px; background: rgba(255,255,255,.85); color: #3E6290; font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer; }
+.storyboard-clip__move:disabled { opacity: .3; cursor: default; }
+.storyboard-scenes__card.has-clip .storyboard-clip__thumb { width: 96px; height: 56px; }
