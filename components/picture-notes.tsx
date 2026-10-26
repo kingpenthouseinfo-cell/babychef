@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveStepDialogue, skipPicture, unskipPicture, removeOldVersions } from '@/lib/actions/pictures';
+import { saveStepDialogue, skipPicture, unskipPicture, removeOldVersions, quickApprove } from '@/lib/actions/pictures';
 import type { StepInfo } from '@/lib/step-dialogue';
 
 /** "Step 2 of 4 · what it shows" and "Says: the dialogue it goes with" under a picture. Click Edit to change either (empty = automatic). */
@@ -41,5 +41,20 @@ export function PictureUse({ id, status, versions }: { id: string; status: strin
         : <button type="button" className="btn btn-sm btn-ghost" disabled={busy} data-testid="pic-skip" onClick={() => { if (window.confirm('Stop using this picture?\n\nIt stays in the plan and its files are kept; it just no longer counts or goes into the video clip. You can use it again any time.')) call(skipPicture); }}>Don’t use this picture</button>}
       {versions > 1 && <button type="button" className="btn btn-sm btn-ghost" disabled={busy} data-testid="pic-remove-old" onClick={() => { if (window.confirm(`Remove the ${versions - 1} older version${versions - 1 === 1 ? '' : 's'} of this picture?\n\nOnly the one in use stays. The others are moved to the Unassigned tab — nothing is deleted.`)) call(removeOldVersions); }}>Remove old versions ({versions - 1})</button>}
     </div>
+  );
+}
+
+/** Big green one-click approve for a picture that has an uploaded version but is not approved yet. Renders nothing otherwise. */
+export function QuickApprove({ id, status, versions, className = '' }: { id: string; status: string; versions: number; className?: string }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  const [err, setErr] = useState('');
+  if (status === 'APPROVED' || status === 'SKIPPED' || versions < 1) return null;
+  return (
+    <span className={'inline-flex flex-col ' + className}>
+      <button type="button" disabled={busy} data-testid="quick-approve" onClick={e => { e.preventDefault(); e.stopPropagation(); start(async () => { try { setErr(''); const fd = new FormData(); fd.set('id', id); await quickApprove(fd); router.refresh(); } catch (x: any) { setErr(x?.message || 'Could not approve.'); } }); }}
+        className="inline-flex items-center gap-1 rounded-lg bg-[#16A34A] px-3 py-1.5 text-[13px] font-extrabold uppercase tracking-wide text-white shadow-sm ring-2 ring-[#BBF7D0] hover:bg-[#15803D] disabled:opacity-60">{busy ? 'Approving…' : '✓ Approve'}</button>
+      {err && <span className="text-[11px] text-red-700">{err}</span>}
+    </span>
   );
 }

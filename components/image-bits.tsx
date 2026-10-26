@@ -7,7 +7,7 @@ import { AiReferences } from './ai-references';
 import { PictureArrange } from './picture-arrange';
 import { FlagButton } from './flag-button';
 import { ImageDrop } from './drop-zone';
-import { PictureNotes, PictureUse } from './picture-notes';
+import { PictureNotes, PictureUse, QuickApprove } from './picture-notes';
 import type { AiRefSet } from '@/lib/ai-refs';
 import { imageCode, sceneCode } from '@/lib/util';
 import { expectedFilename, nextVersion, withFilename } from '@/lib/naming';
@@ -59,6 +59,7 @@ export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts,
       <Link href={href} className="font-semibold leading-tight hover:underline">{img.title}</Link>
       <div className="text-xs text-ink-secondary">{img.shotType}</div>
       {notes && <PictureNotes id={img.id} info={notes} stepNote={img.stepNote ?? null} dialogueLine={img.dialogueLine ?? null} />}
+      <QuickApprove id={img.id} status={img.status} versions={(img.attempts ?? []).length} className="self-start" />
       <PictureUse id={img.id} status={img.status} versions={(img.attempts ?? []).length} />
       {!ai && <RefThumbs list={checklist} />}
       {ai && (img.contPrompt || img.fullPrompt) && <details className="text-[12.5px]"><summary className="cursor-pointer text-ink-secondary">Show prompt</summary><div className="mt-1 max-h-[160px] overflow-y-auto whitespace-pre-wrap rounded-md border border-line bg-surface p-2">{img.contPrompt || img.fullPrompt}</div></details>}

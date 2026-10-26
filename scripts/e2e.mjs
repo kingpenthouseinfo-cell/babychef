@@ -1348,6 +1348,24 @@ const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/n
   `/projects/${slug}`, `/projects/${slug}/recipe`, `/projects/${slug}/ingredients`, `/projects/${slug}/script`, `/projects/${slug}/scenes`, `/projects/${slug}/scenes?view=progression`, `/projects/${slug}/images`, img1Url.replace(BASE, ''), img1Url.replace(BASE, '') + '#review',
   `/projects/${slug}/kling`, klingUrl.replace(BASE, ''), `/projects/${slug}/short`, `/projects/${slug}/references`, `/projects/${slug}/continuity`, `/projects/${slug}/builder`, `/projects/${slug}/builder?type=image-full&image=${imgId1}`, `/projects/${slug}/builder?type=kling-final&kling=${klingUrl.split('/').pop()}`,
   `/projects/${slug}/overrides`, `/projects/${slug}/import`, `/projects/${slug}/story`, `/projects/${slug}/more`, `/projects/${slug}/start`, `/projects/${slug}/start?hide=done`, `/projects/${slug}/questions`, `/projects/${slug}/fill`, '/fill', '/unmatched', `/projects/${slug}/prompts`, `/projects/${slug}/publishing`, `/projects/${slug}/files`, `/projects/${slug}/files?view=list`, `/projects/${slug}/notes`];
+// quick approve (green button) on the storyboard, scenes & pictures and picture list
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await go(`/projects/${slug}/images`);
+  const nBtn = await page.locator('[data-testid=quick-approve]').count();
+  ok('Picture list shows a green Approve button on pictures that are waiting', nBtn >= 0, String(nBtn));
+  if (nBtn) {
+    await go(`/projects/${slug}/storyboard`);
+    const sbN = await page.locator('[data-testid=sb-approve]').count();
+    ok('Storyboard shows the same Approve button', sbN >= 1, String(sbN));
+    await go(`/projects/${slug}/story`);
+    ok('Scenes & pictures shows the Approve button', (await page.locator('[data-testid=quick-approve]').count()) >= 1);
+    await go(`/projects/${slug}/images`);
+    await page.locator('[data-testid=quick-approve]').first().click(); await page.waitForTimeout(2500);
+    await go(`/projects/${slug}/images`);
+    ok('Pressing Approve approves the picture in one click', (await page.locator('[data-testid=quick-approve]').count()) === nBtn - 1);
+  }
+}
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {
   await page.setViewportSize({ width: w, height: h });

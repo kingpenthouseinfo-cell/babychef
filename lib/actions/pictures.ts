@@ -6,6 +6,7 @@ import { projectFolder } from '../files';
 import { str, imageCode } from '../util';
 import { logActivity } from '../activity';
 import { syncFolderNamesSafe } from '../folder-sync';
+import { approveLatest } from './generate';
 
 const touch = () => revalidatePath('/', 'layout');
 const UNASSIGNED_DIR = 'Unassigned Pictures';
@@ -96,4 +97,14 @@ export async function saveStepDialogue(fd: FormData) {
   const v = (k: string) => { const t = (str(fd, k) ?? '').trim(); return t ? t.slice(0, 400) : null; };
   await db.plannedImage.update({ where: { id }, data: { stepNote: v('stepNote'), dialogueLine: v('dialogueLine') } as any });
   touch();
+}
+
+/** One-click approve: the newest uploaded version becomes the approved picture. */
+export async function quickApprove(fd: FormData) {
+  const id = str(fd, 'id')!;
+  const img = await db.plannedImage.findUniqueOrThrow({ where: { id }, select: { status: true } });
+  if (img.status === 'SKIPPED') throw new Error('This picture is marked “don’t use”. Use it again first.');
+  const f = new FormData(); f.set('imageId', id);
+  await approveLatest(f);
+  revalidatePath('/', 'layout');
 }

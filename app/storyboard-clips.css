@@ -27,3 +27,7 @@
 .storyboard__tools { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .storyboard__tool { padding: 1px 8px; border: 1px solid #E7E4EC; border-radius: 999px; background: #fff; font-size: 10.5px; font-weight: 600; color: #6F6A75; cursor: pointer; }
 .storyboard__tool:hover { color: #3E6290; border-color: #3E6290; }
+
+/* quick approve: deliberately loud green so it is never missed */
+.storyboard__approve { margin-top: 6px; width: 100%; border: 0; border-radius: 8px; padding: 7px 10px; background: #16A34A; color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 0 2px #BBF7D0; }
+.storyboard__approve:hover { background: #15803D; }

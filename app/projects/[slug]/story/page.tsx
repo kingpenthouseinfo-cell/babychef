@@ -12,7 +12,7 @@ import { FlagButton } from '@/components/flag-button';
 import { ImageDrop } from '@/components/drop-zone';
 import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 import { Sortable, Handle } from '@/components/sortable';
-import { PictureNotes } from '@/components/picture-notes';
+import { PictureNotes, QuickApprove } from '@/components/picture-notes';
 import { stepInfo } from '@/lib/step-dialogue';
 import { unskipPicture } from '@/lib/actions/pictures';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
@@ -84,6 +84,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                   <Link href={href} title={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} className="min-w-0 flex-1"><span className="block text-[12px] text-ink-secondary">Picture {num.get(i.id)}</span><span className="block truncate text-[14px] font-semibold">{i.title}</span></Link>
                                   <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{waitingFor ? `Waiting for Picture ${waitingFor}` : statusWords(i.status)}</span>
                                   {act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}
+                                  <QuickApprove id={i.id} status={i.status} versions={(i as any)._count.attempts} />
                                   <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} status={i.status} versions={(i as any)._count.attempts} />
                                   {stepOf(i) ? <PictureNotes id={i.id} info={stepOf(i)!} stepNote={(i as any).stepNote} dialogueLine={(i as any).dialogueLine} compact /> : <div className="basis-full pl-[4.5rem] text-[12.5px] text-ink-muted">Not used — <form action={unskipPicture} className="inline"><input type="hidden" name="id" value={i.id} /><button className="font-semibold text-blue-deep hover:underline">use it again</button></form></div>}
                                 </ImageDrop>);
@@ -110,7 +111,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                 {stepOf(i) ? <PictureNotes id={i.id} info={stepOf(i)!} stepNote={(i as any).stepNote} dialogueLine={(i as any).dialogueLine} /> : <div className="mt-1 text-[12.5px] text-ink-muted">Not used — <form action={unskipPicture} className="inline"><input type="hidden" name="id" value={i.id} /><button className="font-semibold text-blue-deep hover:underline">use it again</button></form></div>}
                                 <div className="absolute left-3.5 top-3.5 rounded-md bg-white/85 backdrop-blur"><Handle label={i.title} /></div>
                                 <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} status={i.status} versions={(i as any)._count.attempts} /></div>
-                                <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}</div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}<QuickApprove id={i.id} status={i.status} versions={(i as any)._count.attempts} /></div>
                               </ImageDrop>
                             );
                           })}

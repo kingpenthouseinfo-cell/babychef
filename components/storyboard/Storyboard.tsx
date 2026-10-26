@@ -13,6 +13,7 @@ type Props = {
   tray?: ClipInfo[];                                                       // clips not on any scene yet
   onUploadClip?: (sceneId: string | null, file: File) => Promise<void>;   // save a video file into the project's Video Clips folder (and onto a scene)
   onAssignClip?: (sceneId: string, assetId: string) => Promise<void>;
+  onApprove?: (pictureId: string) => Promise<void>;                     // one-click approve of the newest version
   onSetUsed?: (pictureId: string, used: boolean) => Promise<void>;       // "Don't use this picture" / "Use it again"
   onRemoveOld?: (pictureId: string) => Promise<void>;                     // move all but the picture in use to the Unassigned tab
   onCleanAll?: () => Promise<{ versions: number; pictures: number }>;     // count of old versions in the whole project
@@ -33,7 +34,7 @@ const FolderIcon = () => (
   </svg>
 );
 
-export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip, onReplacePicture, onSetUsed, onRemoveOld, onCleanAll, onCleanAllDo }: Props) {
+export default function Storyboard({ initial, onSave, onOpenPicture, revealInFinder, onCheckFolder, onMatchFolder, sceneClips = {}, tray = [], onUploadClip, onAssignClip, onUnassignClip, onReplacePicture, onApprove, onSetUsed, onRemoveOld, onCleanAll, onCleanAllDo }: Props) {
   const [saved, setSaved] = useState<SbBoard>(initial);
   const [board, setBoard] = useState<SbBoard>(initial);
   const [dirty, setDirty] = useState(false);
@@ -249,6 +250,9 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
                   <button className="storyboard__scene-name" data-testid="sb-pic-scene" title="Click to move to another scene" onClick={() => setPicking(p.id)}>
                     Scene {c.sceneNumber} · {c.scene.title}
                   </button>
+                )}
+                {!p.isNew && onApprove && !p.skipped && p.status !== 'approved' && (p.versions ?? 0) > 0 && (
+                  <button className="storyboard__approve" data-testid="sb-approve" onClick={() => void guard('Approving the picture', () => onApprove(p.id))}>✓ Approve</button>
                 )}
                 {!p.isNew && (onSetUsed || onRemoveOld) && (
                   <div className="storyboard__tools">

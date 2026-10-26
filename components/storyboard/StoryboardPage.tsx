@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Storyboard, { type ClipInfo } from './Storyboard';
-import { skipPicture, unskipPicture, removeOldVersions, countOldVersions, removeOldVersionsProject } from '@/lib/actions/pictures';
+import { quickApprove, skipPicture, unskipPicture, removeOldVersions, countOldVersions, removeOldVersionsProject } from '@/lib/actions/pictures';
 import { uploadToCard, approveLatest } from '@/lib/actions/generate';
 import { uploadSceneClip, assignSceneClip, unassignSceneClip } from '@/lib/actions/clips';
 import { saveOrder, countFolderMismatches, matchFolderToStoryboard } from '@/lib/actions/storyboard';
@@ -25,6 +25,7 @@ export function StoryboardPage({ projectId, slug, board, sceneClips, tray }: { p
       onAssignClip={async (sceneId, assetId) => { await assignSceneClip(projectId, sceneId, assetId); router.refresh(); }}
       onUnassignClip={async sceneId => { await unassignSceneClip(projectId, sceneId); router.refresh(); }}
       onReplacePicture={async (pictureId, file) => { const fd = new FormData(); fd.set('imageId', pictureId); fd.set('file', file); await uploadToCard(fd); const a = new FormData(); a.set('imageId', pictureId); await approveLatest(a); router.refresh(); }}
+      onApprove={async id => { const fd = new FormData(); fd.set('id', id); await quickApprove(fd); router.refresh(); }}
       onSetUsed={async (id, used) => { const fd = new FormData(); fd.set('id', id); await (used ? unskipPicture(fd) : skipPicture(fd)); router.refresh(); }}
       onRemoveOld={async id => { const fd = new FormData(); fd.set('id', id); await removeOldVersions(fd); router.refresh(); }}
       onCleanAll={() => countOldVersions(projectId)}
