@@ -1,7 +1,7 @@
 import { ExportVideo } from '@/components/export-video';
 import { SceneClipDrop } from '@/components/drop-zone';
 import type { ReactNode, CSSProperties } from 'react';
-function VideoWrap({ projectId, sceneId, children, ...rest }: { projectId: string; sceneId: string; className?: string; style?: CSSProperties; children: ReactNode }) { return <SceneClipDrop projectId={projectId} sceneId={sceneId} hint="Drop the finished video here to put it on this scene" {...rest}>{children}</SceneClipDrop>; }
+function VideoWrap({ projectId, sceneId, children, ...rest }: { projectId: string; sceneId: string; className?: string; style?: CSSProperties; children: ReactNode; 'data-tone'?: string }) { return <SceneClipDrop projectId={projectId} sceneId={sceneId} hint="Drop the finished video here to put it on this scene" {...rest}>{children}</SceneClipDrop>; }
 import { sceneLabels } from '@/lib/scene-label';
 import { effectiveCode } from '@/lib/project-code';
 import { notFound } from 'next/navigation';
@@ -15,10 +15,10 @@ import { klingCode, sceneCode } from '@/lib/util';
 import { SCENE_ORDER, IMAGE_ORDER, backfillPositions } from '@/lib/order';
 import { makeClipForScene } from '@/lib/actions/kling';
 import { fileUrl } from '@/components/ui';
-import { SceneClipsPanel, WaitingClips } from '@/components/scene-clips-panel';
-import { sceneClipIds } from '@/lib/scene-clips';
+import { SceneClipsPanel, WaitingClips, NeedsMoreFlag } from '@/components/scene-clips-panel';
+import { sceneClipIds, approvedClipIds } from '@/lib/scene-clips';
 
-export default async function KlingList({ params }: { params: { slug: string } }) {
+export default async function KlingList({ params, searchParams }: { params: { slug: string }; searchParams: { show?: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   await backfillPositions();
@@ -34,14 +34,23 @@ export default async function KlingList({ params }: { params: { slug: string } }
   const waiting = clipAssets.filter(a => !onScene.has(a.id)).map(a => ({ id: a.id, name: a.displayName }));
   const linked = new Set(clips.flatMap(c => c.scenes.map(x => x.sceneId)));
   const other = clips.filter(c => c.scenes.length === 0 || c.scenes.some(x => !scenes.some(sc => sc.id === x.sceneId)));
+  const cat = (sc: (typeof scenes)[number]) => {
+    const ids = sceneClipIds(sc as any), ap = approvedClipIds(sc as any).filter(x => ids.includes(x));
+    return { none: ids.length === 0, done: ids.length > 0 && ap.length === ids.length && !(sc as any).moreClips, approve: ids.length > 0 && ap.length < ids.length, more: !!(sc as any).moreClips };
+  };
+  const FILTERS: [string, string, (c: ReturnType<typeof cat>) => boolean][] = [['', 'All scenes', () => true], ['done', 'Completed scenes', c => c.done], ['approve', 'Need to approve', c => c.approve], ['more', 'Still needs more clips', c => c.more], ['none', 'No videos yet', c => c.none]];
+  const show = FILTERS.find(f => f[0] === (searchParams.show ?? ''))?.[0] ?? '';
+  const shown = scenes.filter(sc => FILTERS.find(f => f[0] === show)![2](cat(sc)));
   let opened = false;
   return (
     <div className="max-w-[1000px] space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-[34px] md:text-[40px]">Video Clips</h1><p className="mt-1 text-[14px] text-ink-secondary">Each scene gathers the pictures that look good. Make the prompt, then make the clip in Kling.</p></div><ExportVideo slug={p.slug} projectTitle={p.title} /></div>
       {scenes.length > 0 && <SceneClipDrop projectId={p.id} hint="Drop the video clips here to save them" className="rounded-[14px] border-2 border-dashed border-[#B9CFEA] bg-[#F4F9FE] px-4 py-3 text-center text-[13.5px] text-[#3E6290]" data-testid="clips-top-drop">Drag finished video clips from Finder onto a scene below to put them on that scene (in play order), or drop them here to save them for later.</SceneClipDrop>}
+      {scenes.length > 0 && <div className="flex flex-wrap gap-1.5" role="group" aria-label="Show scenes" data-testid="clip-filters">{FILTERS.map(([k, label, fn]) => { const n = scenes.filter(sc => fn(cat(sc))).length; return <Link key={k} href={`/projects/${p.slug}/kling${k ? `?show=${k}` : ''}`} data-testid={`clip-filter-${k || 'all'}`} className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold ${show === k ? 'border-[#3E6290] bg-[#3E6290] text-white' : 'border-line bg-white text-ink-secondary'}`}>{label} <span className="opacity-70">({n})</span></Link>; })}</div>}
       <WaitingClips projectId={p.id} scenes={sceneOpts} clips={waiting} />
       {scenes.length === 0 && <Empty title="No scenes yet." hint="Add scenes first — each scene becomes one video clip." />}
-      {scenes.map((sc, i) => {
+      {scenes.length > 0 && shown.length === 0 && <Empty title="No scenes here." hint="Pick another filter above." />}
+      {shown.map((sc) => {
         const pics = imgs.filter(x => x.sceneId === sc.id);
         const good = pics.filter(x => x.approvedAttemptId);
         const fix = pics.filter(x => x.status === 'REDO').length;
@@ -50,12 +59,15 @@ export default async function KlingList({ params }: { params: { slug: string } }
         const clip = clips.find(c => c.scenes.some(x => x.sceneId === sc.id));
         const chip = ready ? [`${good.length} pictures ready`, 'bg-[#E3EAF2] text-[#46638A]'] : fix ? [`${fix} picture${fix > 1 ? 's' : ''} need${fix > 1 ? '' : 's'} fixing first`, 'bg-[#F5E1DB] text-[#A5473A]'] : good.length ? [`${rest} picture${rest > 1 ? 's' : ''} still to make`, 'bg-[#F0EEF3] text-[#6F6A75]'] : ['Pictures not made yet', 'bg-[#F0EEF3] text-[#6F6A75]'];
         const open = ready && !opened && !clip?.status.match(/APPROVED/); if (open) opened = true;
+        const cids = sceneClipIds(sc as any), appr = approvedClipIds(sc as any).filter(x => cids.includes(x));
+        const tone = cids.length === 0 ? { key: 'none', bg: '#FFFFFF', line: '#ECEAF0' } : appr.length === cids.length ? { key: 'approved', bg: '#E4F5E9', line: '#9ED8AE' } : { key: 'clips', bg: '#E6F1FC', line: '#A9C9EE' };
         const clipName = `${effectiveCode(p)}-S${String(sc.order).padStart(2, '0')}-CLIP_v1.mp4`;
         return (
-          <VideoWrap key={sc.id} projectId={p.id} sceneId={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
-            <SceneClipsPanel projectId={p.id} sceneId={sc.id} scenes={sceneOpts} clips={sceneClipIds(sc as any).map(id => clipAssets.find(a => a.id === id)).filter(Boolean).map(a => ({ id: a!.id, name: a!.displayName }))} />
+          <VideoWrap key={sc.id} projectId={p.id} sceneId={sc.id} data-tone={tone.key} className="overflow-hidden rounded-[16px] border" style={{ background: tone.bg, borderColor: tone.line, boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
+            <NeedsMoreFlag projectId={p.id} sceneId={sc.id} on={!!(sc as any).moreClips} />
+            <SceneClipsPanel projectId={p.id} sceneId={sc.id} scenes={sceneOpts} approved={appr} bg={tone.bg} clips={cids.map(id => clipAssets.find(a => a.id === id)).filter(Boolean).map(a => ({ id: a!.id, name: a!.displayName }))} />
             <details open={open}>
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-4">
+              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 py-4 pl-5 pr-14">
                 <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {lab.get(sc.id)} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>
                 <div className="flex items-center gap-1.5" aria-hidden>{pics.slice(0, 5).map(x => <span key={x.id} className="h-7 w-9 overflow-hidden rounded-md bg-sunken">{x.approvedAttempt && <img src={fileUrl(x.approvedAttempt.assetId, 80)} alt="" className="h-full w-full object-cover" />}</span>)}</div>
                 <span className={`rounded-full px-3 py-1 text-[12.5px] font-semibold ${clip?.status === 'APPROVED' ? 'bg-[#E6EEE3] text-[#46704F]' : chip[1]}`}>{clip?.status === 'APPROVED' ? '✓ Looks good' : chip[0]}</span>

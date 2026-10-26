@@ -1,4 +1,5 @@
 'use server';
+import { withVideoAddons } from '../addons';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { db } from '../db';
@@ -55,8 +56,9 @@ export async function applyPrompt(target: string, fd: FormData) {
   }
   if (target === 'kling') {
     const k = await db.klingClip.findUniqueOrThrow({ where: { id }, include: { project: true } });
-    await versionPrompt(id, 'KLING', k.finalPrompt, text, 'From template');
-    await db.klingClip.update({ where: { id }, data: { finalPrompt: text } });
+    const withSentences = await withVideoAddons(k.projectId, text);
+    await versionPrompt(id, 'KLING', k.finalPrompt, withSentences, 'From template');
+    await db.klingClip.update({ where: { id }, data: { finalPrompt: withSentences } });
     touch(); redirect(`/projects/${k.project.slug}/kling/${id}`);
   }
 }

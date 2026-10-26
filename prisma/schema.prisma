@@ -268,6 +268,8 @@ model Scene {
   order          Int      // stable scene number (SC code) — never renumbered
   pos            Int      @default(0) // visible position; inserts/moves change this, not the stable number
   inserted       Boolean  @default(false) // added between existing scenes → shown as 4A, 4B…
+  approvedClipIds String? // JSON array of the scene's clip Asset ids that were approved
+  moreClips      Boolean  @default(false) // purple flag on the Video Clips tab: this scene still needs more clips
   clipIds        String?  // the scene's video clips in play order (JSON array of Asset ids); videoAssetId always mirrors the first one
   videoAssetId   String?  // finished video clip for this scene (Asset id; the file lives in the project's 06 Video Clips folder)
   flagged        Boolean  @default(false) // marked NEED TO FIX
@@ -723,6 +725,7 @@ model VideoExport {
 model PromptAddon {
   id         String   @id @default(cuid())
   text       String
+  kind       String   @default("IMAGE")  // IMAGE (picture prompts) | VIDEO (video prompts)
   position   String   @default("END")   // START | END
   projectIds String   @default("[]")    // JSON array of project ids; empty = all projects
   enabled    Boolean  @default(true)

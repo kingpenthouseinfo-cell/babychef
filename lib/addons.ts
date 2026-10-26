@@ -1,14 +1,15 @@
 import { db } from './db';
 
 /** Permanent sentences added to every picture prompt (e.g. "Make sure the image is not too contrasty and the baby's skin has realistic texture."). */
-export type AddonRow = { id: string; text: string; position: 'START' | 'END'; projectIds: string[]; enabled: boolean; createdAt: Date };
+export type AddonKind = 'IMAGE' | 'VIDEO';
+export type AddonRow = { id: string; kind: AddonKind; text: string; position: 'START' | 'END'; projectIds: string[]; enabled: boolean; createdAt: Date };
 
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
 export const parseIds = (j: string | null | undefined): string[] => { try { const a = j ? JSON.parse(j) : []; return Array.isArray(a) ? a.filter(x => typeof x === 'string') : []; } catch { return []; } };
 
-export async function listAddons(): Promise<AddonRow[]> {
-  const rows = await db.promptAddon.findMany({ orderBy: { createdAt: 'asc' } });
-  return rows.map(r => ({ id: r.id, text: r.text, position: r.position === 'START' ? 'START' : 'END', projectIds: parseIds(r.projectIds), enabled: r.enabled, createdAt: r.createdAt }));
+export async function listAddons(kind: AddonKind = 'IMAGE'): Promise<AddonRow[]> {
+  const rows = (await db.promptAddon.findMany({ orderBy: { createdAt: 'asc' } })).filter(r => ((r as any).kind === 'VIDEO' ? 'VIDEO' : 'IMAGE') === kind);
+  return rows.map(r => ({ id: r.id, kind, text: r.text, position: r.position === 'START' ? 'START' : 'END', projectIds: parseIds(r.projectIds), enabled: r.enabled, createdAt: r.createdAt }));
 }
 export const appliesTo = (a: Pick<AddonRow, 'projectIds' | 'enabled'>, projectId: string) => a.enabled && (a.projectIds.length === 0 || a.projectIds.includes(projectId));
 
@@ -31,4 +32,6 @@ export function withoutAddon(prompt: string, text: string): string {
 }
 
 /** The add-ons that apply to a project's prompts (used when a prompt is written or rewritten, so the sentences stay in). */
-export async function addonsFor(projectId: string): Promise<AddonRow[]> { return (await listAddons()).filter(a => appliesTo(a, projectId)); }
+export async function addonsFor(projectId: string, kind: AddonKind = 'IMAGE'): Promise<AddonRow[]> { return (await listAddons(kind)).filter(a => appliesTo(a, projectId)); }
+/** A video prompt with the permanent video sentences put in (never throws: the prompt is returned unchanged if anything goes wrong). */
+export async function withVideoAddons(projectId: string, prompt: string): Promise<string> { try { return withAddons(prompt, await addonsFor(projectId, 'VIDEO')); } catch (e) { console.error('[addons]', e); return prompt; } }

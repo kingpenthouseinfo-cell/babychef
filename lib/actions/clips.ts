@@ -5,7 +5,7 @@ import { importFile, projectFolder } from '../files';
 import { str } from '../util';
 import { logActivity } from '../activity';
 import { syncFolderNamesSafe } from '../folder-sync';
-import { sceneClipIds, setSceneClips, removeClipEverywhere } from '../scene-clips';
+import { sceneClipIds, approvedClipIds, setSceneClips, removeClipEverywhere } from '../scene-clips';
 
 const touch = () => revalidatePath('/', 'layout');
 const VIDEO = /\.(mp4|mov|m4v|webm)$/i;
@@ -56,4 +56,23 @@ export async function unassignSceneClip(projectId: string, sceneId: string, asse
   await setSceneClips(sceneId, assetId ? sceneClipIds(sc).filter(x => x !== assetId) : []);
   await syncFolderNamesSafe(projectId);
   touch();
+}
+
+/** Video Clips tab: approve (or un-approve) one clip of a scene. The file is renamed to show it (…_approved). */
+export async function approveSceneClip(projectId: string, sceneId: string, assetId: string, approved: boolean): Promise<void> {
+  const sc: any = await db.scene.findFirstOrThrow({ where: { id: sceneId, projectId } });
+  if (!sceneClipIds(sc).includes(assetId)) throw new Error('That clip is not on this scene.');
+  const cur = approvedClipIds(sc).filter(x => x !== assetId);
+  await db.scene.update({ where: { id: sceneId }, data: { approvedClipIds: JSON.stringify(approved ? [...cur, assetId] : cur) } as any });
+  await logActivity(approved ? 'Video clip approved' : 'Video clip approval removed', null, projectId);
+  await syncFolderNamesSafe(projectId);
+  touch();
+}
+
+/** Video Clips tab: the small purple flag — "this scene still needs more clips". Click again to take it off. */
+export async function toggleNeedsMoreClips(projectId: string, sceneId: string): Promise<boolean> {
+  const sc: any = await db.scene.findFirstOrThrow({ where: { id: sceneId, projectId } });
+  await db.scene.update({ where: { id: sceneId }, data: { moreClips: !sc.moreClips } as any });
+  touch();
+  return !sc.moreClips;
 }

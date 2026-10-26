@@ -6,7 +6,7 @@ import { expectedFilename, parseResultFilename, shortDesc } from './naming';
 import { effectiveCode } from './project-code';
 import { pad } from './util';
 import { logActivity } from './activity';
-import { sceneClipIds } from './scene-clips';
+import { sceneClipIds, approvedClipIds } from './scene-clips';
 
 /** The picture files in a project folder are named with their place in the storyboard (001_, 002_ …) so the folder lists them in the same order as the Storyboard.
  *  This renames files on disk (same folder, same picture, same version — only the name changes), updates the records, and keeps a log of every old → new name. */
@@ -20,7 +20,7 @@ export async function planClipNames(projectId: string): Promise<FolderChange[]> 
   const project = await db.project.findUnique({ where: { id: projectId }, select: { slug: true, code: true, folderName: true } });
   if (!project) return [];
   const [scenes, clips] = await Promise.all([
-    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, title: true, videoAssetId: true, clipIds: true } }),
+    db.scene.findMany({ where: { projectId }, orderBy: [...SCENE_ORDER], select: { id: true, order: true, title: true, videoAssetId: true, clipIds: true, approvedClipIds: true } }),
     db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: project.slug } }),
   ]);
   const code = effectiveCode({ slug: project.slug, code: project.code });
@@ -33,14 +33,14 @@ export async function planClipNames(projectId: string): Promise<FolderChange[]> 
       assigned.add(as.id);
       const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
       const d = shortDesc(sc.title);
-      const to = `${dir}/${pad(i + 1, w)}.${k + 1}_${code}-S${pad(sc.order)}-CLIP${ids.length > 1 ? k + 1 : ''}${d ? '_' + d : ''}${ext}`;
+      const to = `${dir}/${pad(i + 1, w)}.${k + 1}_${code}-S${pad(sc.order)}-CLIP${ids.length > 1 ? k + 1 : ''}${d ? '_' + d : ''}${approvedClipIds(sc).includes(id) ? '_approved' : ''}${ext}`;
       if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
     });
   });
   for (const as of clips) {
     if (assigned.has(as.id)) continue;
     const dir = path.posix.dirname(as.relPath), ext = path.posix.extname(as.relPath).toLowerCase();
-    const base = (as.originalName || as.displayName).replace(/\.[^.]+$/, '').replace(/^unassigned_/, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'clip';
+    const base = (as.originalName || as.displayName).replace(/\.[^.]+$/, '').replace(/^unassigned_/, '').replace(/_approved$/, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'clip';
     const to = `${dir}/unassigned_${base}${ext}`;
     if (to !== as.relPath) out.push({ assetId: as.id, imageId: '', from: as.relPath, to });
   }

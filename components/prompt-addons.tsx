@@ -10,7 +10,7 @@ type Proj = { id: string; title: string };
 const where = (a: { projectIds: string[] }, projects: Proj[]) => (a.projectIds.length === 0 ? 'All projects' : a.projectIds.map(id => projects.find(p => p.id === id)?.title ?? 'a removed project').join(', '));
 
 /** Sentences added to every picture prompt: saved permanently, at the beginning or the end, for all projects or the ones you pick. */
-export function PromptAddons({ addons, projects, currentProjectId, slug, babyChefId }: { addons: Addon[]; projects: Proj[]; currentProjectId: string; slug: string; babyChefId: string | null }) {
+export function PromptAddons({ addons, projects, currentProjectId, slug, babyChefId, kind = 'IMAGE' }: { addons: Addon[]; projects: Proj[]; currentProjectId: string; slug: string; babyChefId: string | null; kind?: 'IMAGE' | 'VIDEO' }) {
   const router = useRouter();
   const [busy, start] = useTransition();
   const [msg, setMsg] = useState('');
@@ -20,13 +20,14 @@ export function PromptAddons({ addons, projects, currentProjectId, slug, babyChe
   const [picked, setPicked] = useState<string[]>([currentProjectId]);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 7000); };
   const run = (label: string, fn: () => Promise<string | void>) => start(async () => { try { flash(`${label}…`); const r = await fn(); flash(r || '✓ Done'); router.refresh(); } catch (e: any) { flash(e?.message || 'That did not work.'); } });
+  const noun = kind === 'VIDEO' ? 'video' : 'picture';
   const ids = () => (all ? [] : picked);
   const toggle = (id: string) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]));
   const applyNow = (id: string | null, label: string) => run(label, async () => {
-    const pre = await previewAddons(id);
+    const pre = await previewAddons(id, kind);
     if (!pre.changed) return '✓ Every prompt already has it — nothing to change';
-    if (!window.confirm(`Add ${id ? 'this sentence' : 'the saved sentences'} to ${pre.changed} picture prompt${pre.changed === 1 ? '' : 's'}?\n\nThe old text of each prompt is kept as a version.`)) return 'Nothing was changed.';
-    const r = await applyAddons(id); return `✓ Added to ${r.changed} prompt${r.changed === 1 ? '' : 's'}${r.same ? ` (${r.same} already had it)` : ''}`;
+    if (!window.confirm(`Add ${id ? 'this sentence' : 'the saved sentences'} to ${pre.changed} ${noun} prompt${pre.changed === 1 ? '' : 's'}?\n\nThe old text of each prompt is kept as a version.`)) return 'Nothing was changed.';
+    const r = await applyAddons(id, kind); return `✓ Added to ${r.changed} prompt${r.changed === 1 ? '' : 's'}${r.same ? ` (${r.same} already had it)` : ''}`;
   });
   return (
     <div className="prompt-addons" data-testid="prompt-addons">
@@ -49,7 +50,7 @@ export function PromptAddons({ addons, projects, currentProjectId, slug, babyChe
       <details id="addons" className="prompt-import" data-testid="addons-panel">
         <summary className="prompt-import__summary">Add a sentence to every prompt {addons.length ? `(${addons.length} saved)` : ''}</summary>
         <div className="prompt-import__body">
-          <p className="prompt-import__help">Type a sentence once and it is saved for good. Choose whether it goes at the <b>beginning</b> or the <b>end</b> of each picture prompt, and which projects it is for. New and rewritten prompts get it automatically.</p>
+          <p className="prompt-import__help">Type a sentence once and it is saved for good. Choose whether it goes at the <b>beginning</b> or the <b>end</b> of each {noun} prompt, and which projects it is for. New and rewritten prompts get it automatically.</p>
           <textarea className="prompt-import__text" rows={3} aria-label="Sentence to add" data-testid="addon-text" value={text} onChange={e => setText(e.target.value)} placeholder="e.g. Make sure the image is not too contrasty and the baby’s skin has realistic texture, not too smooth." />
           <fieldset className="prompt-addons__field"><legend>Where in the prompt?</legend>
             <label><input type="radio" name="addon-pos" checked={pos === 'END'} onChange={() => setPos('END')} data-testid="addon-pos-end" /> At the end of each prompt</label>
@@ -61,8 +62,8 @@ export function PromptAddons({ addons, projects, currentProjectId, slug, babyChe
             {!all && <div className="prompt-addons__projects">{projects.map(p => <label key={p.id}><input type="checkbox" checked={picked.includes(p.id)} onChange={() => toggle(p.id)} data-testid="addon-proj" /> {p.title}</label>)}</div>}
           </fieldset>
           <div className="prompt-import__actions">
-            <button type="button" className="prompt-row__btn prompt-row__btn--save" disabled={busy || !text.trim() || (!all && picked.length === 0)} data-testid="addon-save" onClick={() => run('Saving', async () => { await createAddon(text, pos, ids()); setText(''); return '✓ Saved. Use “Add to prompts now” below to put it in the prompts that already exist.'; })}>SAVE THIS SENTENCE</button>
-            <button type="button" className="prompt-row__btn prompt-row__btn--copy" disabled={busy || !text.trim() || (!all && picked.length === 0)} data-testid="addon-save-apply" onClick={() => run('Saving', async () => { const { id } = await createAddon(text, pos, ids()); setText(''); const pre = await previewAddons(id); if (!pre.changed) return '✓ Saved. Every prompt already has it.'; if (!window.confirm(`Add it to ${pre.changed} picture prompt${pre.changed === 1 ? '' : 's'} now?\n\nThe old text of each prompt is kept as a version.`)) return '✓ Saved (the existing prompts were not changed).'; const r = await applyAddons(id); return `✓ Saved and added to ${r.changed} prompt${r.changed === 1 ? '' : 's'}`; })}>SAVE AND ADD TO PROMPTS NOW</button>
+            <button type="button" className="prompt-row__btn prompt-row__btn--save" disabled={busy || !text.trim() || (!all && picked.length === 0)} data-testid="addon-save" onClick={() => run('Saving', async () => { await createAddon(text, pos, ids(), kind); setText(''); return '✓ Saved. Use “Add to prompts now” below to put it in the prompts that already exist.'; })}>SAVE THIS SENTENCE</button>
+            <button type="button" className="prompt-row__btn prompt-row__btn--copy" disabled={busy || !text.trim() || (!all && picked.length === 0)} data-testid="addon-save-apply" onClick={() => run('Saving', async () => { const { id } = await createAddon(text, pos, ids(), kind); setText(''); const pre = await previewAddons(id, kind); if (!pre.changed) return '✓ Saved. Every prompt already has it.'; if (!window.confirm(`Add it to ${pre.changed} ${noun} prompt${pre.changed === 1 ? '' : 's'} now?\n\nThe old text of each prompt is kept as a version.`)) return '✓ Saved (the existing prompts were not changed).'; const r = await applyAddons(id, kind); return `✓ Saved and added to ${r.changed} prompt${r.changed === 1 ? '' : 's'}`; })}>SAVE AND ADD TO PROMPTS NOW</button>
           </div>
           {addons.length > 0 && (
             <ul className="prompt-addons__list" data-testid="addon-list">
@@ -76,7 +77,7 @@ export function PromptAddons({ addons, projects, currentProjectId, slug, babyChe
                   </div>
                   <div className="prompt-addons__buttons">
                     <button type="button" className="prompt-row__btn prompt-row__btn--copy" disabled={busy || !a.enabled} data-testid="addon-apply" onClick={() => applyNow(a.id, 'Adding')}>ADD TO PROMPTS NOW</button>
-                    <button type="button" className="prompt-row__btn" disabled={busy} data-testid="addon-takeout" onClick={() => { if (window.confirm('Take this sentence out of the prompts it was added to?\n\nThe old text of each prompt is kept as a version.')) run('Taking out', async () => { const r = await removeAddonFromPrompts(a.id); return `✓ Taken out of ${r.changed} prompt${r.changed === 1 ? '' : 's'}`; }); }}>TAKE OUT OF PROMPTS</button>
+                    <button type="button" className="prompt-row__btn" disabled={busy} data-testid="addon-takeout" onClick={() => { if (window.confirm('Take this sentence out of the prompts it was added to?\n\nThe old text of each prompt is kept as a version.')) run('Taking out', async () => { const r = await removeAddonFromPrompts(a.id, kind); return `✓ Taken out of ${r.changed} prompt${r.changed === 1 ? '' : 's'}`; }); }}>TAKE OUT OF PROMPTS</button>
                     <button type="button" className="prompt-row__btn prompt-row__btn--clear" disabled={busy} data-testid="addon-delete" onClick={() => { if (window.confirm('Delete this saved sentence?\n\n(Prompts it was already added to keep it, unless you take it out first.)')) run('Deleting', async () => { await deleteAddon(a.id); }); }}>DELETE</button>
                   </div>
                 </li>))}

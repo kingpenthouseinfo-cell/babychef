@@ -935,6 +935,30 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
   ok('Video prompt SAVE persists', (await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes('VIDEO EXTRA'));
   const v1 = page.locator('[data-testid=video-prompt-row]').first();
   await v1.locator('[data-testid=prompt-edit]').click(); await v1.locator('textarea').fill(vorig); await v1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+  // Video Prompts: add a sentence to every video prompt
+  {
+    const VS = 'Keep the camera steady and the colours natural.';
+    await v1.locator('[data-testid=prompt-edit]').click(); await v1.locator('textarea').fill('Video base text.'); await v1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1200);
+    await go(`/projects/${slug}/video-prompts`);
+    ok('The Video Prompts tab has the "Add a sentence to every prompt" panel', (await page.locator('[data-testid=addons-panel]').count()) === 1 && (await page.locator('[data-testid=addon-list] [data-testid=addon-item]').count()) === 0);
+    await page.locator('[data-testid=addons-panel] summary').click();
+    await page.fill('[data-testid=addon-text]', VS);
+    await page.locator('[data-testid=addon-save-apply]').click();
+    await page.waitForFunction(() => /Saved and added to/.test(document.querySelector('[data-testid=addon-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1500);
+    await go(`/projects/${slug}/video-prompts`);
+    const vv = await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue();
+    ok('The sentence is added to the end of the video prompt', vv.startsWith('Video base text.') && vv.trimEnd().endsWith(VS), vv.slice(-120));
+    await go(`/projects/${slug}/image-prompts`);
+    ok('Video sentences do not appear in the picture prompts list', (await page.locator('[data-testid=addon-list] [data-testid=addon-item]').count()) <= 2 && !(await page.locator('[data-testid=image-prompt-row] textarea').evaluateAll((els, t) => els.some(e => e.value.includes(t)), VS)));
+    await go(`/projects/${slug}/video-prompts`);
+    await page.locator('[data-testid=addons-panel] summary').click();
+    await page.locator('[data-testid=addon-takeout]').first().click(); await page.waitForTimeout(2500);
+    await page.locator('[data-testid=addon-delete]').first().click(); await page.waitForTimeout(2000);
+    await go(`/projects/${slug}/video-prompts`);
+    ok('The sentence can be taken out and deleted again', !(await page.locator('[data-testid=video-prompt-row]').first().locator('textarea').inputValue()).includes(VS));
+    const v2 = page.locator('[data-testid=video-prompt-row]').first();
+    await v2.locator('[data-testid=prompt-edit]').click(); await v2.locator('textarea').fill(vorig); await v2.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1000);
+  }
   // paste-to-fill import
   const thumbTitle = await page.locator('[data-testid=video-prompt-row] .prompt-row__thumb--small').first().getAttribute('title');
   const seqNo = parseInt((thumbTitle || '').match(/IMG-0*(\d+)/)?.[1] || '0', 10);
@@ -1081,7 +1105,13 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   const rng = await page.request.get(BASE + link, { headers: { Range: 'bytes=0-9' } });
   ok('Video file is served with byte ranges (plays and shows a thumbnail frame in Safari too)', rng.status() === 206 && (await rng.body()).length === 10);
   // reorder scenes -> file prefixes follow the storyboard
-  await cards().first().locator('.storyboard-scenes__label').dragTo(cards().nth(1), { targetPosition: { x: 150, y: 60 } });
+  await page.waitForLoadState('networkidle'); await page.waitForTimeout(2500);
+  for (let tryN = 0; tryN < 3; tryN++) {
+    await cards().first().locator('.storyboard-scenes__label').dragTo(cards().nth(1), { targetPosition: { x: 150, y: 60 } });
+    await page.waitForTimeout(700);
+    if (!(await page.locator('[data-testid=sb-save]').isDisabled())) break;
+    await go(U);
+  }
   await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(800);
   await go(U);
   const placed = await page.locator('[data-testid=sb-scene-card]').evaluateAll(els => els.map((e, i) => ({ i, name: e.querySelector('.storyboard-clip__name')?.textContent || '' })).filter(x => x.name));
@@ -1424,6 +1454,34 @@ const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/n
   const onBoard = await page.locator('[data-testid=sb-scene-clip]').count();
   await go(`/projects/${slug}/kling`);
   ok('The Video Clips tab shows a player for every clip on a scene', (await page.locator('[data-testid=panel-clip] [data-testid=clip-player]').count()) === onBoard && onBoard >= 1, String(onBoard));
+  // clip approval: blue while clips are waiting, green once approved, files renamed
+  {
+    ok('Scenes with clips are light blue on the Video Clips tab', (await page.locator('[data-tone=clips]').count()) >= 1 && (await page.locator('[data-tone=none]').count()) >= 0);
+    const target = page.locator('[data-tone=clips]').first();
+    const nIn = await target.locator('[data-testid=panel-clip]').count();
+    for (let k = 0; k < nIn; k++) { await target.locator('[data-testid=clip-approve]').first().click({ force: true }); await page.waitForTimeout(2500); await go(`/projects/${slug}/kling`); }
+    ok('Approving every clip of a scene turns it light green', (await page.locator('[data-tone=approved]').count()) >= 1);
+    const vidFiles = () => walk(STORE).filter(f => f.includes('06 Video Clips') && /\.mp4$/.test(f)).map(f => path.basename(f));
+    ok('Approved clips are renamed (…_approved)', vidFiles().some(n => /_approved\.mp4$/.test(n)), vidFiles().join('|'));
+    const apBefore = await page.locator('[data-tone=approved]').count();
+    const ap = page.locator('[data-tone=approved]').first();
+    await ap.locator('[data-testid=clip-approved]').first().click({ force: true }); await page.waitForTimeout(2500); await go(`/projects/${slug}/kling`);
+    ok('Taking the approval off turns the scene blue again', (await page.locator('[data-tone=approved]').count()) === apBefore - 1);
+  }
+  // filters + purple "still needs more clips" flag
+  {
+    await go(`/projects/${slug}/kling`);
+    ok('The Video Clips tab has the five filters', (await page.locator('[data-testid^=clip-filter-]').count()) === 5);
+    await page.locator('[data-testid=more-flag]').first().click({ force: true }); await page.waitForTimeout(2000);
+    await go(`/projects/${slug}/kling?show=more`);
+    ok('A flagged scene shows under "Still needs more clips"', (await page.locator('[data-testid=more-flag][data-on="1"]').count()) === 1 && (await page.locator('[data-testid=more-flag]').count()) === 1);
+    await page.locator('[data-testid=more-flag]').first().click({ force: true }); await page.waitForTimeout(2000);
+    await go(`/projects/${slug}/kling?show=none`);
+    const noneN = await page.locator('[data-tone=none]').count(), shownN = await page.locator('[data-testid=more-flag]').count();
+    ok('"No videos yet" lists only scenes without clips', noneN === shownN);
+    await go(`/projects/${slug}/kling?show=approve`);
+    ok('"Need to approve" lists only scenes with clips waiting', (await page.locator('[data-tone=clips]').count()) === (await page.locator('[data-testid=more-flag]').count()));
+  }
   const firstPanel = page.locator('[data-testid=scene-clips-panel]').first();
   if ((await firstPanel.locator('[data-testid=panel-clip]').count()) >= 2) {
     const ids0 = await firstPanel.locator('[data-testid=panel-clip]').evaluateAll(els => els.map(e => e.getAttribute('data-clip-id')));

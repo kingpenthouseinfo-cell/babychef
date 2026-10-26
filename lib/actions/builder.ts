@@ -1,4 +1,5 @@
 'use server';
+import { withVideoAddons } from '../addons';
 import { planProjectImages } from '../image-gen';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -49,8 +50,9 @@ export async function applyResult(to: string, fd: FormData) {
   }
   if (to === 'kling') {
     const k = await db.klingClip.findUniqueOrThrow({ where: { id: meta.klingId } });
-    await versionPrompt(k.id, 'KLING', k.finalPrompt, result, 'From AI result (Production Brain)');
-    await db.klingClip.update({ where: { id: k.id }, data: { finalPrompt: result, status: k.status === 'PLANNED' ? 'DRAFT' : k.status } });
+    const withSentences = await withVideoAddons(k.projectId, result);
+    await versionPrompt(k.id, 'KLING', k.finalPrompt, withSentences, 'From AI result (Production Brain)');
+    await db.klingClip.update({ where: { id: k.id }, data: { finalPrompt: withSentences, status: k.status === 'PLANNED' ? 'DRAFT' : k.status } });
     touch(); redirect(`/projects/${sp.project.slug}/kling/${k.id}`);
   }
   if (to === 'script') {

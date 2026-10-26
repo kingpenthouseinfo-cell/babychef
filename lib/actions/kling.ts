@@ -1,4 +1,5 @@
 'use server';
+import { withVideoAddons } from '../addons';
 import { sceneLabels } from '../scene-label';
 import { effectiveCode } from '../project-code';
 import { revalidatePath } from 'next/cache';
@@ -202,8 +203,9 @@ export async function applyVideoImport(items: { target: string; prompt: string }
     else if (it.target.startsWith('scene:')) clipId = (await ensureClipForScene(it.target.slice(6))).clip.id;
     if (!clipId) continue;
     const old = await db.klingClip.findUniqueOrThrow({ where: { id: clipId } });
-    await snapshotPrompt(clipId, old.finalPrompt, it.prompt, 'Imported on Video Prompts');
-    await db.klingClip.update({ where: { id: clipId }, data: { finalPrompt: it.prompt, ...(old.status === 'PLANNED' ? { status: 'DRAFT' } : {}) } });
+    const withSentences = await withVideoAddons(old.projectId, it.prompt);
+    await snapshotPrompt(clipId, old.finalPrompt, withSentences, 'Imported on Video Prompts');
+    await db.klingClip.update({ where: { id: clipId }, data: { finalPrompt: withSentences, ...(old.status === 'PLANNED' ? { status: 'DRAFT' } : {}) } });
     saved++;
   }
   touch();

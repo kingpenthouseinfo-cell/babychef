@@ -39,3 +39,14 @@
 .storyboard-clip__move { width: 20px; height: 20px; border: 0; border-radius: 6px; background: rgba(255,255,255,.85); color: #3E6290; font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer; }
 .storyboard-clip__move:disabled { opacity: .3; cursor: default; }
 .storyboard-scenes__card.has-clip .storyboard-clip__thumb { width: 96px; height: 56px; }
+
+/* wider blue box for scenes with clips so the order buttons and the × always fit and are easy to click */
+.storyboard-scenes__card.has-clip { width: 340px; }
+.storyboard-scenes__card.has-clip .storyboard-clip { flex-wrap: wrap; row-gap: 2px; padding-bottom: 4px; border-bottom: 1px solid rgba(62,98,144,.15); }
+.storyboard-scenes__card.has-clip .storyboard-clip:last-of-type { border-bottom: 0; }
+.storyboard-scenes__card.has-clip .storyboard-clip__name { order: 10; flex: 1 0 100%; font-size: 11.5px; }
+.storyboard-scenes__card.has-clip .storyboard-clip__thumb { flex: 1 1 auto; max-width: 180px; width: auto; height: 74px; }
+.storyboard-clip__order { gap: 4px; }
+.storyboard-clip__move, .storyboard-clip__remove { position: relative; z-index: 2; width: 30px; height: 30px; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.storyboard-clip__remove { background: #fff; border: 1px solid #C9D6E8; color: #A5473A; font-size: 20px; }
+.storyboard-clip__remove:hover { background: #FBE9E5; }

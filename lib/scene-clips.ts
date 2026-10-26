@@ -5,9 +5,15 @@ export function sceneClipIds(sc: { clipIds?: string | null; videoAssetId?: strin
   try { const a = sc.clipIds ? JSON.parse(sc.clipIds) : null; if (Array.isArray(a)) return a.filter((x): x is string => typeof x === 'string'); } catch { /* fall through */ }
   return sc.videoAssetId ? [sc.videoAssetId] : [];
 }
+export function approvedClipIds(sc: { approvedClipIds?: string | null }): string[] {
+  try { const a = sc.approvedClipIds ? JSON.parse(sc.approvedClipIds) : null; if (Array.isArray(a)) return a.filter((x): x is string => typeof x === 'string'); } catch { /* none */ }
+  return [];
+}
 export async function setSceneClips(sceneId: string, ids: string[]): Promise<void> {
   const uniq = ids.filter((x, i) => ids.indexOf(x) === i);
-  await db.scene.update({ where: { id: sceneId }, data: { clipIds: JSON.stringify(uniq), videoAssetId: uniq[0] ?? null } as any });
+  const cur: any = await db.scene.findUnique({ where: { id: sceneId }, select: { approvedClipIds: true } as any });
+  const approved = approvedClipIds(cur ?? {}).filter(x => uniq.includes(x)); // a clip that leaves the scene loses its approval
+  await db.scene.update({ where: { id: sceneId }, data: { clipIds: JSON.stringify(uniq), videoAssetId: uniq[0] ?? null, approvedClipIds: JSON.stringify(approved) } as any });
 }
 /** Take a clip off every scene of the project that holds it. */
 export async function removeClipEverywhere(projectId: string, assetId: string): Promise<void> {

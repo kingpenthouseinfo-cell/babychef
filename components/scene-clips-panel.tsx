@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { assignSceneClip, reorderSceneClips, unassignSceneClip } from '@/lib/actions/clips';
+import { assignSceneClip, reorderSceneClips, unassignSceneClip, approveSceneClip, toggleNeedsMoreClips } from '@/lib/actions/clips';
 
 type Clip = { id: string; name: string };
 type SceneOpt = { id: string; label: string };
@@ -11,7 +11,7 @@ function Player({ id, name }: { id: string; name: string }) {
 }
 
 /** The scene's finished video clips on the Video Clips tab: play each one, put them in order, move one to another scene or take it off the scene (the file stays). */
-export function SceneClipsPanel({ projectId, sceneId, clips, scenes }: { projectId: string; sceneId: string; clips: Clip[]; scenes: SceneOpt[] }) {
+export function SceneClipsPanel({ projectId, sceneId, clips, scenes, approved = [], bg = '#F4F9FE' }: { projectId: string; sceneId: string; clips: Clip[]; scenes: SceneOpt[]; approved?: string[]; bg?: string }) {
   const router = useRouter();
   const [busy, start] = useTransition();
   const [err, setErr] = useState('');
@@ -19,12 +19,15 @@ export function SceneClipsPanel({ projectId, sceneId, clips, scenes }: { project
   const swap = (k: number, d: number) => { const ids = clips.map(c => c.id); [ids[k], ids[k + d]] = [ids[k + d], ids[k]]; run(() => reorderSceneClips(projectId, sceneId, ids)); };
   if (!clips.length) return null;
   return (
-    <div className="border-t border-line bg-[#F4F9FE] px-5 py-4" data-testid="scene-clips-panel" onClick={e => e.stopPropagation()}>
+    <div className="border-t border-line px-5 py-4" style={{ background: bg }} data-testid="scene-clips-panel" onClick={e => e.stopPropagation()}>
       <div className="eyebrow !text-[#3E6290]">VIDEO CLIPS ON THIS SCENE — PLAY ORDER</div>
       <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {clips.map((c, k) => (
           <div key={c.id} className="rounded-xl border border-[#B9CFEA] bg-white p-2" data-testid="panel-clip" data-clip-id={c.id}>
-            <div className="mb-1 flex items-center gap-2 text-[12.5px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#3E6290] text-[11px] font-extrabold text-white">{k + 1}</span><span className="min-w-0 flex-1 truncate" title={c.name}>{c.name}</span></div>
+            <div className="mb-1 flex items-center gap-2 text-[12.5px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#3E6290] text-[11px] font-extrabold text-white">{k + 1}</span><span className="min-w-0 flex-1 truncate" title={c.name}>{c.name}</span>
+              {approved.includes(c.id)
+                ? <button type="button" disabled={busy} data-testid="clip-approved" title="Approved — press to take the approval off" onClick={() => run(() => approveSceneClip(projectId, sceneId, c.id, false))} className="inline-flex items-center gap-1 rounded-lg bg-[#DCF3E3] px-2.5 py-1 text-[12px] font-extrabold uppercase text-[#166534] ring-2 ring-[#16A34A]">✓ Approved</button>
+                : <button type="button" disabled={busy} data-testid="clip-approve" title="Approve this clip" onClick={() => run(() => approveSceneClip(projectId, sceneId, c.id, true))} className="inline-flex items-center gap-1 rounded-lg bg-[#16A34A] px-2.5 py-1 text-[12px] font-extrabold uppercase text-white shadow-sm hover:bg-[#15803D]">✓ Approve</button>}</div>
             <Player id={c.id} name={c.name} />
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <button type="button" className="btn btn-sm" disabled={busy || k === 0} data-testid="panel-earlier" onClick={() => swap(k, -1)}>← Earlier</button>
@@ -64,5 +67,16 @@ export function WaitingClips({ projectId, clips, scenes }: { projectId: string; 
       </div>
       {err && <div className="mt-2 text-[12.5px] text-red-700">{err}</div>}
     </div>
+  );
+}
+
+/** The small purple flag on a scene: "still needs more clips". Click to set, click again to clear. */
+export function NeedsMoreFlag({ projectId, sceneId, on }: { projectId: string; sceneId: string; on: boolean }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  return (
+    <button type="button" disabled={busy} data-testid="more-flag" data-on={on ? '1' : '0'} aria-pressed={on} title={on ? 'Flagged: this scene still needs more clips (click to clear)' : 'Flag: this scene still needs more clips'}
+      onClick={e => { e.preventDefault(); e.stopPropagation(); start(async () => { await toggleNeedsMoreClips(projectId, sceneId); router.refresh(); }); }}
+      className={`absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border text-[15px] ${on ? 'border-[#7C4DCC] bg-[#7C4DCC] text-white' : 'border-[#CDBEEA] bg-white text-[#7C4DCC]'}`}>⚑</button>
   );
 }
