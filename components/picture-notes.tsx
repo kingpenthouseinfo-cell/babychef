@@ -22,7 +22,7 @@ export function PictureNotes({ id, info, stepNote, dialogueLine, compact = false
   );
   return (
     <div className={`${compact ? 'basis-full pl-[4.5rem]' : 'mt-1'} text-[12.5px] leading-snug`} data-testid="pic-notes">
-      <div><b className="text-[#46638A]">Step {info.stepNo} of {info.stepOf}:</b> <span className="text-ink-secondary">{info.step}</span></div>
+      <div><b className="text-[#46638A]">{info.stepEnd && info.stepEnd > info.stepNo ? `Steps ${info.stepNo}–${info.stepEnd}` : `Step ${info.stepNo}`} of {info.stepOf}:</b> <span className="text-ink-secondary">{info.step}</span></div>
       {info.says ? <div><b className="text-[#6A4E98]">{label}:</b> <span className={info.saysKind === 'set' ? 'text-ink' : 'italic text-ink-secondary'}>“{info.says}”</span></div> : <div className="text-ink-muted">No dialogue for this picture.</div>}
       <button type="button" className="mt-0.5 text-[12px] font-semibold text-blue-deep hover:underline" onClick={() => setEdit(true)} data-testid="pic-notes-edit-btn">Edit step / dialogue</button>
     </div>

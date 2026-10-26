@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { db } from '@/lib/db';
 import { buildChecklist, getProjectBySlug, imageInclude, refPool, shotSummary } from '@/lib/queries';
 import { Empty, Section, Sel, Text, Field, Chip } from '@/components/ui';
-import { stepInfo, type StepInfo } from '@/lib/step-dialogue';
+import { stepInfosForScene, type StepInfo } from '@/lib/step-dialogue';
 import { ImageCard } from '@/components/image-bits';
 import { CopyButton, SubmitBtn } from '@/components/client';
 import { createImage, batchImages } from '@/lib/actions/image';
@@ -30,7 +30,15 @@ export default async function Images({ params, searchParams }: { params: { slug:
   const chatgpt = settings.url_ChatGPT || 'https://chatgpt.com/';
   // which step and which dialogue each picture is for (pictures marked "don't use" are left out of the count)
   const notesOf = new Map<string, StepInfo | null>();
-  for (const sc of scenes) { const act = all.filter(x => x.sceneId === sc.id && x.status !== 'SKIPPED'); for (const x of all.filter(y => y.sceneId === sc.id)) { const n = act.indexOf(x); notesOf.set(x.id, n < 0 ? null : stepInfo(x as any, sc as any, n, act.length)); } }
+  const mergeOf = new Map<string, { siblings: { id: string; label: string }[]; merged: { id: string; label: string }[] }>();
+  for (const sc of scenes) {
+    const inScene = all.filter(y => y.sceneId === sc.id);
+    const infos = stepInfosForScene(inScene as any, sc as any);
+    for (const x of inScene) {
+      notesOf.set(x.id, infos.get(x.id) ?? null);
+      mergeOf.set(x.id, { siblings: inScene.filter(y => y.id !== x.id && y.status !== 'SKIPPED' && !(y as any).mergedInto).map(y => ({ id: y.id, label: `${imageCode(y.seq)} · ${y.title}` })), merged: inScene.filter(y => (y as any).mergedInto === x.id).map(y => ({ id: y.id, label: imageCode(y.seq) })) });
+    }
+  }
   const arrange = { scenes: scenes.map(s => ({ id: s.id, label: `Scene ${lab.get(s.id)} · ${s.title}` })), pictures: all.map((i, n) => ({ id: i.id, label: `Picture ${n + 1} · ${i.title}` })) };
   const nextSeq = all.reduce((m, i) => Math.max(m, i.seq), 0) + 1;
   const st = searchParams.status;
@@ -71,7 +79,7 @@ export default async function Images({ params, searchParams }: { params: { slug:
                 <Sel name="role" label="Role" options={IMAGE_REF_ROLES} /><div className="flex gap-2"><button name="op" value="addRef" className="btn btn-sm">Add reference</button><button name="op" value="removeRef" className="btn btn-sm btn-danger" onClick={undefined}>Remove reference</button></div></div>
               <div className="flex items-end"><CopyButton text={list.map(i => imageCode(i.seq)).join(', ')} label="COPY IMAGE IDS (filtered)" className="btn-sm" /></div>
             </div></details>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} arrange={arrange} notes={notesOf.get(i.id) ?? null} />)}</div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{list.map(i => <ImageCard key={i.id} img={i} slug={p.slug} pcode={p.code} checklist={buildChecklist(i)} selectable ai={aiMap.get(i.id)} aiOpts={aiOpts} chatgpt={chatgpt} arrange={arrange} merge={mergeOf.get(i.id)} notes={notesOf.get(i.id) ?? null} />)}</div>
         </form>
       )}
 

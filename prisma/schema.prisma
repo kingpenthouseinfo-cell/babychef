@@ -324,6 +324,8 @@ model PlannedImage {
   foodState       String?  // exact food state at this moment
   why             String?  // WHY THIS IMAGE IS NEEDED
   flagged         Boolean  @default(false) // marked NEED TO FIX
+  mergedInto      String?  // set on a picture that was merged into another one (its steps live on in that picture)
+  mergedPrev      String?  // the status it had before it was merged (used to undo)
   stepNote        String?  // which step of the scene this picture shows (plain words); empty = taken from the picture's purpose
   dialogueLine    String?  // the line of dialogue this picture goes with; empty = suggested from the scene's dialogue
   flagNote        String?

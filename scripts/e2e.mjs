@@ -1366,6 +1366,31 @@ const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/n
     ok('Pressing Approve approves the picture in one click', (await page.locator('[data-testid=quick-approve]').count()) === nBtn - 1);
   }
 }
+// merge pictures: steps of several pictures live on in the one you keep
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await go(`/projects/${slug}/images`);
+  const card = page.locator('[data-testid=merge-box]:has([data-testid=merge-pick])').first();
+  const hasMerge = (await card.count()) === 1;
+  ok('Pictures offer "Merge steps into this picture"', hasMerge);
+  if (hasMerge) {
+    await card.locator('summary').click();
+    const picks = card.locator('[data-testid=merge-pick]');
+    const n = Math.min(2, await picks.count());
+    for (let k = 0; k < n; k++) await picks.nth(k).check();
+    await card.locator('[data-testid=merge-go]').click(); await page.waitForTimeout(2500);
+    await go(`/projects/${slug}/images`);
+    const note = page.locator('[data-testid=merged-note]').first();
+    ok('The kept picture says which pictures it also covers', (await note.count()) === 1 && /Also covers/.test(await note.textContent()));
+    ok('The kept picture reads "Steps a–b of n"', (await page.locator('[data-testid=pic-notes]', { hasText: /Steps \d+–\d+ of \d+/ }).count()) >= 1);
+    await go(`/projects/${slug}/story`);
+    ok('Scenes & pictures shows the merged steps too', (await page.locator('[data-testid=pic-notes]', { hasText: /Steps \d+–\d+ of \d+/ }).count()) >= 1);
+    await go(`/projects/${slug}/images`);
+    await page.locator('[data-testid=unmerge]').first().click(); await page.waitForTimeout(2500);
+    await go(`/projects/${slug}/images`);
+    ok('Undo merge brings the pictures back', (await page.locator('[data-testid=merged-note]').count()) === 0);
+  }
+}
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {
   await page.setViewportSize({ width: w, height: h });

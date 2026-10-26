@@ -13,7 +13,8 @@ import { ImageDrop } from '@/components/drop-zone';
 import { InsertPicture, InsertScene, InsertTile, NoticeCard, PictureMenu, SceneMenu } from '@/components/story-bits';
 import { Sortable, Handle } from '@/components/sortable';
 import { PictureNotes, QuickApprove } from '@/components/picture-notes';
-import { stepInfo } from '@/lib/step-dialogue';
+import { stepInfosForScene } from '@/lib/step-dialogue';
+import { PictureMerge } from '@/components/picture-merge';
 import { unskipPicture } from '@/lib/actions/pictures';
 import { reorderPictures, reorderScenes } from '@/lib/actions/insert';
 
@@ -55,7 +56,9 @@ export default async function Story({ params, searchParams }: { params: { slug: 
             {scenes.map((s, si) => {
               const list = imgs.filter(i => i.sceneId === s.id);
               const active = list.filter(i => i.status !== 'SKIPPED'); // pictures marked "don't use" do not count
-              const stepOf = (i: (typeof imgs)[number]) => { const n = active.indexOf(i); return n < 0 ? null : stepInfo(i as any, s as any, n, active.length); };
+              const infos = stepInfosForScene(list as any, s as any);
+              const stepOf = (i: (typeof imgs)[number]) => infos.get(i.id) ?? null;
+              const mergeProps = (i: (typeof imgs)[number]) => ({ siblings: list.filter(y => y.id !== i.id && y.status !== 'SKIPPED' && !(y as any).mergedInto).map(y => ({ id: y.id, label: `${imageCode(y.seq)} · ${y.title}` })), merged: list.filter(y => (y as any).mergedInto === i.id).map(y => ({ id: y.id, label: imageCode(y.seq) })) });
               const ok = active.filter(i => i.status === 'APPROVED').length;
               const fixing = list.filter(i => i.status === 'REDO').length;
               const allDone = active.length > 0 && ok === active.length;
@@ -87,6 +90,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                   <QuickApprove id={i.id} status={i.status} versions={(i as any)._count.attempts} />
                                   <PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} status={i.status} versions={(i as any)._count.attempts} />
                                   {stepOf(i) ? <PictureNotes id={i.id} info={stepOf(i)!} stepNote={(i as any).stepNote} dialogueLine={(i as any).dialogueLine} compact /> : <div className="basis-full pl-[4.5rem] text-[12.5px] text-ink-muted">Not used — <form action={unskipPicture} className="inline"><input type="hidden" name="id" value={i.id} /><button className="font-semibold text-blue-deep hover:underline">use it again</button></form></div>}
+                                  {stepOf(i) && <div className="basis-full pl-[4.5rem]"><PictureMerge imageId={i.id} {...mergeProps(i)} /></div>}
                                 </ImageDrop>);
                             })}
                           </Sortable>
@@ -109,6 +113,7 @@ export default async function Story({ params, searchParams }: { params: { slug: 
                                   <div className="text-[14px] font-semibold leading-snug">{i.title}</div>
                                 </Link>
                                 {stepOf(i) ? <PictureNotes id={i.id} info={stepOf(i)!} stepNote={(i as any).stepNote} dialogueLine={(i as any).dialogueLine} /> : <div className="mt-1 text-[12.5px] text-ink-muted">Not used — <form action={unskipPicture} className="inline"><input type="hidden" name="id" value={i.id} /><button className="font-semibold text-blue-deep hover:underline">use it again</button></form></div>}
+                                {stepOf(i) && <div className="mt-1"><PictureMerge imageId={i.id} {...mergeProps(i)} /></div>}
                                 <div className="absolute left-3.5 top-3.5 rounded-md bg-white/85 backdrop-blur"><Handle label={i.title} /></div>
                                 <div className="absolute right-4 top-4 [&_summary]:bg-white/90 [&_summary]:backdrop-blur"><PictureMenu id={i.id} first={k === 0} last={k === list.length - 1} href={href} code={`${imageCode(i.seq)} · ${sceneCode(s.order)}`} projectId={p.id} sceneId={s.id} prevId={k > 0 ? list[k - 1].id : null} ctx={ctxOf(s)} status={i.status} versions={(i as any)._count.attempts} /></div>
                                 <div className="mt-2 flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${PILL[st] ?? 'bg-[#F0EEF3] text-[#6F6A75]'}`}>{ICON[st] ?? ''}{word}</span>{act && <Link href={act[1]} className={`btn btn-sm ${act[2]}`}>{act[0]}</Link>}<QuickApprove id={i.id} status={i.status} versions={(i as any)._count.attempts} /></div>

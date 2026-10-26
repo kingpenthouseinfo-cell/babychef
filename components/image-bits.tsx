@@ -5,6 +5,7 @@ import { CardUpload } from './card-upload';
 import { MakePictureButton } from './make-picture';
 import { AiReferences } from './ai-references';
 import { PictureArrange } from './picture-arrange';
+import { PictureMerge } from './picture-merge';
 import { FlagButton } from './flag-button';
 import { ImageDrop } from './drop-zone';
 import { PictureNotes, PictureUse, QuickApprove } from './picture-notes';
@@ -42,7 +43,7 @@ export function ChecklistText({ list }: { list: ChecklistEntry[] }) {
   );
 }
 
-export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts, chatgpt, arrange, notes }: { notes?: import('@/lib/step-dialogue').StepInfo | null; arrange?: { scenes: { id: string; label: string }[]; pictures: { id: string; label: string }[] }; ai?: AiRefSet; aiOpts?: { images: { value: string; label: string }[]; refs: { value: string; label: string }[] }; chatgpt?: string; img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
+export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts, chatgpt, arrange, notes, merge }: { merge?: { siblings: { id: string; label: string }[]; merged: { id: string; label: string }[] }; notes?: import('@/lib/step-dialogue').StepInfo | null; arrange?: { scenes: { id: string; label: string }[]; pictures: { id: string; label: string }[] }; ai?: AiRefSet; aiOpts?: { images: { value: string; label: string }[]; refs: { value: string; label: string }[] }; chatgpt?: string; img: any; slug: string; pcode?: string | null; checklist: ChecklistEntry[]; selectable?: boolean }) {
   const code = imageCode(img.seq);
   const thumb = img.approvedAttempt?.assetId ?? img.attempts?.[img.attempts.length - 1]?.assetId;
   const blocked = img.dependsOn && img.dependsOn.status !== 'APPROVED';
@@ -73,6 +74,7 @@ export function ImageCard({ img, slug, pcode, checklist, selectable, ai, aiOpts,
         <Link href={`${href}#results`} className="btn btn-sm">Import</Link>
         {img.status === 'REVIEW' && <Link href={`${href}#review`} className="btn btn-sm btn-accent">Review</Link>}
       </div>
+      {merge && <PictureMerge imageId={img.id} siblings={merge.siblings} merged={merge.merged} />}
       {arrange && <PictureArrange imageId={img.id} sceneId={img.sceneId} scenes={arrange.scenes} pictures={arrange.pictures} />}
       {ai && aiOpts && <AiReferences set={ai} opts={aiOpts} projectSlug={slug} />}
     </ImageDrop>

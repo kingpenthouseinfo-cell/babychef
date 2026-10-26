@@ -14,7 +14,7 @@ const UNASSIGNED_DIR = 'Unassigned Pictures';
 /** "Don't use this picture": it stays in the plan and all files are kept, but it no longer counts (not in video clips, not counted as still to do). Reversible. */
 export async function skipPicture(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: str(fd, 'id')! } });
-  await db.plannedImage.update({ where: { id: img.id }, data: { status: 'SKIPPED', approvedAttemptId: null } });
+  await db.plannedImage.update({ where: { id: img.id }, data: { status: 'SKIPPED', approvedAttemptId: null, mergedInto: null } as any });
   await logActivity(`${imageCode(img.seq)} marked "don't use"`, null, img.projectId);
   touch();
 }
@@ -24,7 +24,7 @@ export async function unskipPicture(fd: FormData) {
   const img = await db.plannedImage.findUniqueOrThrow({ where: { id: str(fd, 'id')! }, include: { attempts: { orderBy: { number: 'desc' } } } });
   const was = img.attempts.find(a => a.status === 'APPROVED');
   const data = was ? { status: 'APPROVED', approvedAttemptId: was.id } : img.attempts.length ? { status: 'REVIEW' } : { status: img.fullPrompt?.trim() ? 'READY' : 'PLANNED' };
-  await db.plannedImage.update({ where: { id: img.id }, data });
+  await db.plannedImage.update({ where: { id: img.id }, data: { ...data, mergedInto: null } as any });
   await logActivity(`${imageCode(img.seq)} is used again`, null, img.projectId);
   touch();
 }
@@ -107,4 +107,39 @@ export async function quickApprove(fd: FormData) {
   const f = new FormData(); f.set('imageId', id);
   await approveLatest(f);
   revalidatePath('/', 'layout');
+}
+
+/** Merge several pictures into one (all in the same scene). You only make/keep the photo of the one you keep; the others are set aside
+ *  ("merged into IMG-xxx") but nothing is deleted, and the kept picture still shows which steps it covers. Undo with unmergePictures. */
+export async function mergePictures(fd: FormData) {
+  const keepId = str(fd, 'keepId')!;
+  const otherIds = fd.getAll('otherIds').map(String).filter(x => x && x !== keepId);
+  if (!otherIds.length) throw new Error('Tick at least one other picture to merge into this one.');
+  const keep: any = await db.plannedImage.findUniqueOrThrow({ where: { id: keepId } });
+  if (keep.status === 'SKIPPED' || keep.mergedInto) throw new Error('This picture is not in use. Use it again first.');
+  const others: any[] = await db.plannedImage.findMany({ where: { id: { in: otherIds } } });
+  if (others.some(o => o.sceneId !== keep.sceneId)) throw new Error('Only pictures from the same scene can be merged.');
+  for (const o of others) {
+    // anything already merged into o now belongs to the kept picture; anything waiting on o now waits on the kept one
+    await db.plannedImage.updateMany({ where: { mergedInto: o.id }, data: { mergedInto: keepId } as any });
+    await db.plannedImage.updateMany({ where: { dependsOnId: o.id, NOT: { id: keepId } }, data: { dependsOnId: keepId } as any });
+    await db.plannedImage.update({ where: { id: o.id }, data: { mergedInto: keepId, mergedPrev: o.mergedInto ? o.mergedPrev : o.status, status: 'SKIPPED' } as any });
+  }
+  if (keep.dependsOnId && otherIds.includes(keep.dependsOnId)) await db.plannedImage.update({ where: { id: keepId }, data: { dependsOnId: null } as any });
+  await logActivity(`${others.map(o => imageCode(o.seq)).join(', ')} merged into ${imageCode(keep.seq)}`, null, keep.projectId);
+  touch();
+}
+
+/** Undo a merge: the merged-away pictures come back with the status they had. */
+export async function unmergePictures(fd: FormData) {
+  const keepId = str(fd, 'keepId')!;
+  const keep = await db.plannedImage.findUniqueOrThrow({ where: { id: keepId } });
+  const rows: any[] = await db.plannedImage.findMany({ where: { mergedInto: keepId }, include: { attempts: { orderBy: { number: 'desc' } } } });
+  for (const r of rows) {
+    const was = r.attempts.find((a: any) => a.status === 'APPROVED');
+    const status = r.mergedPrev && r.mergedPrev !== 'SKIPPED' ? r.mergedPrev : was ? 'APPROVED' : r.attempts.length ? 'REVIEW' : r.fullPrompt?.trim() ? 'READY' : 'PLANNED';
+    await db.plannedImage.update({ where: { id: r.id }, data: { status, mergedInto: null, mergedPrev: null, ...(status === 'APPROVED' && was ? { approvedAttemptId: was.id } : {}) } as any });
+  }
+  await logActivity(`Merge undone on ${imageCode(keep.seq)}`, null, keep.projectId);
+  touch();
 }

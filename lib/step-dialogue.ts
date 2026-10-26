@@ -10,7 +10,7 @@ export function dialogueLines(d: string | null | undefined): string[] {
   return parts.map(x => x.replace(/^["“]|["”]$/g, '').replace(/^(baby|chef|baby chef|narrator|voice|dialogue)\s*:\s*/i, '').trim()).filter(Boolean);
 }
 
-export type StepInfo = { stepNo: number; stepOf: number; step: string; says: string; saysKind: 'set' | 'suggested' | 'scene' | 'none' };
+export type StepInfo = { stepNo: number; stepEnd?: number; merged?: number; stepOf: number; step: string; says: string; saysKind: 'set' | 'suggested' | 'scene' | 'none' };
 
 /** For the picture at `index` of `count` pictures in a scene: the step it shows and the dialogue it goes with.
  *  A line you wrote for the picture always wins. Otherwise, when the scene has at least one line per picture, the lines are shared out in order (marked "suggested"). Otherwise the whole scene dialogue is shown as the scene's. */
@@ -27,4 +27,30 @@ export function stepInfo(pic: { stepNote?: string | null; dialogueLine?: string 
     } else if (lines.length) { says = trim(lines.join(' '), 220); saysKind = 'scene'; }
   }
   return { stepNo: index + 1, stepOf: count, step, says, saysKind };
+}
+
+type ScenePic = { id: string; status: string; mergedInto?: string | null; stepNote?: string | null; dialogueLine?: string | null; purpose?: string | null; why?: string | null; actionMoment?: string | null; title: string };
+/** Step + dialogue for every picture of ONE scene (pass them in storyboard order).
+ *  "Don't use" pictures are left out of the count, but a picture that was merged into another still holds its step number, so the
+ *  picture it was merged into reads "Steps 3–5 of 5" and keeps the step text of all of them. Merged-away pictures get null. */
+export function stepInfosForScene(pics: ScenePic[], scene: { dialogue?: string | null }): Map<string, StepInfo | null> {
+  const out = new Map<string, StepInfo | null>();
+  const counted = pics.filter(p => p.status !== 'SKIPPED' || p.mergedInto);
+  const infos = counted.map((p, n) => stepInfo(p, scene, n, counted.length));
+  for (const p of pics) {
+    const n = counted.indexOf(p);
+    if (n < 0 || p.mergedInto) { out.set(p.id, null); continue; }
+    const members = counted.map((q, k) => ({ q, k })).filter(x => x.q.id === p.id || x.q.mergedInto === p.id);
+    if (members.length === 1) { out.set(p.id, infos[n]); continue; }
+    const mine = infos[n];
+    const steps = members.map(m => infos[m.k].step).filter((t, i, a) => t && a.indexOf(t) === i);
+    const says = [...new Set(members.map(m => infos[m.k].says).filter(Boolean))].join(' ');
+    out.set(p.id, {
+      stepNo: members[0].k + 1, stepEnd: members[members.length - 1].k + 1, merged: members.length, stepOf: counted.length,
+      step: (p.stepNote ?? '').trim() ? mine.step : steps.join(' → '),
+      says: (p.dialogueLine ?? '').trim() ? mine.says : trim(says, 260),
+      saysKind: (p.dialogueLine ?? '').trim() ? 'set' : members.map(m => infos[m.k].saysKind).find(k => k !== 'none') ?? 'none',
+    });
+  }
+  return out;
 }
