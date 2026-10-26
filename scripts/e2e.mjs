@@ -1081,7 +1081,7 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   const rng = await page.request.get(BASE + link, { headers: { Range: 'bytes=0-9' } });
   ok('Video file is served with byte ranges (plays and shows a thumbnail frame in Safari too)', rng.status() === 206 && (await rng.body()).length === 10);
   // reorder scenes -> file prefixes follow the storyboard
-  await cards().first().dragTo(cards().nth(1), { sourcePosition: { x: 30, y: 10 }, targetPosition: { x: 150, y: 60 } });
+  await cards().first().locator('.storyboard-scenes__label').dragTo(cards().nth(1), { targetPosition: { x: 150, y: 60 } });
   await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 20000 }).catch(() => null); await page.waitForTimeout(800);
   await go(U);
   const placed = await page.locator('[data-testid=sb-scene-card]').evaluateAll(els => els.map((e, i) => ({ i, name: e.querySelector('.storyboard-clip__name')?.textContent || '' })).filter(x => x.name));
@@ -1421,6 +1421,17 @@ const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/n
   await page.waitForTimeout(5000);
   await go(`/projects/${slug}/storyboard`);
   ok('A video dropped on a scene of the Video Clips tab is put on that scene', (await page.locator('[data-testid=sb-scene-clip]').count()) === nb + 1);
+  const onBoard = await page.locator('[data-testid=sb-scene-clip]').count();
+  await go(`/projects/${slug}/kling`);
+  ok('The Video Clips tab shows a player for every clip on a scene', (await page.locator('[data-testid=panel-clip] [data-testid=clip-player]').count()) === onBoard && onBoard >= 1, String(onBoard));
+  const firstPanel = page.locator('[data-testid=scene-clips-panel]').first();
+  if ((await firstPanel.locator('[data-testid=panel-clip]').count()) >= 2) {
+    const ids0 = await firstPanel.locator('[data-testid=panel-clip]').evaluateAll(els => els.map(e => e.getAttribute('data-clip-id')));
+    await firstPanel.locator('[data-testid=panel-later]').first().click({ force: true }); await page.waitForTimeout(3000);
+    await go(`/projects/${slug}/kling`);
+    const ids1 = await page.locator('[data-testid=scene-clips-panel]').first().locator('[data-testid=panel-clip]').evaluateAll(els => els.map(e => e.getAttribute('data-clip-id')));
+    ok('Clips can be put in order on the Video Clips tab', ids1[0] === ids0[1] && ids1[1] === ids0[0]);
+  }
 }
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {

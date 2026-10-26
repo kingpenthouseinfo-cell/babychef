@@ -15,17 +15,23 @@ import { klingCode, sceneCode } from '@/lib/util';
 import { SCENE_ORDER, IMAGE_ORDER, backfillPositions } from '@/lib/order';
 import { makeClipForScene } from '@/lib/actions/kling';
 import { fileUrl } from '@/components/ui';
+import { SceneClipsPanel, WaitingClips } from '@/components/scene-clips-panel';
+import { sceneClipIds } from '@/lib/scene-clips';
 
 export default async function KlingList({ params }: { params: { slug: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   await backfillPositions();
-  const [clips, scenes, imgs] = await Promise.all([
+  const [clips, scenes, imgs, clipAssets] = await Promise.all([
     db.klingClip.findMany({ where: { projectId: p.id }, orderBy: { order: 'asc' }, include: { refs: { orderBy: { order: 'asc' }, include: { image: { include: { approvedAttempt: { include: { asset: true } } } } } }, scenes: { include: { scene: true } } } }),
     db.scene.findMany({ where: { projectId: p.id }, orderBy: [...SCENE_ORDER] }),
     db.plannedImage.findMany({ where: { projectId: p.id }, orderBy: [...IMAGE_ORDER], include: { approvedAttempt: { include: { asset: true } } } }),
+    db.asset.findMany({ where: { kind: 'VIDEO_CLIP', projectSlug: p.slug }, orderBy: { createdAt: 'asc' } }),
   ]);
   const lab = sceneLabels(scenes);
+  const sceneOpts = scenes.map(sc => ({ id: sc.id, label: `Scene ${lab.get(sc.id)} · ${sc.title}` }));
+  const onScene = new Set(scenes.flatMap(sc => sceneClipIds(sc as any)));
+  const waiting = clipAssets.filter(a => !onScene.has(a.id)).map(a => ({ id: a.id, name: a.displayName }));
   const linked = new Set(clips.flatMap(c => c.scenes.map(x => x.sceneId)));
   const other = clips.filter(c => c.scenes.length === 0 || c.scenes.some(x => !scenes.some(sc => sc.id === x.sceneId)));
   let opened = false;
@@ -33,6 +39,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
     <div className="max-w-[1000px] space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-[34px] md:text-[40px]">Video Clips</h1><p className="mt-1 text-[14px] text-ink-secondary">Each scene gathers the pictures that look good. Make the prompt, then make the clip in Kling.</p></div><ExportVideo slug={p.slug} projectTitle={p.title} /></div>
       {scenes.length > 0 && <SceneClipDrop projectId={p.id} hint="Drop the video clips here to save them" className="rounded-[14px] border-2 border-dashed border-[#B9CFEA] bg-[#F4F9FE] px-4 py-3 text-center text-[13.5px] text-[#3E6290]" data-testid="clips-top-drop">Drag finished video clips from Finder onto a scene below to put them on that scene (in play order), or drop them here to save them for later.</SceneClipDrop>}
+      <WaitingClips projectId={p.id} scenes={sceneOpts} clips={waiting} />
       {scenes.length === 0 && <Empty title="No scenes yet." hint="Add scenes first — each scene becomes one video clip." />}
       {scenes.map((sc, i) => {
         const pics = imgs.filter(x => x.sceneId === sc.id);
@@ -46,6 +53,7 @@ export default async function KlingList({ params }: { params: { slug: string } }
         const clipName = `${effectiveCode(p)}-S${String(sc.order).padStart(2, '0')}-CLIP_v1.mp4`;
         return (
           <VideoWrap key={sc.id} projectId={p.id} sceneId={sc.id} className="overflow-hidden rounded-[16px] border border-line bg-white" style={{ boxShadow: '0 14px 34px -28px rgba(40,36,60,.4)' }}>
+            <SceneClipsPanel projectId={p.id} sceneId={sc.id} scenes={sceneOpts} clips={sceneClipIds(sc as any).map(id => clipAssets.find(a => a.id === id)).filter(Boolean).map(a => ({ id: a!.id, name: a!.displayName }))} />
             <details open={open}>
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-4">
                 <div className="min-w-0 flex-1"><h2 className="text-[22px]">Scene {lab.get(sc.id)} video</h2><div className="text-[13.5px] text-ink-secondary">{sc.title}</div></div>

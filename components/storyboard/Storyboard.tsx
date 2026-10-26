@@ -291,7 +291,7 @@ export default function Storyboard({ initial, onSave, onOpenPicture, revealInFin
                   data-testid="sb-scene-card" data-scene-id={s.id}
                   className={'storyboard-scenes__card' + (dragScene === s.id ? ' is-dragging' : '') + (sceneClips[s.id]?.length ? ' has-clip' : '') + (clipOver === s.id ? ' clip-over' : '')}
                   draggable={!isEditing}
-                  onDragStart={e => { e.dataTransfer.setData('text/plain', s.id); e.dataTransfer.effectAllowed = 'move'; setDragScene(s.id); }}
+                  onDragStart={e => { setDragClip(null); e.dataTransfer.setData('text/plain', s.id); e.dataTransfer.effectAllowed = 'move'; setDragScene(s.id); }}
                   onDragEnd={() => { setDragScene(null); setOverScene(null); }}
                   onDragOver={e => { if (hasFiles(e) || dragClipRef.current) { e.preventDefault(); if (clipOver !== s.id) setClipOver(s.id); } else overS(gk)(e); }}
                   onDragLeave={() => setClipOver(c => (c === s.id ? null : c))}
