@@ -1218,7 +1218,7 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   ok('Export 4K UHD: finishes, is 3840×2160, plays, right length, audio in sync', e3.status === 'DONE' && c3.dims && c3.plays && c3.dur && c3.sync, JSON.stringify([e3.status, e3.error, c3]));
   // 4) reorder scenes on the storyboard, 24 fps -> export follows the NEW order
   await go(SB);
-  await cards().first().dragTo(cards().nth(2), { targetPosition: { x: 150, y: 60 } }); // dropped before scene 3 = scene 1 moves after scene 2
+  await cards().first().locator('.storyboard-scenes__label').dragTo(cards().nth(2), { targetPosition: { x: 150, y: 60 } }); // dropped before scene 3 = scene 1 moves after scene 2
   await page.locator('[data-testid=sb-save]').click(); await page.waitForFunction(() => /Order saved/.test(document.querySelector('[data-testid=sb-msg]')?.textContent || ''), null, { timeout: 30000 }).catch(() => null); await page.waitForTimeout(1000);
   const e4 = await run({ resolution: '1080p', fps: 24, includeUnassigned: false });
   const c4 = e4.status === 'DONE' ? check(e4, 1920, 1080, 24, 4.5, { names: ['green', 'red', 'blue', 'magenta'], durs: [1.5, 1, 1, 1] }) : {};
