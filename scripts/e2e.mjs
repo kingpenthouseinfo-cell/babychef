@@ -1105,7 +1105,7 @@ await page.setViewportSize({ width: 1440, height: 900 }); // back to desktop (th
   await go(U);
   const two2 = page.locator('[data-testid=sb-scene-card]', { has: page.locator('[data-testid=sb-clip-num]') }).first();
   ok('Clips can be put in order (earlier / later) and the files are renamed to match', (await two2.locator('[data-testid=sb-scene-clip]').nth(1).getAttribute('data-clip-id')) === firstId && /-CLIP2/.test((await two2.locator('.storyboard-clip__name').nth(1).textContent()) || ''));
-  await two2.locator('[data-testid=sb-clip-remove]').first().click(); await page.waitForTimeout(1500); await go(U);
+  await two2.locator('[data-testid=sb-clip-remove]').first().click({ force: true }); await page.waitForTimeout(1500); await go(U);
 }
 // ---- EXPORT FULL VIDEO (real FFmpeg, real files, isolated test project)
 {
