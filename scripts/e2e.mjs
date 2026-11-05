@@ -1491,6 +1491,21 @@ const allPages = ['/', '/projects', '/projects/new', '/babychefs', '/babychefs/n
     ok('Clips can be put in order on the Video Clips tab', ids1[0] === ids0[1] && ids1[1] === ids0[0]);
   }
 }
+// screenshot view on the Picture List: just pictures + info, tiny text, toggle back
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await go(`/projects/${slug}/images`);
+  const nCards = await page.locator('[data-testid=image-card], .card').count();
+  await page.locator('[data-testid=shots-on]').click(); await page.waitForSelector('[data-testid=shot-tile]', { timeout: 20000 }).catch(() => null);
+  const tiles = await page.locator('[data-testid=shot-tile]').count();
+  ok('Screenshot view shows a tile for every picture in use', tiles >= 1 && (await page.locator('[data-testid=shots-view]').count()) === 1, String(tiles));
+  ok('Screenshot view has no buttons or extras except the way back', (await page.locator('[data-testid=shots-view] button, [data-testid=shots-view] select, [data-testid=shots-view] input, [data-testid=shots-view] textarea').count()) === 0 && (await page.locator('[data-testid=shots-off]').count()) === 1);
+  ok('Screenshot view tiles show the code, status, scene, title and step', /IMG-\d+/.test(await page.locator('[data-testid=shot-tile]').first().textContent()) && /Step \d+/.test(await page.locator('[data-testid=shot-tile]').first().textContent()));
+  const w = await page.locator('[data-testid=shot-tile]').first().evaluate(e => e.getBoundingClientRect().width);
+  ok('Screenshot view tiles are small (many to a screen)', w < 260, String(Math.round(w)));
+  await page.locator('[data-testid=shots-off]').click(); await page.waitForSelector('[data-testid=shots-on]', { timeout: 20000 }).catch(() => null);
+  ok('Toggling off brings the full Picture List back', (await page.locator('[data-testid=shots-view]').count()) === 0 && (await page.locator('[data-testid=shots-on]').count()) === 1 && nCards >= 0);
+}
 const overflowing = [];
 for (const [w, h] of [[390, 844], [820, 1100]]) {
   await page.setViewportSize({ width: w, height: h });

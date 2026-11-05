@@ -17,8 +17,9 @@ import { publicBase } from '@/lib/automation-config';
 import { aiReferencesForProject, aiRefOptions, projectMasters } from '@/lib/ai-refs';
 import { getSettings } from '@/lib/settings';
 import { sceneLabels } from '@/lib/scene-label';
+import { fileUrl } from '@/components/ui';
 
-export default async function Images({ params, searchParams }: { params: { slug: string }; searchParams: { status?: string; scene?: string; shot?: string; ingredient?: string; keep?: string; add?: string } }) {
+export default async function Images({ params, searchParams }: { params: { slug: string }; searchParams: { status?: string; scene?: string; shot?: string; ingredient?: string; keep?: string; view?: string; add?: string } }) {
   const p = await getProjectBySlug(params.slug);
   if (!p) notFound();
   const [all, scenes, pool] = await Promise.all([
@@ -52,12 +53,43 @@ export default async function Images({ params, searchParams }: { params: { slug:
   const base = `/projects/${p.slug}/images`;
   const summary = shotSummary(all);
   const counts = (s: string) => all.filter(i => i.status === s).length;
+  const keepQs = (view: boolean) => { const q = new URLSearchParams(); for (const k of ['status', 'scene', 'shot', 'ingredient', 'keep'] as const) if (searchParams[k]) q.set(k, String(searchParams[k])); if (view) q.set('view', 'shots'); const t = q.toString(); return `${base}${t ? `?${t}` : ''}`; };
+  // SCREENSHOT VIEW: only the picture and its info, tiny text, many to a screen — for taking screenshots
+  if (searchParams.view === 'shots') {
+    const tiles = list.filter(i => i.status !== 'SKIPPED');
+    return (
+      <div data-testid="shots-view">
+        <div className="mb-2 flex flex-wrap items-center gap-3">
+          <Link href={keepQs(false)} className="btn btn-sm btn-primary" data-testid="shots-off">◀ BACK TO FULL VIEW</Link>
+          <span className="text-[12px] text-ink-secondary">Screenshot view · {tiles.length} picture{tiles.length === 1 ? '' : 's'}</span>
+        </div>
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))' }}>
+          {tiles.map(i => {
+            const a = i.approvedAttempt?.assetId ?? i.attempts?.[i.attempts.length - 1]?.assetId;
+            const n = notesOf.get(i.id);
+            return (
+              <div key={i.id} className="min-w-0 rounded-lg border border-line bg-white p-1.5 text-[10px] leading-[1.25]" data-testid="shot-tile">
+                <div className="flex items-center gap-1"><span className="font-mono text-[10.5px] font-bold">{imageCode(i.seq)}</span><Chip>{i.status}</Chip></div>
+                <div className="truncate text-ink-secondary">{sceneCode(i.scene.order)} {i.scene.title}</div>
+                <div className="mt-1 aspect-[4/3] overflow-hidden rounded-md bg-sunken">{a ? <img src={fileUrl(a, 360)} alt={i.title} loading="lazy" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-ink-muted">no image</div>}</div>
+                <div className="mt-1 text-[11px] font-semibold leading-tight">{i.title}</div>
+                <div className="uppercase text-ink-secondary">{i.shotType}</div>
+                {n && <div className="text-ink-secondary"><b className="text-[#46638A]">{n.stepEnd && n.stepEnd > n.stepNo ? `Steps ${n.stepNo}–${n.stepEnd}` : `Step ${n.stepNo}`} of {n.stepOf}:</b> {n.step}</div>}
+                <div className="text-ink-secondary">{n?.says ? <>“{n.says}”</> : 'No dialogue for this picture.'}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-1.5">
         {['ALL', ...IMAGE_STATUSES.filter(s => ['PLANNED', 'READY', 'WAITING', 'REVIEW', 'APPROVED', 'REDO', 'REJECTED'].includes(s))].map(s => (
           <Link key={s} href={`${base}?status=${s}`} className={`btn btn-sm ${(st || 'ALL') === s ? 'btn-primary' : ''}`}>{s}{s !== 'ALL' && ` (${counts(s)})`}</Link>
         ))}
+        <Link href={keepQs(true)} className="btn btn-sm" data-testid="shots-on" title="Show only the pictures and their info, small, so many fit on one screen">SCREENSHOT VIEW</Link>
         <a href="#add" className="btn btn-sm btn-accent">+ ADD IMAGE</a>
       </div>
       <form className="flex flex-wrap gap-2" method="get">
