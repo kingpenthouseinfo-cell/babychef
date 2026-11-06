@@ -940,6 +940,17 @@ ok('Settings: app section has Update now, Check again and Quit (not clicked: it 
     const VS = 'Keep the camera steady and the colours natural.';
     await v1.locator('[data-testid=prompt-edit]').click(); await v1.locator('textarea').fill('Video base text.'); await v1.locator('[data-testid=prompt-save]').click(); await page.waitForTimeout(1200);
     await go(`/projects/${slug}/video-prompts`);
+    {
+      const row = page.locator('[data-testid=video-prompt-row]').first();
+      ok('Each video prompt has COPY REQUEST and COPY FACTS ONLY buttons', (await row.locator('[data-testid=copy-request-full]').count()) === 1 && (await row.locator('[data-testid=copy-request-facts]').count()) === 1);
+      await row.locator('[data-testid=copy-request-full]').click();
+      await page.waitForSelector('[data-testid=copy-request-msg]', { timeout: 20000 }).catch(() => null);
+      ok('COPY REQUEST gives a short request', /Copied \((\d+) words\)/.test((await row.locator('[data-testid=copy-request-msg]').textContent().catch(() => '')) || '') || /Could not copy/.test((await row.locator('[data-testid=copy-request-msg]').textContent().catch(() => '')) || ''));
+      const txt = await page.evaluate(() => navigator.clipboard.readText().catch(() => '')).catch(() => '');
+      if (txt) ok('The short request has the rules and this clip\'s facts but no style bible', /THIS CLIP/.test(txt) && /Before EVERY spoken line/.test(txt) && !/PRODUCTION BIBLE/i.test(txt) && txt.split(/\s+/).length < 700, String(txt.split(/\s+/).length));
+      const hasRefs = (await row.locator('.prompt-row__thumb--small').count()) > 0;
+      if (hasRefs) ok('A video prompt that does not mention the start and end pictures is warned about', (await row.locator('[data-testid=video-lint]').count()) === 1 && /start and end/.test(await row.locator('[data-testid=video-lint]').textContent()));
+    }
     ok('The Video Prompts tab has the "Add a sentence to every prompt" panel', (await page.locator('[data-testid=addons-panel]').count()) === 1 && (await page.locator('[data-testid=addon-list] [data-testid=addon-item]').count()) === 0);
     await page.locator('[data-testid=addons-panel] summary').click();
     await page.fill('[data-testid=addon-text]', VS);

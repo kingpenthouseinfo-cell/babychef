@@ -1,0 +1,14 @@
+import { lintVideoPrompt } from '../lib/video-lint.ts';
+let fail = 0; const t = (n, c) => { if (!c) { fail++; console.log('FAIL', n); } else console.log('ok  ', n); };
+const label = 'Cute toddler Jamaican boy baby chef with a slight accent';
+const good = `[START IMAGE] He pours the flour.\n${label} says proudly: "See dat turmeric? That's what's gonna help make our pastry beautiful and golden."\nEnd matching [END IMAGE]. No background music.`;
+const lines = ["See dat turmeric? That's what's gonna help make our pastry beautiful and golden."];
+t('a good prompt has no warnings', lintVideoPrompt({ prompt: good, approvedDialogue: lines, hasReferences: true, speakerLabel: label }).length === 0);
+t('missing name is flagged', lintVideoPrompt({ prompt: 'He pours. Baby Chef says: "See dat turmeric? That\'s what\'s gonna help make our pastry beautiful and golden."', approvedDialogue: lines, hasReferences: false, speakerLabel: label }).some(x => /full character name/.test(x)));
+t('changed words are flagged', lintVideoPrompt({ prompt: `${label} says happily: "Look at this yellow stuff everybody."`, approvedDialogue: lines, hasReferences: false, speakerLabel: label }).some(x => /match the approved script/.test(x)));
+t('continue from previous is flagged', lintVideoPrompt({ prompt: 'Continue from the previous scene. He stirs.', approvedDialogue: [], hasReferences: false }).some(x => /on its own/.test(x)));
+t('same emotion three times is flagged', lintVideoPrompt({ prompt: `${label} says excitedly: "One one one."\n${label} says excitedly: "Two two two."\n${label} says excitedly: "Three three three."`, approvedDialogue: [], hasReferences: false, speakerLabel: label }).some(x => /used 3 times/.test(x)));
+t('too many spoken words is flagged', lintVideoPrompt({ prompt: `${label} says: "${'word '.repeat(40)}"`, approvedDialogue: [], hasReferences: false, speakerLabel: label }).some(x => /spoken words/.test(x)));
+t('missing start/end pictures is flagged', lintVideoPrompt({ prompt: 'He pours the flour.', approvedDialogue: [], hasReferences: true }).some(x => /start and end/.test(x)));
+t('background music asked for is flagged', lintVideoPrompt({ prompt: 'Add background music and @image1.', approvedDialogue: [], hasReferences: true }).some(x => /background music/.test(x)));
+process.exit(fail ? 1 : 0);

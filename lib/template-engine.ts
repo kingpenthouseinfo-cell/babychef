@@ -5,7 +5,7 @@ import { getSettings } from './settings';
 import { bibleText, chefProductionText, OVERRIDE_FIELDS } from './bible';
 
 export const VARIABLES = [
-  'project_title','recipe_name','cuisine','baby_name','baby_personality','baby_profile','dialogue_style','recurring_jokes','safety_rules','voice_instruction','kitchen',
+  'project_title','recipe_name','cuisine','baby_name','baby_personality','baby_profile','dialogue_style','recurring_jokes','safety_rules','voice_instruction','speaker_label','kitchen',
   'recipe_text','script_text','scene_list','scene_code','scene_title','scene_narrative','scene_action','scene_dialogue','scene_cookware','scene_utensils','scene_adult',
   'food_state_before','food_state_during','food_state_after','food_progression','approved_images',
   'image_id','image_title','full_prompt','starting_composition','action_moment','image_ingredients','ingredient_state','camera','must_be_visible','must_not_change','must_not_appear',
@@ -70,7 +70,7 @@ export async function buildVars(projectId: string, opts: { sceneId?: string | nu
   const vars: Record<string, string> = {
     project_title: p.title, recipe_name: v(p.recipeName) || p.title, cuisine: v(p.cuisine), baby_name: v(b?.displayName), baby_personality: v(b?.personality),
     baby_profile: babyProfile, dialogue_style: v(b?.dialogueStyle), recurring_jokes: [b?.recurringJokes, b?.recurringReacts].filter(Boolean).join('; '),
-    safety_rules: v(b?.safetyRules), voice_instruction: v(b?.voiceInstruction), kitchen,
+    safety_rules: v(b?.safetyRules), voice_instruction: v(b?.voiceInstruction), speaker_label: v((b as any)?.speakerLabel) || `Cute toddler ${[v(b?.cuisine) || v(p.cuisine), v(b?.gender)].filter(Boolean).join(' ')} baby chef with a slight accent`.replace(/\s+/g, ' '), kitchen,
     recipe_text: v(p.recipeAdapted) || v(p.recipeOriginal), script_text: v(script?.content),
     scene_list: p.scenes.map(s => `${sceneCode(s.order)} ${s.title}`).join('\n'),
     scene_code: '', scene_title: '', scene_narrative: '', scene_action: '', scene_dialogue: '', scene_cookware: '', scene_utensils: '', scene_adult: '',

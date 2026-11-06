@@ -66,6 +66,7 @@ model BabyChef {
   personality      String?
   dialogueStyle    String?
   voiceInstruction String?
+  speakerLabel     String?  // how the baby is named before EVERY spoken line in video prompts, e.g. "Cute toddler Jamaican boy baby chef with a slight accent"
   recurringJokes   String?
   recurringReacts  String?
   behaviorNotes    String?

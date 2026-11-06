@@ -12,7 +12,7 @@ import { imageCode, klingCode, lines, parseJson, ratioLabel, sceneCode } from '.
 import { CONTINUITY_FIELDS, INGREDIENT_IMPORTANCE } from './constants';
 import { expectedFilename, fileBlock, nextVersion } from './naming';
 
-export type BuilderType = 'plan' | 'script' | 'script-revision' | 'scenes' | 'image-plan' | 'image-full' | 'image-cont' | 'image-redo' | 'continuity' | 'kling-group' | 'kling-final' | 'kling-redo';
+export type BuilderType = 'plan' | 'script' | 'script-revision' | 'scenes' | 'image-plan' | 'image-full' | 'image-cont' | 'image-redo' | 'continuity' | 'kling-group' | 'kling-final' | 'kling-lean' | 'kling-redo';
 export type Target = 'CHATGPT' | 'CLAUDE' | 'GENERIC AI';
 export const TARGETS: Target[] = ['CHATGPT', 'CLAUDE', 'GENERIC AI'];
 
@@ -40,6 +40,7 @@ export const BUILDERS: Record<BuilderType, BuilderDef> = {
   continuity: { group: 'Images', label: 'Continuity review', purpose: 'CONTINUITY REVIEW PROMPT', template: 'TPL-CONTREV', help: 'Have the AI review food progression and continuity.', blocks: ['bible', 'continuityDoc', 'scenesList', 'approvedImages', 'corrections'], extra: ['chef'], required: ['scenesList'], bible: ['food-state', 'food-realism', 'character', 'kitchen', 'references', 'never'] },
   'kling-group': { group: 'Kling', label: 'Kling grouping', purpose: 'KLING GROUPING PROMPT', template: 'TPL-KLING-GROUP', help: 'Decide how approved stills group into clips.', blocks: ['bible', 'scenesList', 'approvedImages', 'specs'], extra: ['chef', 'existingClips'], required: ['approvedImages'], bible: ['kling', 'pacing', 'cooking-action', 'food-state', 'short-form', 'safety', 'custom'] },
   'kling-final': { group: 'Kling', label: 'Final Kling prompt', purpose: 'KLING PROMPT WRITING PROMPT', template: 'TPL-KLING-WRITER', help: 'Ordered @image references + action, voice, physics, camera, ASMR → the AI writes the Kling prompt.', blocks: ['bible', 'chef', 'kling', 'klingScenes', 'corrections', 'overrides'], extra: ['continuityDoc'], required: ['kling'], needs: 'kling', bible: ['kling', 'cooking-action', 'food-physics', 'food-state', 'food-realism', 'asmr', 'camera', 'crop', 'character', 'kitchen', 'safety', 'never', 'custom'] },
+  'kling-lean': { group: 'Kling', label: 'Short Kling request (recommended)', purpose: 'KLING PROMPT — SHORT REQUEST', template: 'TPL-KLING-LEAN', help: 'The rules plus only this clip\'s facts: references, actions, exact dialogue. Short, with no style bible or profile attached.', blocks: [], extra: [], required: [], needs: 'kling', bible: [] },
   'kling-redo': { group: 'Kling', label: 'Kling redo prompt', purpose: 'KLING REDO PROMPT', template: 'TPL-KLING-REDO', help: 'Revise a Kling prompt after a failed generation.', blocks: ['bible', 'kling', 'klingAttempt'], extra: ['chef', 'klingScenes', 'corrections'], required: ['kling', 'klingAttempt'], needs: 'klingAttempt', bible: ['kling', 'food-physics', 'never', 'custom'] },
 };
 
@@ -297,6 +298,16 @@ export async function buildPrompt(projectId: string, type: BuilderType, link: Li
   const note = val(opts.note);
   if (note) parts.push(H('SPECIAL INSTRUCTIONS FOR THIS PROMPT', note));
   const tpl = await db.promptTemplate.findUnique({ where: { code: def.template } });
+  if (type === 'kling-lean') {
+    // short request: just the template (rules + this clip's facts); the exact dialogue falls back to the linked scenes' dialogue
+    const vars = { ...c.vars };
+    if (!(vars.kling_dialogue ?? '').trim() && c.kl) vars.kling_dialogue = (await db.klingScene.findMany({ where: { klingId: c.kl.id }, include: { scene: true } })).map(x => (x.scene.dialogue ?? '').trim()).filter(Boolean).join('\n');
+    if (!(vars.kling_dialogue ?? '').trim()) vars.kling_dialogue = '(no spoken dialogue for this clip)';
+    const leanText = tpl?.active ? render(tpl.text, vars).out : '';
+    if (!leanText) warnings.push(`Task template ${def.template} is missing or inactive (see Prompt Templates).`);
+    const lmeta = { type, purpose: def.purpose, target, projectId, imageId: null, klingId: c.kl?.id ?? null, attemptId: null, klingAttemptId: null, templateCode: def.template, templateUpdatedAt: tpl?.updatedAt ?? null, blocks: [], bibleSections: [], createdAt: new Date().toISOString(), bibleVersion: await currentBibleVersion(), recipeVersion: c.project.recipeVersion, chefUpdatedAt: c.project.babyChef?.updatedAt ?? null, chefName: c.project.babyChef?.displayName ?? null };
+    return { type, purpose: def.purpose, target, text: leanText, blocks: previews, warnings, bibleSections: [], meta: lmeta, templateName: tpl?.name ?? null };
+  }
   if (tpl?.active) parts.push(render(tpl.text, c.vars).out);
   else warnings.push(`Task template ${def.template} is missing or inactive (see Prompt Templates).`);
   const head = `PURPOSE: ${def.purpose}\nPREPARED FOR: ${target}\nPROJECT: ${c.project.title}${c.img ? `\nIMAGE: ${imageCode(c.img.seq)} — ${c.img.title}` : ''}${c.kl ? `\nKLING CLIP: ${klingCode(c.kl.order)} — ${c.kl.title}` : ''}\n\nYou are helping plan a realistic AI-generated Baby Chef cooking video. Context is given in layers. PRIORITY: project-specific instructions override the Baby Chef profile, which overrides/specializes the global production bible. Approved reference images are always the visual source of truth.`;

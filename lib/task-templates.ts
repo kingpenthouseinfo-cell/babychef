@@ -289,6 +289,47 @@ Describe:
 Return only the final Kling prompt.`,
   },
   {
+    code: 'TPL-KLING-LEAN', name: 'Short Kling request — task', category: 'KLING',
+    purpose: 'A short request: the rules plus only this clip\'s facts.', description: 'Used by COPY REQUEST on Video Prompts. Edit the rules here.',
+    text: `Write short, natural, cinematic Kling video prompts using the approved images, scene actions and exact script.
+
+VOICE AND DIALOGUE:
+Before EVERY spoken line, identify the Baby Chef using this character description:
+"{{speaker_label}}..."
+IMPORTANT: Automatically choose the appropriate speaking emotion based on the dialogue and scene (says happily, says curiously, says playfully, says proudly, says softly, says in genuine surprise, says suspiciously, says nervously, says with adorable confusion, says in mock frustration, says offscreen in a worried voice, says with innocent excitement, says naturally, and so on). These are examples, NOT a fixed list. Choose any natural emotion that fits the moment.
+Do not automatically use "says excitedly" for every line. For neutral dialogue, simply use "says".
+Every spoken line must include the complete character identification, appropriate delivery and exact approved dialogue.
+Never rewrite approved dialogue unless requested.
+
+VIDEO ACTION:
+Examine the starting and ending reference images. Determine what physically needs to happen to move naturally between them.
+Describe those actions in chronological order. Include realistic ingredient movement, facial reactions and camera movement.
+Every clip must work independently without referring to previous prompts.
+Keep prompts concise and suitable for 3–10-second video generation. Split complicated actions or long dialogue into separate clips.
+
+VIDEO STYLE:
+Cinematic YouTube cooking show, realistic food physics, soft natural lighting, realistic toddler skin texture and appropriate cooking ASMR.
+Voice must sound genuinely adorable, natural, expressive and childlike, never robotic or adult-sounding.
+Use the correct Baby Chef accent and maintain the same vocal identity throughout the recipe.
+Do not generate background music.
+Adult assistance only when necessary for safety.
+
+OUTPUT:
+Return a ready-to-paste Kling video prompt containing the image references, actions, exact dialogue, appropriate emotions and essential visual/audio instructions.
+Do not include unnecessary explanations or repeat long character descriptions outside the dialogue identification.
+
+THIS CLIP
+{{kling_id}} — {{kling_title}} (target {{kling_duration}} seconds)
+Reference images, start to end:
+{{kling_references}}
+Starting picture: {{kling_start}}
+Actions and moments:
+{{kling_actions}}
+Exact approved dialogue:
+{{kling_dialogue}}
+Adult help for this recipe: {{safety_rules}}`,
+  },
+  {
     code: 'TPL-KLING-REDO', name: 'Kling redo prompt — task', category: 'KLING REVISION',
     purpose: 'Revise a Kling prompt after a failed generation.', description: 'Task block of PREPARE KLING REDO PROMPT.',
     text: `YOUR TASK

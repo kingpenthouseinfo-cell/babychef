@@ -6,7 +6,7 @@ import { importFile, deleteAssetIfOrphan, nextCode, projectFolder, safeSegment }
 import { bool, pickText, slugify, str } from '../util';
 import { logActivity } from '../activity';
 
-const FIELDS = ['displayName','seriesName','cuisine','age','gender','appearance','skinTone','facialFeatures','hair','bodyNotes','outfit','accessories','personality','dialogueStyle','voiceInstruction','recurringJokes','recurringReacts','behaviorNotes','kitchen','lighting','cinematography','safetyRules','continuityRules','humorPatterns','typicalExpressions','ingredientReactions','ctaBehavior','culturalNotes'];
+const FIELDS = ['displayName','seriesName','cuisine','age','gender','appearance','skinTone','facialFeatures','hair','bodyNotes','outfit','accessories','personality','dialogueStyle','voiceInstruction','speakerLabel','recurringJokes','recurringReacts','behaviorNotes','kitchen','lighting','cinematography','safetyRules','continuityRules','humorPatterns','typicalExpressions','ingredientReactions','ctaBehavior','culturalNotes'];
 
 async function uniqueSlug(base: string) {
   let s = slugify(base), i = 1;

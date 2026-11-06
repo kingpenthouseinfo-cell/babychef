@@ -211,3 +211,12 @@ export async function applyVideoImport(items: { target: string; prompt: string }
   touch();
   return { saved };
 }
+
+/** Video Prompts: the short request to paste into ChatGPT (rules + this clip's facts), or only the facts when the rules already live in your ChatGPT Project. */
+export async function leanKlingRequest(projectId: string, klingId: string, factsOnly: boolean): Promise<string> {
+  const { buildPrompt } = await import('../prompt-builder');
+  const r = await buildPrompt(projectId, 'kling-lean', { klingId });
+  if (!factsOnly) return r.text;
+  const at = r.text.indexOf('THIS CLIP\n');
+  return (at >= 0 ? r.text.slice(at) : r.text).trim() + '\n\nFollow the Kling prompt rules you already have. Return only the Kling prompt.';
+}

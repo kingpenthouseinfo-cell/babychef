@@ -33,6 +33,7 @@ export function BabyChefForm({ b, part = 'all' }: { b?: any; part?: ChefPart }) 
         <Area name="personality" label="Personality" v={b?.personality} />
         <Area name="dialogueStyle" label="Dialogue style" v={b?.dialogueStyle} />
         <Area name="voiceInstruction" label="Voice / accent instruction" v={b?.voiceInstruction} />
+        <Text name="speakerLabel" label="Name used before every spoken line in video prompts" v={b?.speakerLabel} hint="e.g. Cute toddler Jamaican boy baby chef with a slight accent. Leave empty to build it from the cuisine." placeholder="Cute toddler … baby chef with a slight accent" />
         <Area name="recurringJokes" label="Recurring jokes" v={b?.recurringJokes} />
         <Area name="recurringReacts" label="Recurring reactions" v={b?.recurringReacts} />
         <Area name="behaviorNotes" label="Behavior notes" v={b?.behaviorNotes} />

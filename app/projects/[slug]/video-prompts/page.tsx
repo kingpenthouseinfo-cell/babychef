@@ -12,6 +12,9 @@ import { PromptRow } from '@/components/prompt-row';
 import { PromptImport } from '@/components/prompt-import';
 import { PromptAddons } from '@/components/prompt-addons';
 import { listAddons } from '@/lib/addons';
+import { CopyRequest } from '@/components/copy-request';
+import { lintVideoPrompt } from '@/lib/video-lint';
+import { buildVars } from '@/lib/template-engine';
 import { makeClipForScene } from '@/lib/actions/kling';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +31,7 @@ export default async function VideoPrompts({ params }: { params: { slug: string 
   ]);
   const [addons, allProjects] = await Promise.all([listAddons('VIDEO'), db.project.findMany({ where: { deletedAt: null }, orderBy: { title: 'asc' }, select: { id: true, title: true } })]);
   const lab = sceneLabels(scenes);
+  const speaker = (await buildVars(p.id, {})).speaker_label;
   const b = `/projects/${p.slug}`;
   const clipScenes = new Set(clips.flatMap(c => c.scenes.map(s => s.sceneId)));
   const waiting = scenes.filter(s => !clipScenes.has(s.id) && imgs.some(i => i.sceneId === s.id));
@@ -48,6 +52,8 @@ export default async function VideoPrompts({ params }: { params: { slug: string 
               <div className="prompt-row__meta"><span className="prompt-row__label">{klingCode(k.order)}</span>{sid && <span className="prompt-row__scene">Scene {lab.get(sid)}</span>}<span className="prompt-row__status">{k.status}</span><span className="prompt-row__count">{k.refs.length} picture{k.refs.length === 1 ? '' : 's'}</span></div>
               <h2 className="prompt-row__title">{k.title}</h2>
               <PromptRow kind="video" id={k.id} prompt={k.finalPrompt} />
+              <CopyRequest projectId={p.id} klingId={k.id} />
+              {(() => { const warn = lintVideoPrompt({ prompt: k.finalPrompt, approvedDialogue: [k.dialogue ?? '', ...k.scenes.map(x => scenes.find(sc => sc.id === x.sceneId)?.dialogue ?? '')].filter(Boolean), hasReferences: k.refs.length > 0, speakerLabel: speaker }); return warn.length ? <ul className="prompt-row__warn" data-testid="video-lint">{warn.map(w => <li key={w}>⚠ {w}</li>)}</ul> : null; })()}
             </div>
           </li>); })}
         {waiting.map(s => (
